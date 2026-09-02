@@ -29,31 +29,39 @@ export default function RegisterPage() {
   const text = {
     TH: {
       badge: "🌿 Virtual Herbarium",
+
       title: "สมัครสมาชิก",
+
       subtitle: "สร้างบัญชี Virtual Herbarium ของคุณ",
 
       username: "ชื่อผู้ใช้",
-      usernamePlaceholder: "เช่น herbarium_user",
+
+      usernamePlaceholder: "เช่น สมชาย หรือ herbarium_user",
 
       email: "อีเมล",
+
       emailPlaceholder: "example@gmail.com",
 
       password: "รหัสผ่าน",
+
       passwordPlaceholder: "ตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษร",
 
       confirmPassword: "ยืนยันรหัสผ่าน",
+
       confirmPasswordPlaceholder: "พิมพ์รหัสผ่านอีกครั้ง",
 
-      usernameHint: "ใช้ตัวอักษรภาษาอังกฤษ ตัวเลข จุด ขีดกลาง หรือขีดล่าง",
+      usernameHint: "ใช้ภาษาไทย ภาษาอังกฤษ ตัวเลข จุด ขีดกลาง หรือขีดล่าง",
 
       passwordHint: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
 
       confirmHint: "กรุณาพิมพ์รหัสผ่านด้วยตัวเองอีกครั้ง",
 
       register: "สมัครสมาชิก",
+
       registering: "กำลังสมัครสมาชิก...",
 
       alreadyAccount: "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ",
+
       back: "กลับหน้าแรก",
 
       required: "กรุณากรอกข้อมูลให้ครบทุกช่อง",
@@ -61,7 +69,7 @@ export default function RegisterPage() {
       usernameLength: "ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร",
 
       usernameInvalid:
-        "ชื่อผู้ใช้ใช้ได้เฉพาะภาษาอังกฤษ ตัวเลข จุด ขีดกลาง และขีดล่าง",
+        "ชื่อผู้ใช้ใช้ได้เฉพาะภาษาไทย ภาษาอังกฤษ ตัวเลข จุด ขีดกลาง และขีดล่าง",
 
       invalidEmail: "กรุณากรอกอีเมลให้ถูกต้อง",
 
@@ -91,29 +99,36 @@ export default function RegisterPage() {
 
     EN: {
       badge: "🌿 Virtual Herbarium",
+
       title: "Create Account",
+
       subtitle: "Create your Virtual Herbarium account",
 
       username: "Username",
-      usernamePlaceholder: "e.g. herbarium_user",
+
+      usernamePlaceholder: "e.g. Somchai or herbarium_user",
 
       email: "Email",
+
       emailPlaceholder: "example@gmail.com",
 
       password: "Password",
+
       passwordPlaceholder: "Create a password with at least 8 characters",
 
       confirmPassword: "Confirm Password",
+
       confirmPasswordPlaceholder: "Type your password again",
 
       usernameHint:
-        "Use English letters, numbers, dots, hyphens or underscores",
+        "Use Thai or English letters, numbers, dots, hyphens or underscores",
 
       passwordHint: "Password must contain at least 8 characters",
 
       confirmHint: "Please type your password again manually",
 
       register: "Create Account",
+
       registering: "Creating account...",
 
       alreadyAccount: "Already have an account? Login",
@@ -125,11 +140,11 @@ export default function RegisterPage() {
       usernameLength: "Username must be at least 3 characters",
 
       usernameInvalid:
-        "Username may only contain English letters, numbers, dots, hyphens and underscores",
+        "Username may only contain Thai or English letters, numbers, dots, hyphens and underscores",
 
       invalidEmail: "Please enter a valid email address",
 
-      passwordLength: "Password must be at least 8 characters",
+      passwordLength: "Password must contain at least 8 characters",
 
       passwordMismatch: "Passwords do not match",
 
@@ -177,6 +192,7 @@ export default function RegisterPage() {
     setSuccess("");
 
     const cleanUsername = username.trim();
+
     const cleanEmail = email.trim().toLowerCase();
 
     // --------------------------------------------------------
@@ -185,20 +201,35 @@ export default function RegisterPage() {
 
     if (!cleanUsername || !cleanEmail || !password || !confirmPassword) {
       setError(t.required);
+
       return;
     }
 
     // --------------------------------------------------------
-    // USERNAME
+    // USERNAME LENGTH
     // --------------------------------------------------------
 
     if (cleanUsername.length < 3) {
       setError(t.usernameLength);
+
       return;
     }
 
-    if (!/^[a-zA-Z0-9._-]+$/.test(cleanUsername)) {
+    // --------------------------------------------------------
+    // USERNAME VALIDATION
+    //
+    // รองรับ:
+    // ภาษาไทย
+    // ภาษาอังกฤษ
+    // ตัวเลข
+    // .
+    // _
+    // -
+    // --------------------------------------------------------
+
+    if (!/^[a-zA-Zก-๙0-9._-]+$/.test(cleanUsername)) {
       setError(t.usernameInvalid);
+
       return;
     }
 
@@ -208,6 +239,7 @@ export default function RegisterPage() {
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setError(t.invalidEmail);
+
       return;
     }
 
@@ -217,6 +249,7 @@ export default function RegisterPage() {
 
     if (password.length < 8) {
       setError(t.passwordLength);
+
       return;
     }
 
@@ -226,6 +259,7 @@ export default function RegisterPage() {
 
     if (password !== confirmPassword) {
       setError(t.passwordMismatch);
+
       return;
     }
 
@@ -238,6 +272,7 @@ export default function RegisterPage() {
 
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: cleanEmail,
+
         password,
 
         options: {
@@ -247,6 +282,7 @@ export default function RegisterPage() {
 
           // หลังจากกดยืนยัน Email
           // ให้กลับมาหน้า Login
+
           emailRedirectTo: `${window.location.origin}/login`,
         },
       });
@@ -258,7 +294,9 @@ export default function RegisterPage() {
       console.log("========== VIRTUAL HERBARIUM REGISTER ==========");
 
       console.log("User:", data?.user);
+
       console.log("Session:", data?.session);
+
       console.log("Supabase Error:", signUpError);
 
       console.log("=================================================");
@@ -281,7 +319,6 @@ export default function RegisterPage() {
         ) {
           setError(t.emailExists);
         } else {
-          // แสดง error จริงจาก Supabase
           setError(`${t.registerFailed}: ${message}`);
         }
 
@@ -294,6 +331,7 @@ export default function RegisterPage() {
 
       if (!data?.user) {
         setError(t.registerFailed);
+
         return;
       }
 
@@ -317,6 +355,7 @@ export default function RegisterPage() {
 
       setTimeout(() => {
         router.push("/account");
+
         router.refresh();
       }, 800);
     } catch (err) {
@@ -327,6 +366,10 @@ export default function RegisterPage() {
       setLoading(false);
     }
   }
+
+  // ==========================================================
+  // PAGE
+  // ==========================================================
 
   return (
     <main className="page">
@@ -356,9 +399,9 @@ export default function RegisterPage() {
 
               <div className="card p-6 shadow-xl sm:p-8">
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  {/* =================================================
+                  {/* =============================================
                       USERNAME
-                  ================================================= */}
+                  ============================================= */}
 
                   <div>
                     <label className="mb-2 block text-sm font-semibold">
@@ -381,9 +424,9 @@ export default function RegisterPage() {
                     </p>
                   </div>
 
-                  {/* =================================================
+                  {/* =============================================
                       EMAIL
-                  ================================================= */}
+                  ============================================= */}
 
                   <div>
                     <label className="mb-2 block text-sm font-semibold">
@@ -401,9 +444,9 @@ export default function RegisterPage() {
                     />
                   </div>
 
-                  {/* =================================================
+                  {/* =============================================
                       PASSWORD
-                  ================================================= */}
+                  ============================================= */}
 
                   <div>
                     <label className="mb-2 block text-sm font-semibold">
@@ -436,9 +479,9 @@ export default function RegisterPage() {
                     </p>
                   </div>
 
-                  {/* =================================================
+                  {/* =============================================
                       CONFIRM PASSWORD
-                  ================================================= */}
+                  ============================================= */}
 
                   <div>
                     <label className="mb-2 block text-sm font-semibold">
@@ -450,13 +493,6 @@ export default function RegisterPage() {
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        /*
-                         * ห้าม Copy
-                         * ห้าม Cut
-                         * ห้าม Paste
-                         * ห้าม Drag & Drop
-                         */
-
                         onPaste={blockClipboard}
                         onCopy={blockClipboard}
                         onCut={blockClipboard}
@@ -485,9 +521,9 @@ export default function RegisterPage() {
                     </p>
                   </div>
 
-                  {/* =================================================
+                  {/* =============================================
                       PASSWORD MATCH
-                  ================================================= */}
+                  ============================================= */}
 
                   {password && confirmPassword && (
                     <div
@@ -503,9 +539,9 @@ export default function RegisterPage() {
                     </div>
                   )}
 
-                  {/* =================================================
+                  {/* =============================================
                       ERROR
-                  ================================================= */}
+                  ============================================= */}
 
                   {error && (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
@@ -513,9 +549,9 @@ export default function RegisterPage() {
                     </div>
                   )}
 
-                  {/* =================================================
+                  {/* =============================================
                       SUCCESS
-                  ================================================= */}
+                  ============================================= */}
 
                   {success && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300">
@@ -532,9 +568,9 @@ export default function RegisterPage() {
                     </div>
                   )}
 
-                  {/* =================================================
+                  {/* =============================================
                       REGISTER BUTTON
-                  ================================================= */}
+                  ============================================= */}
 
                   <button
                     type="submit"
@@ -545,9 +581,9 @@ export default function RegisterPage() {
                   </button>
                 </form>
 
-                {/* ==================================================
+                {/* ===============================================
                     LOGIN
-                ================================================== */}
+                =============================================== */}
 
                 <div className="mt-6 border-t border-[var(--border)] pt-6 text-center">
                   <Link
@@ -558,9 +594,9 @@ export default function RegisterPage() {
                   </Link>
                 </div>
 
-                {/* ==================================================
+                {/* ===============================================
                     HOME
-                ================================================== */}
+                =============================================== */}
 
                 <div className="mt-4 text-center">
                   <Link

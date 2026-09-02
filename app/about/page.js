@@ -50,15 +50,6 @@ export default function AboutPage() {
       step4: "สำรวจคลังข้อมูล",
       step4Text: "ค้นหาและเรียนรู้ข้อมูลพรรณไม้จากคลังข้อมูล",
 
-      collection: "คลังพรรณไม้",
-      collectionText:
-        "ค้นพบข้อมูลพรรณไม้จากสถานที่และพื้นที่ต่าง ๆ ผ่านระบบคลังข้อมูลออนไลน์",
-
-      browse: "เข้าสู่คลังพรรณไม้",
-
-      ready: "พร้อมเริ่มต้นหรือยัง?",
-      readyText: "เริ่มสำรวจข้อมูลพรรณไม้ หรือสร้างข้อมูลของคุณเองได้ทันที",
-
       about: "เกี่ยวกับเรา",
     },
 
@@ -104,16 +95,6 @@ export default function AboutPage() {
       step4: "Explore Collection",
       step4Text: "Search and learn from the digital plant collection.",
 
-      collection: "Plant Collection",
-      collectionText:
-        "Discover plant records from different locations through the online collection.",
-
-      browse: "Browse Collection",
-
-      ready: "Ready to get started?",
-      readyText:
-        "Explore plant records or create your own digital specimen record.",
-
       about: "About Us",
     },
   };
@@ -128,7 +109,8 @@ export default function AboutPage() {
     >
       <Navbar />
 
-      {/* HERO */}
+      {/* ================= HERO ================= */}
+
       <section
         className={`relative overflow-hidden ${
           darkMode ? "bg-[#09150f]" : "bg-white"
@@ -191,7 +173,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* OVERVIEW */}
+      {/* ================= OVERVIEW ================= */}
+
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-24">
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
           <div>
@@ -226,7 +209,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* PURPOSE */}
+      {/* ================= PURPOSE ================= */}
+
       <section
         className={`border-y ${
           darkMode
@@ -274,7 +258,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* WORKFLOW */}
+      {/* ================= WORKFLOW ================= */}
+
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-24">
         <div className="text-center">
           <SectionLabel text={t.workflow} darkMode={darkMode} center />
@@ -320,99 +305,6 @@ export default function AboutPage() {
           />
         </div>
       </section>
-
-      {/* COLLECTION */}
-      <section
-        className={`mx-5 overflow-hidden rounded-[2rem] sm:mx-8 lg:mx-auto lg:max-w-7xl ${
-          darkMode ? "bg-[#0d1914]" : "bg-emerald-900"
-        }`}
-      >
-        <div className="grid items-center gap-10 px-7 py-12 sm:px-12 sm:py-16 lg:grid-cols-[1fr_auto] lg:px-16">
-          <div>
-            <p className="text-sm font-bold text-emerald-300">{t.collection}</p>
-
-            <h2 className="mt-4 text-3xl font-black text-white sm:text-4xl">
-              {isEnglish ? "Explore the collection." : "ออกสำรวจคลังพรรณไม้"}
-            </h2>
-
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-gray-300 sm:text-base">
-              {t.collectionText}
-            </p>
-          </div>
-
-          <Link
-            href="/plants"
-            className="rounded-xl bg-white px-6 py-3.5 text-center text-sm font-bold text-emerald-800 transition hover:bg-emerald-50"
-          >
-            {t.browse}
-          </Link>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="mx-auto max-w-7xl px-5 py-16 text-center sm:px-8 lg:py-24">
-        <h2
-          className={`text-3xl font-black sm:text-4xl ${
-            darkMode ? "text-white" : "text-slate-950"
-          }`}
-        >
-          {t.ready}
-        </h2>
-
-        <p
-          className={`mx-auto mt-4 max-w-2xl leading-7 ${
-            darkMode ? "text-gray-400" : "text-slate-500"
-          }`}
-        >
-          {t.readyText}
-        </p>
-
-        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link
-            href="/plants"
-            className="rounded-xl bg-emerald-600 px-7 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-700"
-          >
-            {t.explore}
-          </Link>
-
-          <Link
-            href="/register"
-            className={`rounded-xl border px-7 py-3.5 text-sm font-bold transition ${
-              darkMode
-                ? "border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-            }`}
-          >
-            {t.start}
-          </Link>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer
-        className={`border-t ${
-          darkMode
-            ? "border-white/10 bg-[#050b08]"
-            : "border-emerald-100 bg-white"
-        }`}
-      >
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-8 text-center text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:text-left">
-          <span className={darkMode ? "text-gray-500" : "text-gray-500"}>
-            © 2026 Virtual Herbarium
-          </span>
-
-          <Link
-            href="/plants"
-            className={
-              darkMode
-                ? "font-semibold text-emerald-400"
-                : "font-semibold text-emerald-700"
-            }
-          >
-            {t.collection}
-          </Link>
-        </div>
-      </footer>
     </main>
   );
 }
