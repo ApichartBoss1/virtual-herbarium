@@ -1,82 +1,139 @@
 @import "tailwindcss";
 
 /* =========================================================
-   VIRTUAL HERBARIUM
-   Modern Botanical Design System
+   🌲 VIRTUAL HERBARIUM
+   DARK FOREST DESIGN SYSTEM
    ========================================================= */
 
 :root {
-  --background: #f5f7f4;
-  --foreground: #172019;
+  /* ---------- BACKGROUND ---------- */
 
-  --card: #ffffff;
-  --card-hover: #fbfdfb;
+  --background: #07100b;
+  --background-deep: #030805;
 
-  --muted: #68736c;
-  --muted-light: #8b958e;
+  --foreground: #edf7ef;
+  --foreground-soft: #d7e7da;
 
-  --border: #e2e8e3;
-  --border-strong: #d2dbd4;
+  /* ---------- SURFACE ---------- */
 
-  --primary: #16734a;
-  --primary-hover: #105c3a;
-  --primary-soft: #e8f4ed;
+  --card: rgba(13, 27, 18, 0.88);
+  --card-hover: rgba(18, 38, 25, 0.94);
 
-  --secondary: #f0f4f1;
-  --secondary-hover: #e6ece8;
+  --surface: #0d1b12;
+  --surface-light: #13261a;
+  --surface-soft: rgba(20, 48, 30, 0.55);
 
-  --danger: #c74646;
-  --danger-soft: #fdf0f0;
+  /* ---------- TEXT ---------- */
 
-  --shadow-sm: 0 1px 2px rgba(20, 35, 25, 0.04);
+  --muted: #91a697;
+  --muted-light: #6f8575;
+
+  /* ---------- BORDER ---------- */
+
+  --border: rgba(117, 160, 127, 0.16);
+  --border-strong: rgba(117, 160, 127, 0.3);
+
+  /* ---------- GREEN ---------- */
+
+  --primary: #45b96f;
+  --primary-hover: #62cc88;
+
+  --primary-dark: #176b3b;
+
+  --primary-soft: rgba(69, 185, 111, 0.12);
+  --primary-glow: rgba(69, 185, 111, 0.2);
+
+  /* ---------- SECONDARY ---------- */
+
+  --secondary: #102117;
+  --secondary-hover: #172c1e;
+
+  /* ---------- DANGER ---------- */
+
+  --danger: #f07878;
+  --danger-soft: rgba(240, 120, 120, 0.1);
+
+  /* ---------- SHADOW ---------- */
+
+  --shadow-sm:
+    0 2px 8px rgba(0, 0, 0, 0.2);
+
   --shadow-md:
-    0 8px 24px rgba(20, 35, 25, 0.07);
+    0 12px 35px rgba(0, 0, 0, 0.3);
+
   --shadow-lg:
-    0 18px 45px rgba(20, 35, 25, 0.10);
+    0 25px 70px rgba(0, 0, 0, 0.45);
+
+  --shadow-green:
+    0 10px 40px rgba(69, 185, 111, 0.12);
+
+  /* ---------- RADIUS ---------- */
 
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 20px;
-  --radius-xl: 26px;
+  --radius-xl: 28px;
+
+  /* ---------- LAYOUT ---------- */
 
   --max-width: 1180px;
 }
 
-.dark {
-  --background: #0b120e;
-  --foreground: #edf4ef;
-
-  --card: #111a15;
-  --card-hover: #152019;
-
-  --muted: #9aa89f;
-  --muted-light: #748279;
-
-  --border: #26332b;
-  --border-strong: #344238;
-
-  --primary: #4caf7b;
-  --primary-hover: #63bd8c;
-  --primary-soft: #153524;
-
-  --secondary: #18211c;
-  --secondary-hover: #202b24;
-
-  --danger: #ef7777;
-  --danger-soft: #321919;
-
-  --shadow-sm:
-    0 1px 2px rgba(0, 0, 0, 0.25);
-
-  --shadow-md:
-    0 10px 30px rgba(0, 0, 0, 0.28);
-
-  --shadow-lg:
-    0 20px 50px rgba(0, 0, 0, 0.38);
-}
 
 /* =========================================================
-   BASE
+   🌿 LIGHT MODE
+   ========================================================= */
+
+.light {
+  --background: #f1f6f1;
+  --background-deep: #e6efe7;
+
+  --foreground: #142219;
+  --foreground-soft: #304437;
+
+  --card: rgba(255, 255, 255, 0.9);
+  --card-hover: #ffffff;
+
+  --surface: #edf4ee;
+  --surface-light: #e3eee5;
+  --surface-soft: rgba(223, 238, 226, 0.7);
+
+  --muted: #607267;
+  --muted-light: #819187;
+
+  --border: rgba(38, 82, 51, 0.13);
+  --border-strong: rgba(38, 82, 51, 0.22);
+
+  --primary: #187947;
+  --primary-hover: #116238;
+
+  --primary-dark: #0d5530;
+
+  --primary-soft: rgba(24, 121, 71, 0.09);
+  --primary-glow: rgba(24, 121, 71, 0.14);
+
+  --secondary: #e8f0e9;
+  --secondary-hover: #dce8de;
+
+  --danger: #c74747;
+  --danger-soft: rgba(199, 71, 71, 0.08);
+
+  --shadow-sm:
+    0 2px 8px rgba(25, 55, 34, 0.05);
+
+  --shadow-md:
+    0 12px 35px rgba(25, 55, 34, 0.09);
+
+  --shadow-lg:
+    0 25px 70px rgba(25, 55, 34, 0.13);
+
+  --shadow-green:
+    0 10px 40px rgba(24, 121, 71, 0.1);
+}
+
+
+/* =========================================================
+   🌲 BASE
    ========================================================= */
 
 * {
@@ -85,6 +142,7 @@
 
 html {
   scroll-behavior: smooth;
+  background: var(--background-deep);
 }
 
 html,
@@ -95,7 +153,24 @@ body {
 body {
   margin: 0;
 
-  background: var(--background);
+  background:
+    radial-gradient(
+      circle at 50% -10%,
+      rgba(55, 145, 82, 0.12),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 0% 40%,
+      rgba(27, 100, 55, 0.08),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 100% 70%,
+      rgba(38, 119, 68, 0.07),
+      transparent 30%
+    ),
+    var(--background);
+
   color: var(--foreground);
 
   font-family:
@@ -110,6 +185,11 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+
+/* =========================================================
+   🌿 ELEMENTS
+   ========================================================= */
 
 button,
 input,
@@ -128,36 +208,104 @@ a {
   text-decoration: none;
 }
 
-::selection {
-  background: rgba(22, 115, 74, 0.18);
+img {
+  max-width: 100%;
 }
 
-/* =========================================================
-   LAYOUT
-   ========================================================= */
-
-.page {
-  min-height: 100vh;
-  background: var(--background);
+::selection {
+  background: rgba(69, 185, 111, 0.25);
   color: var(--foreground);
 }
 
+
+/* =========================================================
+   🌲 PAGE
+   ========================================================= */
+
+.page {
+  position: relative;
+
+  min-height: 100vh;
+
+  overflow-x: hidden;
+
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(53, 139, 78, 0.12),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 10% 20%,
+      rgba(42, 116, 65, 0.07),
+      transparent 25%
+    ),
+    var(--background);
+
+  color: var(--foreground);
+}
+
+
+/*
+ * Ambient forest glow
+ */
+
+.page::before {
+  content: "";
+
+  position: fixed;
+
+  top: -200px;
+  left: 50%;
+
+  width: 700px;
+  height: 500px;
+
+  transform: translateX(-50%);
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      ellipse,
+      rgba(58, 166, 91, 0.09),
+      transparent 70%
+    );
+
+  filter: blur(20px);
+
+  z-index: 0;
+}
+
+
+/* =========================================================
+   🌿 CONTAINER
+   ========================================================= */
+
 .container {
-  width: min(calc(100% - 40px),
-      var(--max-width));
+  position: relative;
+  z-index: 1;
+
+  width: min(
+    calc(100% - 40px),
+    var(--max-width)
+  );
 
   margin-inline: auto;
 }
 
 @media (max-width: 640px) {
   .container {
-    width: min(calc(100% - 28px),
-        var(--max-width));
+    width: min(
+      calc(100% - 28px),
+      var(--max-width)
+    );
   }
 }
 
+
 /* =========================================================
-   TYPOGRAPHY
+   🌲 TYPOGRAPHY
    ========================================================= */
 
 h1,
@@ -170,15 +318,20 @@ h6 {
 
   color: var(--foreground);
 
-  letter-spacing: -0.025em;
+  letter-spacing: -0.035em;
 }
 
 p {
   margin: 0;
 }
 
+strong {
+  color: var(--foreground);
+}
+
+
 /* =========================================================
-   HERO
+   🌿 HERO
    ========================================================= */
 
 .hero {
@@ -186,48 +339,165 @@ p {
 
   overflow: hidden;
 
+  isolation: isolate;
+
   background:
-    radial-gradient(circle at 80% 10%,
-      rgba(22, 115, 74, 0.08),
-      transparent 30%),
-    radial-gradient(circle at 10% 40%,
-      rgba(52, 132, 92, 0.05),
-      transparent 30%),
+    radial-gradient(
+      circle at 75% 5%,
+      rgba(62, 166, 91, 0.15),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 15% 45%,
+      rgba(38, 113, 62, 0.11),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(6, 16, 10, 0.2),
+      transparent
+    ),
     var(--background);
 }
 
+
+/*
+ * Soft forest light
+ */
+
+.hero::before {
+  content: "";
+
+  position: absolute;
+
+  width: 450px;
+  height: 450px;
+
+  top: -220px;
+  right: -120px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(75, 190, 105, 0.14),
+      transparent 70%
+    );
+
+  filter: blur(30px);
+
+  pointer-events: none;
+}
+
+
+/*
+ * Bottom forest atmosphere
+ */
+
+.hero::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  height: 160px;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      to top,
+      rgba(3, 9, 5, 0.3),
+      transparent
+    );
+}
+
+
 /* =========================================================
-   CARD
+   🌿 CARD
    ========================================================= */
 
 .card {
+  position: relative;
+
+  overflow: hidden;
+
   border: 1px solid var(--border);
 
   border-radius: var(--radius-lg);
 
-  background: var(--card);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.025),
+      transparent 45%
+    ),
+    var(--card);
 
   box-shadow: var(--shadow-sm);
 
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
   transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease,
-    background 180ms ease;
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    background 220ms ease;
+}
+
+
+/*
+ * Green reflection
+ */
+
+.card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(89, 190, 116, 0.35),
+      transparent
+    );
+
+  opacity: 0.7;
 }
 
 .card-hover:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
 
   border-color: var(--border-strong);
 
-  background: var(--card-hover);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(72, 160, 91, 0.05),
+      transparent 50%
+    ),
+    var(--card-hover);
 
-  box-shadow: var(--shadow-md);
+  box-shadow:
+    var(--shadow-md),
+    var(--shadow-green);
 }
 
+
 /* =========================================================
-   BUTTON SYSTEM
+   🌲 BUTTON SYSTEM
    ========================================================= */
 
 .btn {
@@ -247,7 +517,8 @@ p {
   padding: 0 18px;
 
   font-size: 14px;
-  font-weight: 650;
+
+  font-weight: 700;
 
   line-height: 1;
 
@@ -265,7 +536,7 @@ p {
 }
 
 .btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .btn:active {
@@ -274,33 +545,53 @@ p {
 
 .btn:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+
+  opacity: 0.5;
+
   transform: none;
 }
 
-/* Primary */
+
+/* =========================================================
+   🌿 PRIMARY BUTTON
+   ========================================================= */
 
 .btn-primary {
-  border-color: var(--primary);
+  border-color: rgba(91, 208, 126, 0.35);
 
-  background: var(--primary);
+  background:
+    linear-gradient(
+      135deg,
+      #23844d,
+      #176d3e
+    );
 
   color: #ffffff;
 
   box-shadow:
-    0 5px 14px rgba(22, 115, 74, 0.18);
+    0 8px 24px rgba(23, 109, 62, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary:hover {
-  border-color: var(--primary-hover);
+  border-color: rgba(105, 222, 138, 0.5);
 
-  background: var(--primary-hover);
+  background:
+    linear-gradient(
+      135deg,
+      #2b9658,
+      #1b7a45
+    );
 
   box-shadow:
-    0 8px 20px rgba(22, 115, 74, 0.24);
+    0 12px 30px rgba(39, 151, 83, 0.32),
+    0 0 25px rgba(69, 185, 111, 0.1);
 }
 
-/* Secondary */
+
+/* =========================================================
+   🌲 SECONDARY BUTTON
+   ========================================================= */
 
 .btn-secondary {
   border-color: var(--border);
@@ -310,6 +601,8 @@ p {
   color: var(--foreground);
 
   box-shadow: var(--shadow-sm);
+
+  backdrop-filter: blur(10px);
 }
 
 .btn-secondary:hover {
@@ -320,7 +613,10 @@ p {
   box-shadow: var(--shadow-md);
 }
 
-/* Ghost */
+
+/* =========================================================
+   🌿 GHOST BUTTON
+   ========================================================= */
 
 .btn-ghost {
   border-color: transparent;
@@ -336,7 +632,10 @@ p {
   color: var(--foreground);
 }
 
-/* Danger */
+
+/* =========================================================
+   🚨 DANGER BUTTON
+   ========================================================= */
 
 .btn-danger {
   border-color: transparent;
@@ -347,11 +646,14 @@ p {
 }
 
 .btn-danger:hover {
-  border-color: rgba(199, 70, 70, 0.2);
+  border-color: rgba(240, 120, 120, 0.2);
+
+  background: rgba(240, 120, 120, 0.15);
 }
 
+
 /* =========================================================
-   INPUT
+   🌿 INPUT
    ========================================================= */
 
 .input {
@@ -363,7 +665,13 @@ p {
 
   border-radius: 12px;
 
-  background: var(--card);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.025),
+      transparent
+    ),
+    var(--surface);
 
   color: var(--foreground);
 
@@ -373,12 +681,14 @@ p {
 
   font-size: 14px;
 
-  box-shadow: var(--shadow-sm);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02);
 
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
-    background 160ms ease;
+    background 160ms ease,
+    transform 160ms ease;
 }
 
 .input::placeholder {
@@ -390,10 +700,19 @@ p {
 }
 
 .input:focus {
-  border-color: var(--primary);
+  border-color: rgba(69, 185, 111, 0.65);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(69, 185, 111, 0.045),
+      transparent
+    ),
+    var(--surface);
 
   box-shadow:
-    0 0 0 3px rgba(22, 115, 74, 0.12);
+    0 0 0 3px rgba(69, 185, 111, 0.1),
+    0 0 25px rgba(69, 185, 111, 0.05);
 }
 
 textarea.input {
@@ -402,14 +721,17 @@ textarea.input {
   padding: 12px 14px;
 
   line-height: 1.6;
+
+  resize: vertical;
 }
 
 select.input {
   cursor: pointer;
 }
 
+
 /* =========================================================
-   BADGE
+   🌱 BADGE
    ========================================================= */
 
 .badge {
@@ -420,31 +742,43 @@ select.input {
   align-items: center;
   justify-content: center;
 
+  gap: 6px;
+
   border-radius: 999px;
 
-  padding: 0 11px;
+  padding: 0 12px;
 
   font-size: 11px;
-  font-weight: 750;
+
+  font-weight: 800;
 
   letter-spacing: 0.08em;
 
   text-transform: uppercase;
+
+  backdrop-filter: blur(10px);
 }
 
 .badge-green {
-  border: 1px solid rgba(22, 115, 74, 0.14);
+  border: 1px solid rgba(69, 185, 111, 0.2);
 
-  background: var(--primary-soft);
+  background:
+    rgba(69, 185, 111, 0.1);
 
-  color: var(--primary);
+  color: #64d38b;
+
+  box-shadow:
+    0 0 20px rgba(69, 185, 111, 0.05);
 }
 
+
 /* =========================================================
-   SECTION
+   🌲 SECTION
    ========================================================= */
 
 .section {
+  position: relative;
+
   padding: 88px 0;
 }
 
@@ -454,26 +788,34 @@ select.input {
   }
 }
 
+
 /* =========================================================
-   DIVIDER
+   🌿 DIVIDER
    ========================================================= */
 
 .divider {
-  height: 1px;
-
   width: 100%;
 
-  background: var(--border);
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      var(--border-strong),
+      transparent
+    );
 }
 
+
 /* =========================================================
-   LINK
+   🍃 LINK
    ========================================================= */
 
 .text-link {
   color: var(--primary);
 
-  font-weight: 650;
+  font-weight: 700;
 
   transition:
     color 160ms ease,
@@ -486,8 +828,9 @@ select.input {
   opacity: 0.9;
 }
 
+
 /* =========================================================
-   ICON BUTTON
+   🌿 ICON BUTTON
    ========================================================= */
 
 .icon-btn {
@@ -503,17 +846,21 @@ select.input {
 
   border-radius: 11px;
 
-  background: var(--card);
+  background:
+    rgba(15, 31, 20, 0.7);
 
   color: var(--muted);
 
   cursor: pointer;
 
+  backdrop-filter: blur(10px);
+
   transition:
     background 160ms ease,
     color 160ms ease,
     border-color 160ms ease,
-    transform 160ms ease;
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .icon-btn:hover {
@@ -523,37 +870,59 @@ select.input {
 
   color: var(--foreground);
 
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 5px 18px rgba(0, 0, 0, 0.2);
 }
 
+
 /* =========================================================
-   PLANT CARD
+   🌱 PLANT CARD
    ========================================================= */
 
 .plant-card {
+  position: relative;
+
   overflow: hidden;
 
   border: 1px solid var(--border);
 
   border-radius: var(--radius-lg);
 
-  background: var(--card);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(69, 185, 111, 0.025),
+      transparent 50%
+    ),
+    var(--card);
 
   box-shadow: var(--shadow-sm);
 
+  backdrop-filter: blur(12px);
+
   transition:
-    transform 200ms ease,
-    box-shadow 200ms ease,
-    border-color 200ms ease;
+    transform 250ms ease,
+    box-shadow 250ms ease,
+    border-color 250ms ease;
 }
 
 .plant-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px);
 
-  border-color: var(--border-strong);
+  border-color:
+    rgba(78, 177, 105, 0.3);
 
-  box-shadow: var(--shadow-lg);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 40px rgba(69, 185, 111, 0.06);
 }
+
+
+/* =========================================================
+   🌿 PLANT IMAGE
+   ========================================================= */
 
 .plant-card-image {
   position: relative;
@@ -562,7 +931,35 @@ select.input {
 
   overflow: hidden;
 
-  background: var(--secondary);
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(64, 141, 82, 0.2),
+      transparent 65%
+    ),
+    var(--surface);
+}
+
+
+/*
+ * Image dark overlay
+ */
+
+.plant-card-image::after {
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      to top,
+      rgba(2, 8, 4, 0.3),
+      transparent 50%
+    );
 }
 
 .plant-card-image img {
@@ -572,18 +969,25 @@ select.input {
   object-fit: cover;
 
   transition:
-    transform 500ms cubic-bezier(0.2,
+    transform 600ms cubic-bezier(
+      0.2,
       0.8,
       0.2,
-      1);
+      1
+    ),
+    filter 400ms ease;
 }
 
-.plant-card:hover .plant-card-image img {
-  transform: scale(1.035);
+.plant-card:hover
+.plant-card-image img {
+  transform: scale(1.06);
+
+  filter: saturate(1.08);
 }
+
 
 /* =========================================================
-   SOFT PANEL
+   🌿 SOFT PANEL
    ========================================================= */
 
 .soft-panel {
@@ -591,13 +995,22 @@ select.input {
 
   border-radius: var(--radius-lg);
 
-  background: var(--secondary);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(69, 185, 111, 0.04),
+      transparent 60%
+    ),
+    var(--secondary);
 
   padding: 24px;
+
+  box-shadow: var(--shadow-sm);
 }
 
+
 /* =========================================================
-   TABLE
+   🌲 TABLE
    ========================================================= */
 
 .table-wrap {
@@ -610,6 +1023,8 @@ select.input {
   border-radius: var(--radius-lg);
 
   background: var(--card);
+
+  box-shadow: var(--shadow-sm);
 }
 
 table {
@@ -619,13 +1034,14 @@ table {
 }
 
 th {
-  background: var(--secondary);
+  background:
+    rgba(69, 185, 111, 0.045);
 
   color: var(--muted);
 
   font-size: 12px;
 
-  font-weight: 700;
+  font-weight: 800;
 
   text-align: left;
 
@@ -641,14 +1057,154 @@ td {
 
 td {
   font-size: 14px;
+
+  color: var(--foreground-soft);
+}
+
+tbody tr {
+  transition:
+    background 160ms ease;
+}
+
+tbody tr:hover {
+  background:
+    rgba(69, 185, 111, 0.035);
 }
 
 tr:last-child td {
   border-bottom: 0;
 }
 
+
 /* =========================================================
-   SCROLLBAR
+   🌿 FOREST GLOW UTILITY
+   ========================================================= */
+
+.forest-glow {
+  position: relative;
+}
+
+.forest-glow::before {
+  content: "";
+
+  position: absolute;
+
+  inset: -30px;
+
+  z-index: -1;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(69, 185, 111, 0.12),
+      transparent 70%
+    );
+
+  filter: blur(25px);
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   🌱 FLOATING LEAF / DECORATION
+   ========================================================= */
+
+.forest-particle {
+  position: absolute;
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: rgba(90, 190, 112, 0.35);
+
+  box-shadow:
+    0 0 15px rgba(69, 185, 111, 0.35);
+
+  pointer-events: none;
+
+  animation:
+    forestFloat 7s ease-in-out infinite;
+}
+
+@keyframes forestFloat {
+  0%,
+  100% {
+    transform:
+      translate3d(0, 0, 0)
+      scale(1);
+
+    opacity: 0.35;
+  }
+
+  50% {
+    transform:
+      translate3d(0, -15px, 0)
+      scale(1.2);
+
+    opacity: 0.7;
+  }
+}
+
+
+/* =========================================================
+   🌲 PAGE ENTER ANIMATION
+   ========================================================= */
+
+.page-enter {
+  animation:
+    pageEnter 500ms ease both;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* =========================================================
+   🌿 FADE UP
+   ========================================================= */
+
+.fade-up {
+  animation:
+    fadeUp 600ms ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* =========================================================
+   🌲 SCROLLBAR
    ========================================================= */
 
 ::-webkit-scrollbar {
@@ -657,21 +1213,28 @@ tr:last-child td {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background:
+    var(--background-deep);
 }
 
 ::-webkit-scrollbar-thumb {
   border-radius: 999px;
 
-  background: var(--border-strong);
+  background:
+    rgba(105, 137, 112, 0.35);
+
+  border:
+    2px solid var(--background-deep);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-light);
+  background:
+    rgba(105, 137, 112, 0.55);
 }
 
+
 /* =========================================================
-   FOCUS
+   🌿 FOCUS
    ========================================================= */
 
 :focus-visible {
@@ -680,8 +1243,61 @@ tr:last-child td {
   outline-offset: 3px;
 }
 
+
 /* =========================================================
-   REDUCED MOTION
+   🌲 IMAGE FALLBACK
+   ========================================================= */
+
+img {
+  background:
+    linear-gradient(
+      135deg,
+      var(--surface),
+      var(--secondary)
+    );
+}
+
+
+/* =========================================================
+   🌿 DISABLED
+   ========================================================= */
+
+button:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.55;
+}
+
+
+/* =========================================================
+   🌲 MOBILE
+   ========================================================= */
+
+@media (max-width: 640px) {
+  .card {
+    border-radius: 18px;
+  }
+
+  .plant-card {
+    border-radius: 18px;
+  }
+
+  .section {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+
+  .btn {
+    min-height: 46px;
+  }
+}
+
+
+/* =========================================================
+   🌿 REDUCED MOTION
    ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
@@ -693,7 +1309,9 @@ tr:last-child td {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+
     animation-iteration-count: 1 !important;
+
     transition-duration: 0.01ms !important;
   }
 }
