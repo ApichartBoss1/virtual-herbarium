@@ -14,6 +14,10 @@ import { useSiteSettings } from "@/components/SiteSettingsContext";
 const FOREST_IMAGE =
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=90";
 
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default function ForgotPasswordPage() {
   const { language, darkMode } = useSiteSettings();
 
@@ -151,8 +155,8 @@ export default function ForgotPasswordPage() {
      SEND RESET EMAIL
   ===================================================== */
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
 
     if (loading) return;
 
@@ -231,10 +235,10 @@ export default function ForgotPasswordPage() {
   ===================================================== */
 
   return (
-    <main className="page overflow-hidden">
+    <main className="page overflow-x-hidden">
       <Navbar />
 
-      <section className="relative isolate min-h-[calc(100svh-78px)] overflow-hidden">
+      <section className="relative isolate min-h-[calc(100dvh-58px)] overflow-x-hidden md:min-h-[calc(100dvh-78px)]">
         {/* =================================================
             FOREST BACKGROUND
         ================================================= */}
@@ -251,8 +255,8 @@ export default function ForgotPasswordPage() {
         <div
           className={`absolute inset-0 -z-20 ${
             darkMode
-              ? "bg-[linear-gradient(90deg,rgba(2,9,5,0.96)_0%,rgba(3,14,7,0.86)_48%,rgba(3,14,7,0.70)_100%)]"
-              : "bg-[linear-gradient(90deg,rgba(238,246,236,0.96)_0%,rgba(238,246,236,0.90)_48%,rgba(235,244,233,0.74)_100%)]"
+              ? "bg-[linear-gradient(180deg,rgba(2,9,5,0.92)_0%,rgba(3,14,7,0.86)_50%,rgba(3,14,7,0.94)_100%)] md:bg-[linear-gradient(90deg,rgba(2,9,5,0.96)_0%,rgba(3,14,7,0.86)_48%,rgba(3,14,7,0.70)_100%)]"
+              : "bg-[linear-gradient(180deg,rgba(238,246,236,0.94)_0%,rgba(238,246,236,0.91)_50%,rgba(235,244,233,0.96)_100%)] md:bg-[linear-gradient(90deg,rgba(238,246,236,0.96)_0%,rgba(238,246,236,0.90)_48%,rgba(235,244,233,0.74)_100%)]"
           }`}
         />
 
@@ -291,55 +295,63 @@ export default function ForgotPasswordPage() {
         ================================================= */}
 
         <div className="container">
-          <div className="grid min-h-[calc(100svh-78px)] items-center gap-12 py-12 lg:grid-cols-[1fr_0.85fr] lg:gap-20 lg:py-16">
+          <div className="grid min-h-[calc(100dvh-58px)] items-center gap-8 py-6 sm:py-8 md:min-h-[calc(100dvh-78px)] md:py-10 lg:grid-cols-[1.02fr_0.88fr] lg:gap-16 lg:py-10 xl:gap-20 xl:py-12">
             {/* =================================================
                 LEFT INTRO
             ================================================= */}
 
-            <div className="hidden max-w-xl lg:block page-enter">
+            <div className="hidden max-w-[650px] lg:block page-enter">
               {/* BADGE */}
 
-              <div
-                className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
-                  darkMode
-                    ? "border-emerald-300/20 bg-black/20 text-emerald-200"
-                    : "border-emerald-950/15 bg-white/55 text-emerald-900"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
+              <div>
+                <div
+                  className={`inline-flex min-h-[42px] items-center gap-3 rounded-full border px-5 py-2.5 backdrop-blur-xl ${
                     darkMode
-                      ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
-                      : "bg-emerald-700"
+                      ? "border-emerald-300/20 bg-black/20 text-emerald-200"
+                      : "border-emerald-950/15 bg-white/55 text-emerald-900"
                   }`}
-                />
+                >
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      darkMode
+                        ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
+                        : "bg-emerald-700"
+                    }`}
+                  />
 
-                <span className="text-[10px] font-black tracking-[0.22em]">
-                  {t.eyebrow}
-                </span>
+                  <span className="text-[10px] font-black tracking-[0.22em]">
+                    {t.eyebrow}
+                  </span>
+                </div>
               </div>
 
-              {/* TITLE */}
+              {/* =================================================
+                  TITLE AREA
+              ================================================= */}
 
-              <h1
-                className={`mt-7 text-5xl font-black leading-[1.03] tracking-[-0.05em] xl:text-6xl ${
-                  darkMode ? "text-white" : "text-[#102218]"
-                }`}
-              >
-                {t.forestTitle}
-              </h1>
+              <div className="pt-7">
+                <h1
+                  className={`max-w-[650px] pb-1 font-black tracking-[-0.035em] ${
+                    isEnglish
+                      ? "text-5xl leading-[1.08] xl:text-6xl"
+                      : "text-[3.05rem] leading-[1.25] xl:text-[3.65rem] xl:leading-[1.23]"
+                  } ${darkMode ? "text-white" : "text-[#102218]"}`}
+                >
+                  {t.forestTitle}
+                </h1>
 
-              <p
-                className={`mt-6 max-w-lg text-base leading-8 ${
-                  darkMode ? "text-[#bdccc1]" : "text-[#475f4e]"
-                }`}
-              >
-                {t.forestDescription}
-              </p>
+                <p
+                  className={`mt-4 max-w-[610px] text-[16px] font-medium leading-[1.9] xl:text-[17px] ${
+                    darkMode ? "text-[#bdccc1]" : "text-[#475f4e]"
+                  }`}
+                >
+                  {t.forestDescription}
+                </p>
+              </div>
 
               {/* RECOVERY STEPS */}
 
-              <div className="mt-10 space-y-3">
+              <div className="mt-7 grid max-w-[610px] gap-3">
                 <RecoveryStep
                   darkMode={darkMode}
                   number="01"
@@ -370,33 +382,35 @@ export default function ForgotPasswordPage() {
                 FORGOT PASSWORD CARD
             ================================================= */}
 
-            <div className="mx-auto w-full max-w-md page-enter">
+            <div className="mx-auto w-full max-w-[460px] page-enter">
               {/* MOBILE BADGE */}
 
-              <div className="mb-6 text-center lg:hidden">
+              <div className="mb-4 text-center sm:mb-5 lg:hidden">
                 <div
-                  className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
+                  className={`inline-flex min-h-[40px] items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
                     darkMode
                       ? "border-emerald-300/20 bg-black/20 text-emerald-200"
                       : "border-emerald-950/15 bg-white/55 text-emerald-900"
                   }`}
                 >
                   <span
-                    className={`h-2 w-2 rounded-full ${
+                    className={`h-2 w-2 shrink-0 rounded-full ${
                       darkMode ? "bg-emerald-400" : "bg-emerald-700"
                     }`}
                   />
 
                   <span className="text-[10px] font-black tracking-[0.2em]">
-                    VIRTUAL HERBARIUM
+                    {t.eyebrow}
                   </span>
                 </div>
               </div>
 
+              {/* CARD */}
+
               <div
-                className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl backdrop-blur-2xl sm:p-8 ${
+                className={`relative overflow-hidden rounded-[24px] border p-5 shadow-2xl backdrop-blur-2xl min-[390px]:p-6 sm:rounded-[28px] sm:p-7 lg:p-8 ${
                   darkMode
-                    ? "border-white/10 bg-[#07130c]/85 shadow-black/40"
+                    ? "border-white/10 bg-[#07130c]/84 shadow-black/40"
                     : "border-white/60 bg-white/80 shadow-emerald-950/15"
                 }`}
               >
@@ -419,44 +433,48 @@ export default function ForgotPasswordPage() {
                 />
 
                 <div className="relative">
-                  {/* ICON */}
-
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
-                      darkMode
-                        ? "border-emerald-400/15 bg-emerald-400/10 text-emerald-300"
-                        : "border-emerald-800/10 bg-emerald-800/10 text-emerald-800"
-                    }`}
-                  >
-                    <KeyIcon className="h-6 w-6" />
-                  </div>
-
                   {/* HEADER */}
 
-                  <h2
-                    className={`mt-6 text-3xl font-black tracking-[-0.04em] ${
-                      darkMode ? "text-white" : "text-[#14271a]"
-                    }`}
-                  >
-                    {t.title}
-                  </h2>
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+                        darkMode
+                          ? "border-emerald-400/15 bg-emerald-400/10 text-emerald-300"
+                          : "border-emerald-800/10 bg-emerald-800/10 text-emerald-800"
+                      }`}
+                    >
+                      <KeyIcon className="h-6 w-6" />
+                    </div>
 
-                  <p
-                    className={`mt-2 text-sm leading-6 ${
-                      darkMode ? "text-gray-400" : "text-slate-500"
-                    }`}
-                  >
-                    {t.subtitle}
-                  </p>
+                    <div className="min-w-0">
+                      <h2
+                        className={`text-[2rem] font-black leading-tight tracking-[-0.04em] sm:text-3xl ${
+                          darkMode ? "text-white" : "text-[#14271a]"
+                        }`}
+                      >
+                        {t.title}
+                      </h2>
+
+                      <p
+                        className={`mt-1.5 text-sm leading-6 ${
+                          darkMode ? "text-gray-400" : "text-slate-500"
+                        }`}
+                      >
+                        {t.subtitle}
+                      </p>
+                    </div>
+                  </div>
 
                   {/* =================================================
                       SUCCESS SCREEN
                   ================================================= */}
 
                   {success ? (
-                    <div className="mt-8">
+                    <div className="mt-6 sm:mt-7">
                       <div
-                        className={`rounded-2xl border p-5 ${
+                        role="status"
+                        aria-live="polite"
+                        className={`rounded-2xl border p-4 sm:p-5 ${
                           darkMode
                             ? "border-emerald-400/15 bg-emerald-400/[0.06]"
                             : "border-emerald-200 bg-emerald-50"
@@ -473,7 +491,7 @@ export default function ForgotPasswordPage() {
                         </div>
 
                         <h3
-                          className={`mt-5 text-lg font-black ${
+                          className={`mt-4 text-lg font-black ${
                             darkMode ? "text-emerald-200" : "text-emerald-900"
                           }`}
                         >
@@ -494,7 +512,7 @@ export default function ForgotPasswordPage() {
                       <button
                         type="button"
                         onClick={handleUseAnotherEmail}
-                        className={`mt-4 flex min-h-12 w-full items-center justify-center rounded-xl border px-5 text-sm font-bold transition ${
+                        className={`mt-4 flex min-h-[48px] w-full items-center justify-center rounded-xl border px-5 text-sm font-bold transition active:scale-[0.99] ${
                           darkMode
                             ? "border-white/10 bg-white/[0.035] text-gray-200 hover:bg-white/[0.08]"
                             : "border-emerald-950/10 bg-white text-slate-700 hover:bg-emerald-50"
@@ -508,7 +526,11 @@ export default function ForgotPasswordPage() {
                        FORM
                     ================================================= */
 
-                    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                    <form
+                      onSubmit={handleSubmit}
+                      aria-busy={loading}
+                      className="mt-6 space-y-5 sm:mt-7"
+                    >
                       {/* EMAIL */}
 
                       <div>
@@ -531,10 +553,19 @@ export default function ForgotPasswordPage() {
                           <input
                             id="forgot-email"
                             type="email"
+                            inputMode="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(event) => {
+                              setEmail(event.target.value);
+
+                              if (error) {
+                                setError("");
+                              }
+                            }}
                             placeholder={t.placeholder}
                             autoComplete="email"
+                            autoCapitalize="none"
+                            spellCheck={false}
                             disabled={loading}
                             required
                             className={`h-[52px] w-full rounded-xl border pl-12 pr-4 text-sm outline-none transition ${
@@ -568,7 +599,7 @@ export default function ForgotPasswordPage() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.28)] transition hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-[0_16px_35px_rgba(6,78,45,0.35)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+                        className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.28)] transition active:scale-[0.99] hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-[0_16px_35px_rgba(6,78,45,0.35)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
                       >
                         {loading ? (
                           <>
@@ -592,7 +623,7 @@ export default function ForgotPasswordPage() {
                   ================================================= */}
 
                   <div
-                    className={`mt-7 flex items-start gap-3 rounded-xl p-4 ${
+                    className={`mt-5 flex items-start gap-3 rounded-xl p-3.5 sm:mt-6 sm:p-4 ${
                       darkMode ? "bg-white/[0.025]" : "bg-emerald-950/[0.035]"
                     }`}
                   >
@@ -626,13 +657,13 @@ export default function ForgotPasswordPage() {
                   ================================================= */}
 
                   <div
-                    className={`mt-7 border-t pt-6 text-center ${
+                    className={`mt-5 border-t pt-5 text-center sm:mt-6 sm:pt-6 ${
                       darkMode ? "border-white/10" : "border-emerald-950/10"
                     }`}
                   >
                     <Link
                       href="/login"
-                      className={`text-sm font-black transition ${
+                      className={`inline-flex min-h-9 items-center justify-center text-sm font-black transition ${
                         darkMode
                           ? "text-emerald-300 hover:text-emerald-200"
                           : "text-emerald-700 hover:text-emerald-800"
@@ -662,7 +693,7 @@ export default function ForgotPasswordPage() {
 function RecoveryStep({ darkMode, number, icon, title, text }) {
   return (
     <div
-      className={`flex items-center gap-4 rounded-2xl border p-4 backdrop-blur-xl ${
+      className={`flex min-h-[76px] items-center gap-4 rounded-2xl border p-4 backdrop-blur-xl ${
         darkMode
           ? "border-white/10 bg-black/15"
           : "border-emerald-950/10 bg-white/45"
@@ -689,7 +720,7 @@ function RecoveryStep({ darkMode, number, icon, title, text }) {
           </p>
 
           <span
-            className={`text-[9px] font-black tracking-[0.14em] ${
+            className={`shrink-0 text-[9px] font-black tracking-[0.14em] ${
               darkMode ? "text-emerald-400/70" : "text-emerald-700/70"
             }`}
           >
@@ -728,7 +759,9 @@ function KeyIcon({ className = "" }) {
       <circle cx="8" cy="12" r="4" />
 
       <path d="M12 12h9" />
+
       <path d="M18 12v3" />
+
       <path d="M15 12v2" />
     </svg>
   );
@@ -806,6 +839,7 @@ function AlertIcon({ className = "" }) {
       <circle cx="12" cy="12" r="9" />
 
       <path d="M12 8v5" />
+
       <path d="M12 16.5h.01" />
     </svg>
   );

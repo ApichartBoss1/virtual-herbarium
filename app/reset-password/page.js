@@ -15,6 +15,10 @@ import { useSiteSettings } from "@/components/SiteSettingsContext";
 const FOREST_IMAGE =
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=90";
 
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default function ResetPasswordPage() {
   const router = useRouter();
 
@@ -50,28 +54,19 @@ export default function ResetPasswordPage() {
 
   const text = {
     TH: {
-      eyebrow: "ACCOUNT RECOVERY",
-
-      forestTitle: "สร้างกุญแจใหม่สำหรับบัญชีของคุณ",
-
-      forestDescription:
-        "ตั้งรหัสผ่านใหม่เพื่อกลับเข้าสู่พื้นที่ส่วนตัวของ Virtual Herbarium และจัดการข้อมูลพรรณไม้ของคุณต่อได้อย่างปลอดภัย",
+      eyebrow: "PASSWORD RECOVERY",
 
       title: "ตั้งรหัสผ่านใหม่",
 
-      subtitle: "กำหนดรหัสผ่านใหม่สำหรับบัญชี Virtual Herbarium",
+      subtitle: "กรอกรหัสผ่านใหม่สำหรับบัญชี Virtual Herbarium ของคุณ",
 
       password: "รหัสผ่านใหม่",
 
       confirmPassword: "ยืนยันรหัสผ่านใหม่",
 
-      passwordPlaceholder: "รหัสผ่านอย่างน้อย 8 ตัวอักษร",
+      passwordPlaceholder: "อย่างน้อย 6 ตัวอักษร",
 
-      confirmPlaceholder: "พิมพ์รหัสผ่านใหม่อีกครั้ง",
-
-      passwordHint: "ใช้รหัสผ่านอย่างน้อย 8 ตัวอักษร",
-
-      confirmHint: "กรอกรหัสผ่านเดิมอีกครั้งเพื่อยืนยัน",
+      confirmPlaceholder: "กรอกรหัสผ่านใหม่อีกครั้ง",
 
       save: "บันทึกรหัสผ่านใหม่",
 
@@ -79,70 +74,52 @@ export default function ResetPasswordPage() {
 
       checking: "กำลังตรวจสอบลิงก์รีเซ็ต...",
 
-      required: "กรุณากรอกรหัสผ่านให้ครบทั้งสองช่อง",
+      required: "กรุณากรอกรหัสผ่านให้ครบทุกช่อง",
 
-      short: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+      short: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
 
       mismatch: "รหัสผ่านทั้งสองช่องไม่ตรงกัน",
 
-      match: "รหัสผ่านตรงกัน",
-
       invalidLink: "ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว",
 
-      success: "เปลี่ยนรหัสผ่านสำเร็จ กำลังพาคุณกลับไปเข้าสู่ระบบ",
+      success: "เปลี่ยนรหัสผ่านสำเร็จแล้ว",
+
+      successText: "กำลังพาคุณกลับไปหน้าเข้าสู่ระบบ",
 
       error: "ไม่สามารถเปลี่ยนรหัสผ่านได้",
 
-      login: "กลับไปหน้าเข้าสู่ระบบ",
+      login: "กลับเข้าสู่ระบบ",
 
       forgot: "ขอลิงก์รีเซ็ตรหัสผ่านใหม่",
 
-      invalidTitle: "ไม่สามารถใช้ลิงก์นี้ได้",
+      showPassword: "แสดงรหัสผ่าน",
 
-      invalidDescription:
-        "ลิงก์สำหรับตั้งรหัสผ่านใหม่อาจหมดอายุ ถูกใช้งานไปแล้ว หรือไม่ถูกต้อง กรุณาขอลิงก์ใหม่อีกครั้ง",
+      hidePassword: "ซ่อนรหัสผ่าน",
+
+      passwordMatch: "รหัสผ่านตรงกัน",
+
+      passwordNotMatch: "รหัสผ่านยังไม่ตรงกัน",
 
       secure: "SECURE PASSWORD RESET",
 
       secureText:
-        "เมื่อเปลี่ยนรหัสผ่านสำเร็จ ระบบจะออกจากบัญชีและให้คุณเข้าสู่ระบบใหม่ด้วยรหัสผ่านที่เพิ่งตั้ง",
-
-      feature1: "Secure Access",
-
-      feature1Text: "สร้างรหัสผ่านใหม่สำหรับบัญชีของคุณ",
-
-      feature2: "Protected Records",
-
-      feature2Text: "กลับมาจัดการข้อมูลพรรณไม้ของคุณอย่างปลอดภัย",
-
-      feature3: "Fresh Session",
-
-      feature3Text: "เข้าสู่ระบบใหม่หลังตั้งรหัสผ่านเรียบร้อยแล้ว",
+        "หลังจากบันทึกรหัสผ่านใหม่ คุณจะต้องเข้าสู่ระบบอีกครั้งด้วยรหัสผ่านใหม่",
     },
 
     EN: {
-      eyebrow: "ACCOUNT RECOVERY",
-
-      forestTitle: "Create a new key for your account",
-
-      forestDescription:
-        "Set a new password to return to your Virtual Herbarium workspace and continue managing your botanical records securely.",
+      eyebrow: "PASSWORD RECOVERY",
 
       title: "Reset Password",
 
-      subtitle: "Create a new password for your Virtual Herbarium account.",
+      subtitle: "Enter a new password for your Virtual Herbarium account.",
 
       password: "New Password",
 
       confirmPassword: "Confirm New Password",
 
-      passwordPlaceholder: "At least 8 characters",
+      passwordPlaceholder: "At least 6 characters",
 
       confirmPlaceholder: "Enter your new password again",
-
-      passwordHint: "Use a password with at least 8 characters",
-
-      confirmHint: "Enter the same password again to confirm it",
 
       save: "Save New Password",
 
@@ -152,65 +129,102 @@ export default function ResetPasswordPage() {
 
       required: "Please complete both password fields",
 
-      short: "Password must be at least 8 characters",
+      short: "Password must be at least 6 characters",
 
       mismatch: "Passwords do not match",
 
-      match: "Passwords match",
-
       invalidLink: "The password reset link is invalid or expired.",
 
-      success: "Password changed successfully. Taking you back to login.",
+      success: "Your password has been changed successfully.",
+
+      successText: "Taking you back to the login page",
 
       error: "Unable to change your password",
 
       login: "Back to Login",
 
-      forgot: "Request a New Reset Link",
+      forgot: "Request a new reset link",
 
-      invalidTitle: "This link cannot be used",
+      showPassword: "Show password",
 
-      invalidDescription:
-        "The password reset link may have expired, already been used, or be invalid. Please request a new reset link.",
+      hidePassword: "Hide password",
+
+      passwordMatch: "Passwords match",
+
+      passwordNotMatch: "Passwords do not match",
 
       secure: "SECURE PASSWORD RESET",
 
       secureText:
-        "After your password is changed, you will be signed out and asked to sign in again with your new password.",
-
-      feature1: "Secure Access",
-
-      feature1Text: "Create a new password for your account",
-
-      feature2: "Protected Records",
-
-      feature2Text: "Return securely to your botanical records",
-
-      feature3: "Fresh Session",
-
-      feature3Text: "Sign in again after your password has been changed",
+        "After saving your new password, you will need to sign in again using the new password.",
     },
   };
 
   const t = isEnglish ? text.EN : text.TH;
 
   /* =====================================================
-     CHECK RECOVERY SESSION
+     CHECK RESET SESSION
   ===================================================== */
 
   useEffect(() => {
     let mounted = true;
+    let recoveryDetected = false;
 
-    async function checkSession() {
-      setLoading(true);
-      setError("");
+    const hashParams = new URLSearchParams(
+      window.location.hash.replace(/^#/, ""),
+    );
 
+    const searchParams = new URLSearchParams(window.location.search);
+
+    const urlError = hashParams.get("error") || searchParams.get("error");
+
+    const urlErrorCode =
+      hashParams.get("error_code") || searchParams.get("error_code");
+
+    const recoveryType = hashParams.get("type") || searchParams.get("type");
+
+    const hasRecoveryCode = searchParams.has("code");
+
+    /*
+     * ถ้า Supabase ส่ง error กลับมา เช่น
+     * otp_expired / access_denied
+     * ให้หยุดทันที
+     */
+
+    if (urlError || urlErrorCode) {
+      setError(t.invalidLink);
+      setReady(false);
+      setLoading(false);
+
+      return;
+    }
+
+    /*
+     * Implicit flow:
+     * #type=recovery
+     *
+     * PKCE flow:
+     * ?code=...
+     */
+
+    const hasRecoveryUrl = recoveryType === "recovery" || hasRecoveryCode;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
+      if (event === "PASSWORD_RECOVERY" && session) {
+        recoveryDetected = true;
+
+        setError("");
+        setReady(true);
+        setLoading(false);
+      }
+    });
+
+    async function checkRecoverySession() {
       try {
-        /*
-         * เมื่อผู้ใช้กดลิงก์ Recovery จาก Email
-         * Supabase จะสร้าง recovery session ให้กับหน้าเว็บ
-         */
-
         const { data, error: sessionError } = await supabase.auth.getSession();
 
         if (!mounted) return;
@@ -218,59 +232,77 @@ export default function ResetPasswordPage() {
         if (sessionError) {
           console.error("Reset session error:", sessionError);
 
-          setReady(false);
           setError(t.invalidLink);
+          setReady(false);
+          setLoading(false);
 
           return;
         }
 
-        if (!data?.session) {
-          setReady(false);
-          setError(t.invalidLink);
+        /*
+         * สำคัญ:
+         * จะไม่ยอมรับ session ปกติที่ผู้ใช้ login ค้างไว้
+         *
+         * ต้องมีหลักฐานจาก URL ว่าเป็น recovery เท่านั้น
+         */
+
+        if (hasRecoveryUrl && data?.session) {
+          recoveryDetected = true;
+
+          setError("");
+          setReady(true);
+          setLoading(false);
 
           return;
         }
 
-        setReady(true);
+        /*
+         * ให้ Supabase มีเวลาประมวลผล
+         * PASSWORD_RECOVERY event ก่อน
+         */
+
+        window.setTimeout(() => {
+          if (!mounted) return;
+
+          if (!recoveryDetected) {
+            setError(t.invalidLink);
+            setReady(false);
+            setLoading(false);
+          }
+        }, 800);
       } catch (err) {
         console.error("Reset password session check failed:", err);
 
-        if (!mounted) {
-          return;
-        }
-
-        setReady(false);
+        if (!mounted) return;
 
         setError(t.invalidLink);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        setReady(false);
+        setLoading(false);
       }
     }
 
-    checkSession();
+    checkRecoverySession();
 
     return () => {
       mounted = false;
+
+      subscription.unsubscribe();
     };
-  }, [language]);
+  }, [t.invalidLink]);
 
   /* =====================================================
-     SAVE NEW PASSWORD
+     RESET PASSWORD
   ===================================================== */
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
 
     if (saving) return;
 
     setError("");
     setSuccess("");
 
-    /* -----------------------------------------------------
-       REQUIRED
-    ----------------------------------------------------- */
+    /* REQUIRED */
 
     if (!password || !confirmPassword) {
       setError(t.required);
@@ -278,19 +310,15 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    /* -----------------------------------------------------
-       PASSWORD LENGTH
-    ----------------------------------------------------- */
+    /* LENGTH */
 
-    if (password.length < 8) {
+    if (password.length < 6) {
       setError(t.short);
 
       return;
     }
 
-    /* -----------------------------------------------------
-       PASSWORD MATCH
-    ----------------------------------------------------- */
+    /* MATCH */
 
     if (password !== confirmPassword) {
       setError(t.mismatch);
@@ -314,23 +342,18 @@ export default function ResetPasswordPage() {
       setSuccess(t.success);
 
       setPassword("");
+
       setConfirmPassword("");
 
       /*
-       * หลังเปลี่ยนรหัสผ่าน
-       * ออกจาก session ปัจจุบัน
-       * แล้วให้ผู้ใช้ Login ใหม่
+       * Sign out after password reset.
+       * User will need to login with the new password.
        */
 
-      const { error: signOutError } = await supabase.auth.signOut();
-
-      if (signOutError) {
-        console.error("Sign out after password reset error:", signOutError);
-      }
+      await supabase.auth.signOut();
 
       setTimeout(() => {
-        router.push("/login");
-
+        router.replace("/login");
         router.refresh();
       }, 1200);
     } catch (err) {
@@ -343,28 +366,43 @@ export default function ResetPasswordPage() {
   }
 
   /* =====================================================
-     PASSWORD MATCH STATE
+     PASSWORD STATUS
   ===================================================== */
 
-  const passwordHasValue = password.length > 0;
-
-  const confirmHasValue = confirmPassword.length > 0;
+  const hasConfirmPassword = confirmPassword.length > 0;
 
   const passwordsMatch =
-    passwordHasValue && confirmHasValue && password === confirmPassword;
+    password && confirmPassword && password === confirmPassword;
 
-  const passwordsDoNotMatch =
-    passwordHasValue && confirmHasValue && password !== confirmPassword;
+  /* =====================================================
+     CLEAR ERROR
+  ===================================================== */
+
+  function handlePasswordChange(value) {
+    setPassword(value);
+
+    if (error) {
+      setError("");
+    }
+  }
+
+  function handleConfirmPasswordChange(value) {
+    setConfirmPassword(value);
+
+    if (error) {
+      setError("");
+    }
+  }
 
   /* =====================================================
      PAGE
   ===================================================== */
 
   return (
-    <main className="page overflow-hidden">
+    <main className="page overflow-x-hidden">
       <Navbar />
 
-      <section className="relative isolate min-h-[calc(100svh-78px)] overflow-hidden">
+      <section className="relative isolate min-h-[calc(100dvh-58px)] overflow-x-hidden md:min-h-[calc(100dvh-78px)]">
         {/* =================================================
             FOREST BACKGROUND
         ================================================= */}
@@ -381,8 +419,8 @@ export default function ResetPasswordPage() {
         <div
           className={`absolute inset-0 -z-20 ${
             darkMode
-              ? "bg-[linear-gradient(90deg,rgba(2,9,5,0.96)_0%,rgba(3,14,7,0.86)_48%,rgba(3,14,7,0.70)_100%)]"
-              : "bg-[linear-gradient(90deg,rgba(238,246,236,0.96)_0%,rgba(238,246,236,0.90)_48%,rgba(235,244,233,0.74)_100%)]"
+              ? "bg-[linear-gradient(180deg,rgba(2,9,5,0.92)_0%,rgba(3,14,7,0.86)_50%,rgba(3,14,7,0.95)_100%)] md:bg-[linear-gradient(90deg,rgba(2,9,5,0.95)_0%,rgba(3,14,7,0.86)_50%,rgba(3,14,7,0.72)_100%)]"
+              : "bg-[linear-gradient(180deg,rgba(238,246,236,0.94)_0%,rgba(238,246,236,0.91)_50%,rgba(235,244,233,0.97)_100%)] md:bg-[linear-gradient(90deg,rgba(238,246,236,0.96)_0%,rgba(238,246,236,0.91)_50%,rgba(235,244,233,0.76)_100%)]"
           }`}
         />
 
@@ -391,12 +429,12 @@ export default function ResetPasswordPage() {
         <div
           className={`absolute inset-0 -z-10 ${
             darkMode
-              ? "bg-[linear-gradient(180deg,rgba(2,8,4,0.18)_0%,transparent_40%,rgba(2,8,4,0.52)_100%)]"
-              : "bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,transparent_45%,rgba(230,240,228,0.48)_100%)]"
+              ? "bg-[linear-gradient(180deg,rgba(2,8,4,0.16)_0%,transparent_42%,rgba(2,8,4,0.54)_100%)]"
+              : "bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,transparent_45%,rgba(230,240,228,0.48)_100%)]"
           }`}
         />
 
-        {/* LIGHT */}
+        {/* FOREST LIGHT */}
 
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
           <div
@@ -409,11 +447,11 @@ export default function ResetPasswordPage() {
 
           <div className="forest-particle left-[12%] top-[22%]" />
 
-          <div className="forest-particle left-[36%] top-[64%] [animation-delay:-2s]" />
+          <div className="forest-particle left-[35%] top-[65%] [animation-delay:-2s]" />
 
           <div className="forest-particle right-[20%] top-[30%] [animation-delay:-4s]" />
 
-          <div className="forest-particle right-[8%] top-[67%] [animation-delay:-6s]" />
+          <div className="forest-particle right-[8%] top-[68%] [animation-delay:-6s]" />
         </div>
 
         {/* =================================================
@@ -421,103 +459,40 @@ export default function ResetPasswordPage() {
         ================================================= */}
 
         <div className="container">
-          <div className="grid min-h-[calc(100svh-78px)] items-center gap-12 py-12 lg:grid-cols-[1fr_0.85fr] lg:gap-20 lg:py-16">
-            {/* =================================================
-                LEFT
-            ================================================= */}
+          <div className="flex min-h-[calc(100dvh-58px)] items-center justify-center py-6 sm:py-8 md:min-h-[calc(100dvh-78px)] md:py-10 lg:py-12">
+            <div className="w-full max-w-[500px] page-enter">
+              {/* BADGE */}
 
-            <div className="hidden max-w-xl lg:block page-enter">
-              <div
-                className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
-                  darkMode
-                    ? "border-emerald-300/20 bg-black/20 text-emerald-200"
-                    : "border-emerald-950/15 bg-white/55 text-emerald-900"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    darkMode
-                      ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
-                      : "bg-emerald-700"
-                  }`}
-                />
-
-                <span className="text-[10px] font-black tracking-[0.22em]">
-                  {t.eyebrow}
-                </span>
-              </div>
-
-              <h1
-                className={`mt-7 text-5xl font-black leading-[1.03] tracking-[-0.05em] xl:text-6xl ${
-                  darkMode ? "text-white" : "text-[#102218]"
-                }`}
-              >
-                {t.forestTitle}
-              </h1>
-
-              <p
-                className={`mt-6 max-w-lg text-base leading-8 ${
-                  darkMode ? "text-[#bdccc1]" : "text-[#475f4e]"
-                }`}
-              >
-                {t.forestDescription}
-              </p>
-
-              <div className="mt-10 space-y-3">
-                <FeatureRow
-                  darkMode={darkMode}
-                  icon={<LockIcon className="h-5 w-5" />}
-                  title={t.feature1}
-                  text={t.feature1Text}
-                />
-
-                <FeatureRow
-                  darkMode={darkMode}
-                  icon={<LeafIcon className="h-5 w-5" />}
-                  title={t.feature2}
-                  text={t.feature2Text}
-                />
-
-                <FeatureRow
-                  darkMode={darkMode}
-                  icon={<RefreshIcon className="h-5 w-5" />}
-                  title={t.feature3}
-                  text={t.feature3Text}
-                />
-              </div>
-            </div>
-
-            {/* =================================================
-                RESET CARD
-            ================================================= */}
-
-            <div className="mx-auto w-full max-w-md page-enter">
-              {/* MOBILE BADGE */}
-
-              <div className="mb-6 text-center lg:hidden">
+              <div className="mb-4 text-center sm:mb-5">
                 <div
-                  className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
+                  className={`inline-flex min-h-[40px] items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
                     darkMode
                       ? "border-emerald-300/20 bg-black/20 text-emerald-200"
                       : "border-emerald-950/15 bg-white/55 text-emerald-900"
                   }`}
                 >
                   <span
-                    className={`h-2 w-2 rounded-full ${
-                      darkMode ? "bg-emerald-400" : "bg-emerald-700"
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      darkMode
+                        ? "bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.8)]"
+                        : "bg-emerald-700"
                     }`}
                   />
 
                   <span className="text-[10px] font-black tracking-[0.2em]">
-                    VIRTUAL HERBARIUM
+                    {t.eyebrow}
                   </span>
                 </div>
               </div>
 
+              {/* =================================================
+                  CARD
+              ================================================= */}
+
               <div
-                className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl backdrop-blur-2xl sm:p-8 ${
+                className={`relative overflow-hidden rounded-[24px] border p-5 shadow-2xl backdrop-blur-2xl min-[390px]:p-6 sm:rounded-[28px] sm:p-7 lg:p-8 ${
                   darkMode
-                    ? "border-white/10 bg-[#07130c]/85 shadow-black/40"
+                    ? "border-white/10 bg-[#07130c]/84 shadow-black/40"
                     : "border-white/60 bg-white/80 shadow-emerald-950/15"
                 }`}
               >
@@ -542,31 +517,35 @@ export default function ResetPasswordPage() {
                 <div className="relative">
                   {/* HEADER */}
 
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
-                      darkMode
-                        ? "border-emerald-400/15 bg-emerald-400/10 text-emerald-300"
-                        : "border-emerald-800/10 bg-emerald-800/10 text-emerald-800"
-                    }`}
-                  >
-                    <KeyIcon className="h-6 w-6" />
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+                        darkMode
+                          ? "border-emerald-400/15 bg-emerald-400/10 text-emerald-300"
+                          : "border-emerald-800/10 bg-emerald-800/10 text-emerald-800"
+                      }`}
+                    >
+                      <LockKeyIcon className="h-6 w-6" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h1
+                        className={`text-[2rem] font-black leading-tight tracking-[-0.04em] sm:text-3xl ${
+                          darkMode ? "text-white" : "text-[#14271a]"
+                        }`}
+                      >
+                        {t.title}
+                      </h1>
+
+                      <p
+                        className={`mt-1.5 text-sm leading-6 ${
+                          darkMode ? "text-gray-400" : "text-slate-500"
+                        }`}
+                      >
+                        {t.subtitle}
+                      </p>
+                    </div>
                   </div>
-
-                  <h2
-                    className={`mt-6 text-3xl font-black tracking-[-0.04em] ${
-                      darkMode ? "text-white" : "text-[#14271a]"
-                    }`}
-                  >
-                    {t.title}
-                  </h2>
-
-                  <p
-                    className={`mt-2 text-sm leading-6 ${
-                      darkMode ? "text-gray-400" : "text-slate-500"
-                    }`}
-                  >
-                    {t.subtitle}
-                  </p>
 
                   {/* =================================================
                       LOADING
@@ -574,18 +553,14 @@ export default function ResetPasswordPage() {
 
                   {loading && (
                     <div className="py-12 text-center">
-                      <div
-                        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${
-                          darkMode
-                            ? "bg-emerald-400/[0.07] text-emerald-300"
-                            : "bg-emerald-800/[0.07] text-emerald-800"
+                      <LoadingIcon
+                        className={`mx-auto h-9 w-9 animate-spin ${
+                          darkMode ? "text-emerald-300" : "text-emerald-700"
                         }`}
-                      >
-                        <LoadingIcon className="h-6 w-6 animate-spin" />
-                      </div>
+                      />
 
                       <p
-                        className={`mt-5 text-sm ${
+                        className={`mt-4 text-sm font-medium ${
                           darkMode ? "text-gray-400" : "text-slate-500"
                         }`}
                       >
@@ -599,53 +574,60 @@ export default function ResetPasswordPage() {
                   ================================================= */}
 
                   {!loading && !ready && (
-                    <div className="pt-8">
+                    <div className="mt-6 sm:mt-7">
                       <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                        role="alert"
+                        className={`rounded-2xl border p-4 sm:p-5 ${
                           darkMode
-                            ? "bg-red-400/10 text-red-300"
-                            : "bg-red-100 text-red-700"
+                            ? "border-red-400/15 bg-red-400/[0.06]"
+                            : "border-red-200 bg-red-50"
                         }`}
                       >
-                        <AlertIcon className="h-6 w-6" />
+                        <div
+                          className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                            darkMode
+                              ? "bg-red-400/10 text-red-300"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          <AlertIcon className="h-5 w-5" />
+                        </div>
+
+                        <h2
+                          className={`mt-4 text-base font-black ${
+                            darkMode ? "text-red-200" : "text-red-800"
+                          }`}
+                        >
+                          {t.invalidLink}
+                        </h2>
                       </div>
-
-                      <h3
-                        className={`mt-5 text-xl font-black ${
-                          darkMode ? "text-white" : "text-[#14271a]"
-                        }`}
-                      >
-                        {t.invalidTitle}
-                      </h3>
-
-                      <p
-                        className={`mt-3 text-sm leading-7 ${
-                          darkMode ? "text-gray-400" : "text-slate-500"
-                        }`}
-                      >
-                        {error || t.invalidDescription}
-                      </p>
 
                       <Link
                         href="/forgot-password"
-                        className="mt-7 flex min-h-[50px] w-full items-center justify-center rounded-xl bg-emerald-700 px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-emerald-600"
+                        className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.24)] transition active:scale-[0.99] hover:-translate-y-0.5 hover:bg-emerald-600"
                       >
+                        <RefreshIcon className="h-5 w-5" />
+
                         {t.forgot}
                       </Link>
                     </div>
                   )}
 
                   {/* =================================================
-                      FORM
+                      RESET FORM
                   ================================================= */}
 
                   {!loading && ready && (
-                    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                      {/* NEW PASSWORD */}
+                    <form
+                      onSubmit={handleSubmit}
+                      aria-busy={saving}
+                      className="mt-6 space-y-5 sm:mt-7"
+                    >
+                      {/* PASSWORD */}
 
                       <div>
                         <label
-                          htmlFor="new-password"
+                          htmlFor="reset-password"
                           className={`mb-2 block text-sm font-bold ${
                             darkMode ? "text-gray-200" : "text-slate-700"
                           }`}
@@ -661,41 +643,63 @@ export default function ResetPasswordPage() {
                           />
 
                           <input
-                            id="new-password"
+                            id="reset-password"
                             type={showPassword ? "text" : "password"}
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(event) =>
+                              handlePasswordChange(event.target.value)
+                            }
                             placeholder={t.passwordPlaceholder}
                             autoComplete="new-password"
-                            minLength={8}
+                            minLength={6}
                             disabled={saving}
                             required
-                            className={`${inputClass(darkMode)} pr-12`}
+                            className={`h-[52px] w-full rounded-xl border pl-12 pr-12 text-sm outline-none transition ${
+                              darkMode
+                                ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 hover:border-white/15 focus:border-emerald-400/45 focus:bg-black/30 focus:ring-4 focus:ring-emerald-400/[0.06]"
+                                : "border-emerald-950/10 bg-white/70 text-slate-900 placeholder:text-slate-400 hover:border-emerald-950/20 focus:border-emerald-700/35 focus:bg-white focus:ring-4 focus:ring-emerald-700/[0.06]"
+                            }`}
                           />
 
-                          <PasswordButton
-                            darkMode={darkMode}
-                            visible={showPassword}
+                          <button
+                            type="button"
                             onClick={() =>
                               setShowPassword((current) => !current)
                             }
-                          />
+                            aria-label={
+                              showPassword ? t.hidePassword : t.showPassword
+                            }
+                            title={
+                              showPassword ? t.hidePassword : t.showPassword
+                            }
+                            className={`absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg transition ${
+                              darkMode
+                                ? "text-gray-500 hover:bg-white/[0.06] hover:text-gray-200"
+                                : "text-slate-400 hover:bg-emerald-950/[0.05] hover:text-slate-700"
+                            }`}
+                          >
+                            {showPassword ? (
+                              <EyeOffIcon className="h-5 w-5" />
+                            ) : (
+                              <EyeIcon className="h-5 w-5" />
+                            )}
+                          </button>
                         </div>
 
                         <p
-                          className={`mt-2 text-xs ${
+                          className={`mt-1.5 text-[10px] leading-5 ${
                             darkMode ? "text-gray-500" : "text-slate-500"
                           }`}
                         >
-                          {t.passwordHint}
+                          {t.short}
                         </p>
                       </div>
 
-                      {/* CONFIRM */}
+                      {/* CONFIRM PASSWORD */}
 
                       <div>
                         <label
-                          htmlFor="confirm-new-password"
+                          htmlFor="reset-confirm-password"
                           className={`mb-2 block text-sm font-bold ${
                             darkMode ? "text-gray-200" : "text-slate-700"
                           }`}
@@ -711,58 +715,79 @@ export default function ResetPasswordPage() {
                           />
 
                           <input
-                            id="confirm-new-password"
+                            id="reset-confirm-password"
                             type={showConfirmPassword ? "text" : "password"}
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            onChange={(event) =>
+                              handleConfirmPasswordChange(event.target.value)
+                            }
                             placeholder={t.confirmPlaceholder}
                             autoComplete="new-password"
-                            minLength={8}
+                            minLength={6}
                             disabled={saving}
                             required
-                            className={`${inputClass(darkMode)} pr-12`}
+                            className={`h-[52px] w-full rounded-xl border pl-12 pr-12 text-sm outline-none transition ${
+                              darkMode
+                                ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 hover:border-white/15 focus:border-emerald-400/45 focus:bg-black/30 focus:ring-4 focus:ring-emerald-400/[0.06]"
+                                : "border-emerald-950/10 bg-white/70 text-slate-900 placeholder:text-slate-400 hover:border-emerald-950/20 focus:border-emerald-700/35 focus:bg-white focus:ring-4 focus:ring-emerald-700/[0.06]"
+                            }`}
                           />
 
-                          <PasswordButton
-                            darkMode={darkMode}
-                            visible={showConfirmPassword}
+                          <button
+                            type="button"
                             onClick={() =>
                               setShowConfirmPassword((current) => !current)
                             }
-                          />
+                            aria-label={
+                              showConfirmPassword
+                                ? t.hidePassword
+                                : t.showPassword
+                            }
+                            title={
+                              showConfirmPassword
+                                ? t.hidePassword
+                                : t.showPassword
+                            }
+                            className={`absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg transition ${
+                              darkMode
+                                ? "text-gray-500 hover:bg-white/[0.06] hover:text-gray-200"
+                                : "text-slate-400 hover:bg-emerald-950/[0.05] hover:text-slate-700"
+                            }`}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOffIcon className="h-5 w-5" />
+                            ) : (
+                              <EyeIcon className="h-5 w-5" />
+                            )}
+                          </button>
                         </div>
-
-                        <p
-                          className={`mt-2 text-xs ${
-                            darkMode ? "text-gray-500" : "text-slate-500"
-                          }`}
-                        >
-                          {t.confirmHint}
-                        </p>
                       </div>
 
                       {/* PASSWORD MATCH */}
 
-                      {(passwordsMatch || passwordsDoNotMatch) && (
+                      {hasConfirmPassword && (
                         <div
-                          className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
+                          role="status"
+                          className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 ${
                             passwordsMatch
                               ? darkMode
                                 ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-200"
                                 : "border-emerald-200 bg-emerald-50 text-emerald-800"
                               : darkMode
-                                ? "border-red-400/15 bg-red-400/[0.06] text-red-200"
+                                ? "border-red-400/15 bg-red-400/[0.05] text-red-200"
                                 : "border-red-200 bg-red-50 text-red-700"
                           }`}
                         >
                           {passwordsMatch ? (
-                            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                            <CheckIcon className="h-4 w-4 shrink-0" />
                           ) : (
-                            <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                            <AlertIcon className="h-4 w-4 shrink-0" />
                           )}
 
-                          <p className="text-sm">
-                            {passwordsMatch ? t.match : t.mismatch}
+                          <p className="text-xs font-bold">
+                            {passwordsMatch
+                              ? t.passwordMatch
+                              : t.passwordNotMatch}
                           </p>
                         </div>
                       )}
@@ -789,6 +814,7 @@ export default function ResetPasswordPage() {
                       {success && (
                         <div
                           role="status"
+                          aria-live="polite"
                           className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
                             darkMode
                               ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-200"
@@ -797,7 +823,13 @@ export default function ResetPasswordPage() {
                         >
                           <CheckIcon className="mt-0.5 h-4 w-4 shrink-0" />
 
-                          <p className="text-sm leading-6">{success}</p>
+                          <div>
+                            <p className="text-sm font-black">{success}</p>
+
+                            <p className="mt-1 text-xs leading-5 opacity-75">
+                              {t.successText}
+                            </p>
+                          </div>
                         </div>
                       )}
 
@@ -806,7 +838,7 @@ export default function ResetPasswordPage() {
                       <button
                         type="submit"
                         disabled={saving || Boolean(success)}
-                        className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.28)] transition hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-[0_16px_35px_rgba(6,78,45,0.35)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+                        className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.28)] transition active:scale-[0.99] hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-[0_16px_35px_rgba(6,78,45,0.35)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
                       >
                         {saving ? (
                           <>
@@ -816,7 +848,7 @@ export default function ResetPasswordPage() {
                           </>
                         ) : (
                           <>
-                            <KeyIcon className="h-5 w-5" />
+                            <SaveIcon className="h-5 w-5" />
 
                             {t.save}
                           </>
@@ -826,12 +858,12 @@ export default function ResetPasswordPage() {
                   )}
 
                   {/* =================================================
-                      SECURITY NOTE
+                      SECURITY
                   ================================================= */}
 
                   {!loading && ready && (
                     <div
-                      className={`mt-7 flex items-start gap-3 rounded-xl p-4 ${
+                      className={`mt-5 flex items-start gap-3 rounded-xl p-3.5 sm:mt-6 sm:p-4 ${
                         darkMode ? "bg-white/[0.025]" : "bg-emerald-950/[0.035]"
                       }`}
                     >
@@ -866,13 +898,13 @@ export default function ResetPasswordPage() {
                   ================================================= */}
 
                   <div
-                    className={`mt-7 border-t pt-6 text-center ${
+                    className={`mt-5 border-t pt-5 text-center sm:mt-6 sm:pt-6 ${
                       darkMode ? "border-white/10" : "border-emerald-950/10"
                     }`}
                   >
                     <Link
                       href="/login"
-                      className={`text-sm font-black transition ${
+                      className={`inline-flex min-h-9 items-center justify-center text-sm font-black transition ${
                         darkMode
                           ? "text-emerald-300 hover:text-emerald-200"
                           : "text-emerald-700 hover:text-emerald-800"
@@ -896,91 +928,10 @@ export default function ResetPasswordPage() {
 }
 
 /* =========================================================
-   INPUT CLASS
-========================================================= */
-
-function inputClass(darkMode) {
-  return `h-[52px] w-full rounded-xl border pl-12 pr-4 text-sm outline-none transition ${
-    darkMode
-      ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 hover:border-white/15 focus:border-emerald-400/45 focus:bg-black/30 focus:ring-4 focus:ring-emerald-400/[0.06]"
-      : "border-emerald-950/10 bg-white/70 text-slate-900 placeholder:text-slate-400 hover:border-emerald-950/20 focus:border-emerald-700/35 focus:bg-white focus:ring-4 focus:ring-emerald-700/[0.06]"
-  }`;
-}
-
-/* =========================================================
-   PASSWORD BUTTON
-========================================================= */
-
-function PasswordButton({ darkMode, visible, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={visible ? "Hide password" : "Show password"}
-      className={`absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg transition ${
-        darkMode
-          ? "text-gray-500 hover:bg-white/[0.06] hover:text-gray-200"
-          : "text-slate-400 hover:bg-emerald-950/[0.05] hover:text-slate-700"
-      }`}
-    >
-      {visible ? (
-        <EyeOffIcon className="h-5 w-5" />
-      ) : (
-        <EyeIcon className="h-5 w-5" />
-      )}
-    </button>
-  );
-}
-
-/* =========================================================
-   FEATURE ROW
-========================================================= */
-
-function FeatureRow({ darkMode, icon, title, text }) {
-  return (
-    <div
-      className={`flex items-center gap-4 rounded-2xl border p-4 backdrop-blur-xl ${
-        darkMode
-          ? "border-white/10 bg-black/15"
-          : "border-emerald-950/10 bg-white/45"
-      }`}
-    >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-800/10 text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <div>
-        <p
-          className={`text-sm font-black ${
-            darkMode ? "text-white" : "text-[#173321]"
-          }`}
-        >
-          {title}
-        </p>
-
-        <p
-          className={`mt-0.5 text-xs ${
-            darkMode ? "text-gray-400" : "text-slate-500"
-          }`}
-        >
-          {text}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
    ICONS
 ========================================================= */
 
-function KeyIcon({ className = "" }) {
+function LockKeyIcon({ className = "" }) {
   return (
     <svg
       className={className}
@@ -992,11 +943,13 @@ function KeyIcon({ className = "" }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <circle cx="8" cy="12" r="4" />
+      <rect x="4" y="10" width="16" height="11" rx="2" />
 
-      <path d="M12 12h9" />
-      <path d="M18 12v3" />
-      <path d="M15 12v2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+
+      <circle cx="12" cy="15" r="1.2" />
+
+      <path d="M12 16.2V18" />
     </svg>
   );
 }
@@ -1077,6 +1030,7 @@ function AlertIcon({ className = "" }) {
       <circle cx="12" cy="12" r="9" />
 
       <path d="M12 8v5" />
+
       <path d="M12 16.5h.01" />
     </svg>
   );
@@ -1120,25 +1074,6 @@ function ShieldIcon({ className = "" }) {
   );
 }
 
-function LeafIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
-
-      <path d="M4 20c4-5 7-7 13-10" />
-    </svg>
-  );
-}
-
 function RefreshIcon({ className = "" }) {
   return (
     <svg
@@ -1146,16 +1081,39 @@ function RefreshIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M20 11a8.1 8.1 0 0 0-14.9-3.9L3 10" />
-      <path d="M3 4v6h6" />
+      <path d="M20 6v5h-5" />
 
-      <path d="M4 13a8.1 8.1 0 0 0 14.9 3.9L21 14" />
-      <path d="M21 20v-6h-6" />
+      <path d="M4 18v-5h5" />
+
+      <path d="M6.1 9a7 7 0 0 1 11.8-2.5L20 11" />
+
+      <path d="M17.9 15a7 7 0 0 1-11.8 2.5L4 13" />
+    </svg>
+  );
+}
+
+function SaveIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 3h12l2 2v16H5Z" />
+
+      <path d="M8 3v6h8V3" />
+
+      <path d="M8 21v-7h8v7" />
     </svg>
   );
 }

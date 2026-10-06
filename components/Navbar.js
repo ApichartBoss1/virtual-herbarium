@@ -16,19 +16,23 @@ export default function Navbar() {
 
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
-
-  const [menuOpen, setMenuOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
-
   const [loggingOut, setLoggingOut] = useState(false);
 
   const languageMenuRef = useRef(null);
 
   const isEnglish = language === "EN";
 
-  /* =====================================================
+  /* =========================================================
+     BRAND
+  ========================================================= */
+
+  const brandTitle = "Virtual Herbarium";
+  const brandSubtitle = "Digital Plant Collection";
+
+  /* =========================================================
      TEXT
-  ===================================================== */
+  ========================================================= */
 
   const text = {
     TH: {
@@ -40,19 +44,29 @@ export default function Navbar() {
       register: "สมัครสมาชิก",
 
       account: "บัญชีของฉัน",
+      accountShort: "บัญชี",
+
       logout: "ออกจากระบบ",
 
-      menu: "เมนู",
-
-      language: "ภาษา",
-
+      language: "เปลี่ยนภาษา",
       thai: "ไทย",
       english: "English",
 
       lightMode: "โหมดสว่าง",
       darkMode: "โหมดมืด",
 
-      collection: "คลังพรรณไม้ดิจิทัล",
+      add: "เพิ่ม",
+      addPlant: "เพิ่มพรรณไม้",
+      editPlant: "แก้ไขพรรณไม้",
+      editAccount: "แก้ไขบัญชี",
+      myPlants: "พรรณไม้ของฉัน",
+
+      specimen: "รายละเอียดพรรณไม้",
+
+      forgotPassword: "ลืมรหัสผ่าน",
+      resetPassword: "ตั้งรหัสผ่านใหม่",
+
+      back: "ย้อนกลับ",
     },
 
     EN: {
@@ -64,27 +78,37 @@ export default function Navbar() {
       register: "Register",
 
       account: "My Account",
+      accountShort: "Account",
+
       logout: "Logout",
 
-      menu: "Menu",
-
-      language: "Language",
-
+      language: "Change Language",
       thai: "ไทย",
       english: "English",
 
       lightMode: "Light Mode",
       darkMode: "Dark Mode",
 
-      collection: "Digital Plant Collection",
+      add: "Add",
+      addPlant: "Add Plant",
+      editPlant: "Edit Plant",
+      editAccount: "Edit Account",
+      myPlants: "My Plants",
+
+      specimen: "Plant Details",
+
+      forgotPassword: "Forgot Password",
+      resetPassword: "Reset Password",
+
+      back: "Back",
     },
   };
 
   const t = isEnglish ? text.EN : text.TH;
 
-  /* =====================================================
-     GET USER
-  ===================================================== */
+  /* =========================================================
+     USER
+  ========================================================= */
 
   useEffect(() => {
     let mounted = true;
@@ -120,23 +144,21 @@ export default function Navbar() {
 
     return () => {
       mounted = false;
-
       subscription.unsubscribe();
     };
   }, []);
 
-  /* =====================================================
-     CLOSE MENU WHEN ROUTE CHANGES
-  ===================================================== */
+  /* =========================================================
+     ROUTE CHANGE
+  ========================================================= */
 
   useEffect(() => {
-    setMenuOpen(false);
     setLanguageOpen(false);
   }, [pathname]);
 
-  /* =====================================================
-     CLOSE LANGUAGE MENU WHEN CLICK OUTSIDE
-  ===================================================== */
+  /* =========================================================
+     LANGUAGE MENU OUTSIDE CLICK
+  ========================================================= */
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -155,9 +177,42 @@ export default function Navbar() {
     };
   }, []);
 
-  /* =====================================================
+  /* =========================================================
+     MOBILE APP SHELL
+  ========================================================= */
+
+  const isAuthRoute =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password";
+
+  const isEditorRoute =
+    pathname === "/account/edit" ||
+    pathname === "/account/plants/new" ||
+    /^\/account\/plants\/[^/]+\/edit$/.test(pathname);
+
+  const hideMobileBottomNav = isAuthRoute || isEditorRoute;
+
+  useEffect(() => {
+    document.body.classList.add("has-mobile-app-shell");
+
+    document.body.classList.toggle(
+      "mobile-app-no-bottom-nav",
+      hideMobileBottomNav,
+    );
+
+    return () => {
+      document.body.classList.remove(
+        "has-mobile-app-shell",
+        "mobile-app-no-bottom-nav",
+      );
+    };
+  }, [hideMobileBottomNav]);
+
+  /* =========================================================
      LOGOUT
-  ===================================================== */
+  ========================================================= */
 
   async function handleLogout() {
     if (loggingOut) return;
@@ -174,7 +229,6 @@ export default function Navbar() {
       }
 
       setUser(null);
-      setMenuOpen(false);
 
       router.push("/");
       router.refresh();
@@ -185,20 +239,22 @@ export default function Navbar() {
     }
   }
 
-  /* =====================================================
-     CHANGE LANGUAGE
-  ===================================================== */
+  /* =========================================================
+     LANGUAGE
+  ========================================================= */
 
   function handleLanguageChange(lang) {
     changeLanguage(lang);
-
     setLanguageOpen(false);
-    setMenuOpen(false);
   }
 
-  /* =====================================================
-     NAVIGATION
-  ===================================================== */
+  function toggleMobileLanguage() {
+    changeLanguage(language === "TH" ? "EN" : "TH");
+  }
+
+  /* =========================================================
+     DESKTOP NAV
+  ========================================================= */
 
   const navItems = [
     {
@@ -223,9 +279,9 @@ export default function Navbar() {
     return pathname.startsWith(href);
   }
 
-  /* =====================================================
-     USER DISPLAY NAME
-  ===================================================== */
+  /* =========================================================
+     USER DISPLAY
+  ========================================================= */
 
   const username =
     user?.user_metadata?.username ||
@@ -236,32 +292,76 @@ export default function Navbar() {
 
   const avatarUrl = user?.user_metadata?.avatar_url || "";
 
-  /* =====================================================
-     PAGE
-  ===================================================== */
+  /* =========================================================
+     MOBILE BACK
+  ========================================================= */
+
+  const mobileRootRoutes = ["/", "/plants", "/about", "/account"];
+
+  const showMobileBack = !mobileRootRoutes.includes(pathname);
+
+  function handleMobileBack() {
+    router.back();
+  }
+
+  /* =========================================================
+     MOBILE BOTTOM NAV
+  ========================================================= */
+
+  const accountHref = user ? "/account" : "/login";
+
+  const addHref = user ? "/account/plants/new" : "/login";
+
+  function isBottomActive(type) {
+    if (type === "home") {
+      return pathname === "/";
+    }
+
+    if (type === "plants") {
+      return pathname === "/plants" || /^\/plants\/[^/]+$/.test(pathname);
+    }
+
+    if (type === "add") {
+      return pathname === "/account/plants/new";
+    }
+
+    if (type === "about") {
+      return pathname === "/about";
+    }
+
+    if (type === "account") {
+      return pathname.startsWith("/account");
+    }
+
+    return false;
+  }
 
   return (
     <>
+      {/* =====================================================
+          DESKTOP / TABLET HEADER
+          FIXED TOP
+      ===================================================== */}
+
       <header
-        className={`sticky top-0 z-50 border-b backdrop-blur-2xl transition-all duration-300 ${
+        className={`fixed inset-x-0 top-0 z-[100] hidden border-b backdrop-blur-2xl transition-all duration-300 md:block ${
           darkMode
             ? "border-white/10 bg-[#061009]/85 text-white shadow-[0_10px_40px_rgba(0,0,0,0.18)]"
             : "border-emerald-950/10 bg-[#f4f8f2]/90 text-slate-900 shadow-[0_8px_30px_rgba(21,55,31,0.06)]"
         }`}
       >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="flex h-[78px] items-center justify-between gap-4">
             {/* =================================================
-                LOGO
+                DESKTOP BRAND
+                LOGO + TEXT CLICK -> HOME
             ================================================= */}
 
             <Link
               href="/"
+              aria-label="Virtual Herbarium Home"
               className="group flex shrink-0 items-center gap-3"
-              onClick={() => setMenuOpen(false)}
             >
-              {/* LOGO ICON */}
-
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition duration-300 group-hover:-translate-y-0.5 ${
                   darkMode
@@ -276,30 +376,30 @@ export default function Navbar() {
                 />
               </div>
 
-              {/* LOGO TEXT */}
-
-              <div className="hidden sm:block">
+              <div className="min-w-0">
                 <h1
-                  className={`text-lg font-extrabold tracking-tight lg:text-xl ${
-                    darkMode ? "text-white" : "text-[#183320]"
+                  className={`text-lg font-extrabold tracking-tight transition lg:text-xl ${
+                    darkMode
+                      ? "text-white group-hover:text-emerald-200"
+                      : "text-[#183320] group-hover:text-emerald-800"
                   }`}
                 >
-                  Virtual Herbarium
+                  {brandTitle}
                 </h1>
 
                 <p
-                  className={`mt-0.5 text-xs font-medium ${
-                    darkMode ? "text-[#9eafa3]" : "text-slate-500"
+                  className={`mt-0.5 text-xs font-medium transition ${
+                    darkMode
+                      ? "text-[#9eafa3] group-hover:text-white/70"
+                      : "text-slate-500 group-hover:text-emerald-700"
                   }`}
                 >
-                  {t.collection}
+                  {brandSubtitle}
                 </p>
               </div>
             </Link>
 
-            {/* =================================================
-                DESKTOP NAVIGATION
-            ================================================= */}
+            {/* DESKTOP NAVIGATION */}
 
             <nav className="hidden items-center gap-1 lg:flex">
               {navItems.map((item) => {
@@ -333,14 +433,10 @@ export default function Navbar() {
               })}
             </nav>
 
-            {/* =================================================
-                DESKTOP ACTIONS
-            ================================================= */}
+            {/* DESKTOP ACTIONS */}
 
-            <div className="hidden items-center gap-2 md:flex">
-              {/* =============================================
-                  LANGUAGE
-              ============================================== */}
+            <div className="flex items-center gap-2">
+              {/* LANGUAGE */}
 
               <div ref={languageMenuRef} className="relative">
                 <button
@@ -412,9 +508,7 @@ export default function Navbar() {
                 )}
               </div>
 
-              {/* =============================================
-                  DARK MODE
-              ============================================== */}
+              {/* THEME */}
 
               <button
                 type="button"
@@ -434,15 +528,11 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* =============================================
-                  USER
-              ============================================== */}
+              {/* AUTH */}
 
               {!loadingUser &&
-                (user ? (
+                (user && !isAuthRoute ? (
                   <>
-                    {/* ACCOUNT */}
-
                     <Link
                       href="/account"
                       className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-600"
@@ -459,8 +549,6 @@ export default function Navbar() {
 
                       <span>{t.account}</span>
                     </Link>
-
-                    {/* LOGOUT */}
 
                     <button
                       type="button"
@@ -479,16 +567,12 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    {/* LOGIN */}
-
                     <Link
                       href="/login"
                       className="inline-flex h-11 items-center justify-center rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-600"
                     >
                       {t.login}
                     </Link>
-
-                    {/* REGISTER */}
 
                     <Link
                       href="/register"
@@ -503,241 +587,298 @@ export default function Navbar() {
                   </>
                 ))}
             </div>
-
-            {/* =================================================
-                MOBILE BUTTONS
-            ================================================= */}
-
-            <div className="flex items-center gap-2 md:hidden">
-              {/* DARK MODE */}
-
-              <button
-                type="button"
-                onClick={toggleDarkMode}
-                aria-label={darkMode ? t.lightMode : t.darkMode}
-                className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.04] text-amber-200"
-                    : "border-emerald-950/10 bg-white/70 text-slate-700"
-                }`}
-              >
-                {darkMode ? (
-                  <SunIcon className="h-5 w-5" />
-                ) : (
-                  <MoonIcon className="h-5 w-5" />
-                )}
-              </button>
-
-              {/* HAMBURGER */}
-
-              <button
-                type="button"
-                onClick={() => setMenuOpen((current) => !current)}
-                aria-label={t.menu}
-                aria-expanded={menuOpen}
-                className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
-                    : "border-emerald-950/10 bg-white/70 text-slate-700 hover:bg-white"
-                }`}
-              >
-                {menuOpen ? (
-                  <CloseIcon className="h-5 w-5" />
-                ) : (
-                  <MenuIcon className="h-5 w-5" />
-                )}
-              </button>
-            </div>
           </div>
         </div>
+      </header>
 
-        {/* =====================================================
-            MOBILE MENU
-        ===================================================== */}
+      {/* =====================================================
+          DESKTOP / TABLET NAVBAR SPACER
+      ===================================================== */}
 
-        {menuOpen && (
-          <div
-            className={`border-t px-4 pb-5 pt-4 shadow-2xl backdrop-blur-2xl md:hidden ${
-              darkMode
-                ? "border-white/10 bg-[#07100c]/95"
-                : "border-emerald-950/10 bg-[#f4f8f2]/95"
-            }`}
-          >
-            <div className="mx-auto max-w-7xl space-y-4">
-              {/* =============================================
-                  MOBILE NAVIGATION
-              ============================================== */}
+      <div aria-hidden="true" className="hidden h-[78px] md:block" />
 
-              <div className="space-y-1">
-                {navItems.map((item) => {
-                  const active = isActive(item.href);
+      {/* =====================================================
+          MOBILE APP BAR
+      ===================================================== */}
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex min-h-12 items-center rounded-xl px-4 font-bold transition ${
-                        active
-                          ? "bg-emerald-700 text-white"
-                          : darkMode
-                            ? "text-gray-200 hover:bg-white/[0.05]"
-                            : "text-slate-700 hover:bg-emerald-900/[0.05] hover:text-emerald-800"
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
+      <header
+        className={`mobile-app-header md:hidden ${
+          darkMode
+            ? "border-white/10 bg-[#061009]/88"
+            : "border-emerald-950/10 bg-[#f4f8f2]/92"
+        }`}
+      >
+        <div className="mobile-app-header-inner">
+          {/* LEFT */}
 
-              {/* DIVIDER */}
-
-              <div
-                className={`border-t ${
-                  darkMode ? "border-white/10" : "border-emerald-950/10"
-                }`}
-              />
-
-              {/* =============================================
-                  MOBILE LANGUAGE
-              ============================================== */}
-
-              <div
-                className={`rounded-2xl border p-3 ${
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            {showMobileBack ? (
+              <button
+                type="button"
+                onClick={handleMobileBack}
+                aria-label={t.back}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border ${
                   darkMode
-                    ? "border-white/10 bg-white/[0.025]"
-                    : "border-emerald-950/10 bg-white/60"
+                    ? "border-white/10 bg-white/[0.045] text-white"
+                    : "border-emerald-950/10 bg-white/75 text-[#183320]"
                 }`}
               >
-                <div className="mb-3 flex items-center gap-2 px-1">
-                  <GlobeIcon
-                    className={`h-4 w-4 ${
-                      darkMode ? "text-emerald-300" : "text-emerald-700"
-                    }`}
-                  />
+                <ArrowLeftIcon className="h-5 w-5" />
+              </button>
+            ) : (
+              /* =============================================
+                 MOBILE LOGO CLICK -> HOME
+              ============================================= */
 
-                  <p
-                    className={`text-xs font-bold uppercase tracking-[0.12em] ${
-                      darkMode ? "text-gray-400" : "text-slate-500"
-                    }`}
-                  >
-                    {t.language}
-                  </p>
-                </div>
+              <Link
+                href="/"
+                aria-label="Virtual Herbarium Home"
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border transition active:scale-95 ${
+                  darkMode
+                    ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                    : "border-emerald-800/10 bg-emerald-800/10 text-emerald-700"
+                }`}
+              >
+                <LeafIcon className="h-5 w-5" />
+              </Link>
+            )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  {/* TH */}
+            {/* ===============================================
+                MOBILE BRAND CLICK -> HOME
+            =============================================== */}
 
-                  <button
-                    type="button"
-                    onClick={() => handleLanguageChange("TH")}
-                    className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${
-                      language === "TH"
-                        ? "bg-emerald-700 text-white"
-                        : darkMode
-                          ? "bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]"
-                          : "bg-white text-slate-700 hover:bg-emerald-50"
-                    }`}
-                  >
-                    ไทย
-                  </button>
+            <Link
+              href="/"
+              aria-label="Virtual Herbarium Home"
+              className="group min-w-0 flex-1"
+            >
+              <p
+                className={`truncate text-[15px] font-black leading-tight tracking-[-0.02em] transition ${
+                  darkMode
+                    ? "text-white group-active:text-emerald-300"
+                    : "text-[#183320] group-active:text-emerald-700"
+                }`}
+              >
+                {brandTitle}
+              </p>
 
-                  {/* EN */}
-
-                  <button
-                    type="button"
-                    onClick={() => handleLanguageChange("EN")}
-                    className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${
-                      language === "EN"
-                        ? "bg-emerald-700 text-white"
-                        : darkMode
-                          ? "bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]"
-                          : "bg-white text-slate-700 hover:bg-emerald-50"
-                    }`}
-                  >
-                    English
-                  </button>
-                </div>
-              </div>
-
-              {/* =============================================
-                  MOBILE USER
-              ============================================== */}
-
-              {!loadingUser && (
-                <>
-                  <div
-                    className={`border-t ${
-                      darkMode ? "border-white/10" : "border-emerald-950/10"
-                    }`}
-                  />
-
-                  {user ? (
-                    <div className="space-y-2">
-                      {/* ACCOUNT */}
-
-                      <Link
-                        href="/account"
-                        className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 font-bold text-white shadow-lg shadow-emerald-950/20"
-                      >
-                        {avatarUrl ? (
-                          <img
-                            src={avatarUrl}
-                            alt={username || t.account}
-                            className="h-7 w-7 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <UserIcon className="h-5 w-5" />
-                        )}
-
-                        {t.account}
-                      </Link>
-
-                      {/* LOGOUT */}
-
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        disabled={loggingOut}
-                        className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-4 font-bold transition disabled:opacity-50 ${
-                          darkMode
-                            ? "border-red-400/15 bg-red-400/[0.04] text-red-300 hover:bg-red-400/10"
-                            : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                        }`}
-                      >
-                        <LogoutIcon className="h-5 w-5" />
-
-                        {loggingOut ? "..." : t.logout}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      <Link
-                        href="/login"
-                        className="flex min-h-12 items-center justify-center rounded-xl bg-emerald-700 px-4 font-bold text-white shadow-lg shadow-emerald-950/20"
-                      >
-                        {t.login}
-                      </Link>
-
-                      <Link
-                        href="/register"
-                        className={`flex min-h-12 items-center justify-center rounded-xl border px-4 font-bold ${
-                          darkMode
-                            ? "border-white/10 bg-white/[0.035] text-white"
-                            : "border-emerald-950/10 bg-white text-slate-700"
-                        }`}
-                      >
-                        {t.register}
-                      </Link>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+              <p
+                className={`mt-0.5 truncate text-[9px] font-semibold tracking-[0.01em] transition ${
+                  darkMode
+                    ? "text-white/52 group-active:text-white/75"
+                    : "text-slate-500 group-active:text-emerald-700"
+                }`}
+              >
+                {brandSubtitle}
+              </p>
+            </Link>
           </div>
-        )}
+
+          {/* =================================================
+              MOBILE RIGHT
+              LANGUAGE + DARK MODE
+          ================================================= */}
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* LANGUAGE */}
+
+            <button
+              type="button"
+              onClick={toggleMobileLanguage}
+              aria-label={t.language}
+              title={t.language}
+              className={`flex h-10 min-w-[48px] items-center justify-center gap-1.5 rounded-[14px] border px-2.5 text-[12px] font-black transition active:scale-95 ${
+                darkMode
+                  ? "border-white/10 bg-white/[0.045] text-white"
+                  : "border-emerald-950/10 bg-white/75 text-[#183320]"
+              }`}
+            >
+              <GlobeIcon className="h-[16px] w-[16px]" />
+
+              <span>{language}</span>
+            </button>
+
+            {/* DARK MODE */}
+
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              aria-label={darkMode ? t.lightMode : t.darkMode}
+              title={darkMode ? t.lightMode : t.darkMode}
+              className={`flex h-10 w-10 items-center justify-center rounded-[14px] border transition active:scale-95 ${
+                darkMode
+                  ? "border-white/10 bg-white/[0.045] text-amber-200"
+                  : "border-emerald-950/10 bg-white/75 text-slate-700"
+              }`}
+            >
+              {darkMode ? (
+                <SunIcon className="h-[19px] w-[19px]" />
+              ) : (
+                <MoonIcon className="h-[19px] w-[19px]" />
+              )}
+            </button>
+          </div>
+        </div>
       </header>
+
+      {/* =====================================================
+          MOBILE BOTTOM NAVIGATION
+      ===================================================== */}
+
+      {!hideMobileBottomNav && (
+        <nav
+          className={`mobile-bottom-nav md:hidden ${
+            darkMode
+              ? "border-white/10 bg-[#07110b]/94"
+              : "border-emerald-950/10 bg-[#f7faf5]/95"
+          }`}
+        >
+          <div className="mobile-bottom-nav-inner">
+            {/* HOME */}
+
+            <MobileBottomItem
+              href="/"
+              label={t.home}
+              active={isBottomActive("home")}
+              darkMode={darkMode}
+              icon={<HomeIcon className="h-[21px] w-[21px]" />}
+            />
+
+            {/* PLANTS */}
+
+            <MobileBottomItem
+              href="/plants"
+              label={t.plants}
+              active={isBottomActive("plants")}
+              darkMode={darkMode}
+              icon={<CollectionIcon className="h-[21px] w-[21px]" />}
+            />
+
+            {/* ADD */}
+
+            <Link
+              href={addHref}
+              aria-label={t.addPlant}
+              className="relative flex min-w-0 flex-col items-center justify-end"
+            >
+              <span className="mobile-add-button">
+                <PlusIcon className="h-6 w-6" />
+              </span>
+
+              <span
+                className={`mt-1 truncate text-[9px] font-black ${
+                  isBottomActive("add")
+                    ? darkMode
+                      ? "text-emerald-300"
+                      : "text-emerald-700"
+                    : darkMode
+                      ? "text-white/50"
+                      : "text-slate-500"
+                }`}
+              >
+                {t.add}
+              </span>
+            </Link>
+
+            {/* ABOUT */}
+
+            <MobileBottomItem
+              href="/about"
+              label={t.about}
+              active={isBottomActive("about")}
+              darkMode={darkMode}
+              icon={<InfoIcon className="h-[21px] w-[21px]" />}
+            />
+
+            {/* ACCOUNT */}
+
+            <Link
+              href={accountHref}
+              className="flex min-w-0 flex-col items-center justify-center gap-1 py-1"
+              aria-current={isBottomActive("account") ? "page" : undefined}
+            >
+              <span
+                className={`flex h-7 w-7 items-center justify-center overflow-hidden rounded-[10px] transition ${
+                  isBottomActive("account")
+                    ? darkMode
+                      ? "bg-emerald-400/12 text-emerald-300"
+                      : "bg-emerald-700/10 text-emerald-700"
+                    : darkMode
+                      ? "text-white/50"
+                      : "text-slate-500"
+                }`}
+              >
+                {user && avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={username || t.account}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <UserIcon className="h-[21px] w-[21px]" />
+                )}
+              </span>
+
+              <span
+                className={`max-w-full truncate text-[9px] font-bold ${
+                  isBottomActive("account")
+                    ? darkMode
+                      ? "text-emerald-300"
+                      : "text-emerald-700"
+                    : darkMode
+                      ? "text-white/45"
+                      : "text-slate-500"
+                }`}
+              >
+                {user ? t.accountShort : t.login}
+              </span>
+            </Link>
+          </div>
+        </nav>
+      )}
     </>
+  );
+}
+
+/* =========================================================
+   MOBILE BOTTOM ITEM
+========================================================= */
+
+function MobileBottomItem({ href, label, icon, active, darkMode }) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className="flex min-w-0 flex-col items-center justify-center gap-1 py-1"
+    >
+      <span
+        className={`flex h-7 w-9 items-center justify-center rounded-[11px] transition ${
+          active
+            ? darkMode
+              ? "bg-emerald-400/12 text-emerald-300"
+              : "bg-emerald-700/10 text-emerald-700"
+            : darkMode
+              ? "text-white/50"
+              : "text-slate-500"
+        }`}
+      >
+        {icon}
+      </span>
+
+      <span
+        className={`max-w-full truncate text-[9px] font-bold ${
+          active
+            ? darkMode
+              ? "text-emerald-300"
+              : "text-emerald-700"
+            : darkMode
+              ? "text-white/45"
+              : "text-slate-500"
+        }`}
+      >
+        {label}
+      </span>
+    </Link>
   );
 }
 
@@ -760,6 +901,106 @@ function LeafIcon({ className = "" }) {
       <path d="M20.5 3.5C14 3.8 8.2 6 5.2 10.1c-2.2 3-1.9 6.4.1 8.6 2.2 2.4 6.1 2.4 9-.1 3.8-3.3 5.6-8.9 6.2-15.1Z" />
 
       <path d="M4 20c3.2-4.9 7.1-8.4 12.7-11.2" />
+    </svg>
+  );
+}
+
+function HomeIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m3 11 9-8 9 8" />
+
+      <path d="M5 10v10h14V10" />
+
+      <path d="M9 20v-6h6v6" />
+    </svg>
+  );
+}
+
+function CollectionIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 4h14v16H5z" />
+
+      <path d="M8 8h8" />
+
+      <path d="M8 12h8" />
+
+      <path d="M8 16h5" />
+    </svg>
+  );
+}
+
+function InfoIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+
+      <path d="M12 11v5" />
+
+      <path d="M12 8h.01" />
+    </svg>
+  );
+}
+
+function PlusIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M12 5v14" />
+
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function ArrowLeftIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m15 18-6-6 6-6" />
     </svg>
   );
 }
@@ -819,12 +1060,19 @@ function SunIcon({ className = "" }) {
       <circle cx="12" cy="12" r="4" />
 
       <path d="M12 2v2" />
+
       <path d="M12 20v2" />
+
       <path d="m4.93 4.93 1.41 1.41" />
+
       <path d="m17.66 17.66 1.41 1.41" />
+
       <path d="M2 12h2" />
+
       <path d="M20 12h2" />
+
       <path d="m4.93 19.07 1.41-1.41" />
+
       <path d="m17.66 6.34 1.41-1.41" />
     </svg>
   );
@@ -883,41 +1131,6 @@ function LogoutIcon({ className = "" }) {
       <path d="M15 12H3" />
 
       <path d="M21 19V5a2 2 0 0 0-2-2h-6" />
-    </svg>
-  );
-}
-
-function MenuIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M4 6h16" />
-      <path d="M4 12h16" />
-      <path d="M4 18h16" />
-    </svg>
-  );
-}
-
-function CloseIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
     </svg>
   );
 }

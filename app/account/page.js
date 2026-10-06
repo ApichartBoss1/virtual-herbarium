@@ -9,11 +9,15 @@ import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 /* =========================================================
-   FOREST BACKGROUND
+   FOREST
 ========================================================= */
 
 const FOREST_IMAGE =
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=88";
+
+/* =========================================================
+   PAGE
+========================================================= */
 
 export default function AccountPage() {
   const router = useRouter();
@@ -51,23 +55,15 @@ export default function AccountPage() {
       title: "พื้นที่พรรณไม้ของฉัน",
 
       subtitle:
-        "จัดการข้อมูลบัญชี ตัวอย่างพรรณไม้ และบันทึกที่คุณเพิ่มเข้าสู่ Virtual Herbarium",
+        "จัดการบัญชีและตัวอย่างพรรณไม้ที่คุณเพิ่มเข้าสู่ Virtual Herbarium",
 
       welcome: "ยินดีต้อนรับกลับ",
 
-      dashboard: "แดชบอร์ดส่วนตัว",
+      addPlant: "เพิ่มพรรณไม้",
 
-      addPlant: "เพิ่มข้อมูลพรรณไม้",
-
-      managePlants: "จัดการพรรณไม้ทั้งหมด",
-
-      accountInfo: "ข้อมูลบัญชี",
+      managePlants: "จัดการทั้งหมด",
 
       profileLabel: "PROFILE",
-
-      username: "ชื่อผู้ใช้",
-
-      email: "อีเมล",
 
       memberSince: "เป็นสมาชิกตั้งแต่",
 
@@ -75,18 +71,17 @@ export default function AccountPage() {
 
       unverified: "ยังไม่ได้ยืนยันอีเมล",
 
-      editProfile: "แก้ไขข้อมูลบัญชี",
+      editProfile: "แก้ไขบัญชี",
 
       logout: "ออกจากระบบ",
 
-      loggingOut: "กำลังออกจากระบบ...",
+      loggingOut: "กำลังออก...",
 
       myPlants: "พรรณไม้ของฉัน",
 
       myPlantsLabel: "MY COLLECTION",
 
-      myPlantsDescription:
-        "ตัวอย่างพรรณไม้ทั้งหมดที่คุณเป็นผู้เพิ่มเข้าสู่คลัง Virtual Herbarium",
+      myPlantsDescription: "ตัวอย่างพรรณไม้ที่คุณเป็นผู้เพิ่มเข้าสู่คลัง",
 
       totalPlants: "ตัวอย่างทั้งหมด",
 
@@ -94,42 +89,24 @@ export default function AccountPage() {
 
       provinces: "จังหวัด",
 
-      records: "รายการ",
-
-      familyUnit: "วงศ์",
-
-      provinceUnit: "จังหวัด",
-
       edit: "แก้ไข",
 
-      view: "ดูรายละเอียด",
+      view: "ดู",
 
       noPlants: "ยังไม่มีข้อมูลพรรณไม้",
 
       noPlantsDescription:
-        "เริ่มต้นสร้างคลังพรรณไม้ส่วนตัวของคุณด้วยการเพิ่มตัวอย่างแรก",
+        "เริ่มสร้างคลังส่วนตัวด้วยการเพิ่มตัวอย่างพรรณไม้แรกของคุณ",
 
-      loading: "กำลังเปิดพื้นที่ส่วนตัวของคุณ...",
+      loading: "กำลังเปิดพื้นที่ของคุณ...",
 
-      loadingPlants: "กำลังโหลดพรรณไม้ของคุณ...",
+      loadingPlants: "กำลังโหลดพรรณไม้...",
 
       family: "วงศ์",
 
       province: "จังหวัด",
 
-      location: "สถานที่",
-
-      collectedBy: "ผู้เก็บตัวอย่าง",
-
-      specimen: "หมายเลขตัวอย่าง",
-
-      accountSecurity: "ความปลอดภัยของบัญชี",
-
-      securityLabel: "ACCOUNT SECURITY",
-
-      securityDescription: "ดูแลการเข้าถึงบัญชีและรหัสผ่านของคุณ",
-
-      changePassword: "เปลี่ยนรหัสผ่าน",
+      specimen: "ตัวอย่าง",
 
       login: "เข้าสู่ระบบ",
 
@@ -137,16 +114,17 @@ export default function AccountPage() {
 
       notLoggedIn: "กรุณาเข้าสู่ระบบ",
 
-      notLoggedDescription:
-        "เข้าสู่ระบบเพื่อเปิดพื้นที่ส่วนตัวและจัดการคลังพรรณไม้ของคุณ",
+      notLoggedDescription: "เข้าสู่ระบบเพื่อจัดการบัญชีและคลังพรรณไม้ของคุณ",
 
       loadError: "ไม่สามารถโหลดข้อมูลพรรณไม้ได้",
 
       retry: "ลองอีกครั้ง",
 
-      unknownPlant: "ไม่ระบุชื่อพรรณไม้",
+      unknownPlant: "ไม่ระบุชื่อ",
 
-      collection: "Digital Herbarium Collection",
+      morePlants: "รายการเพิ่มเติม",
+
+      showAll: "ดูทั้งหมด",
     },
 
     EN: {
@@ -155,23 +133,15 @@ export default function AccountPage() {
       title: "My Botanical Space",
 
       subtitle:
-        "Manage your account, plant specimens and botanical records contributed to the Virtual Herbarium.",
+        "Manage your account and plant specimens contributed to the Virtual Herbarium.",
 
       welcome: "Welcome back",
 
-      dashboard: "Personal Dashboard",
+      addPlant: "Add Plant",
 
-      addPlant: "Add Plant Record",
-
-      managePlants: "Manage All Plants",
-
-      accountInfo: "Account Information",
+      managePlants: "Manage All",
 
       profileLabel: "PROFILE",
-
-      username: "Username",
-
-      email: "Email",
 
       memberSince: "Member since",
 
@@ -179,7 +149,7 @@ export default function AccountPage() {
 
       unverified: "Email not verified",
 
-      editProfile: "Edit Profile",
+      editProfile: "Edit Account",
 
       logout: "Sign Out",
 
@@ -190,7 +160,7 @@ export default function AccountPage() {
       myPlantsLabel: "MY COLLECTION",
 
       myPlantsDescription:
-        "Plant specimens and botanical records that you have contributed to the Virtual Herbarium.",
+        "Plant specimens contributed to the collection by you.",
 
       totalPlants: "Total Specimens",
 
@@ -198,42 +168,24 @@ export default function AccountPage() {
 
       provinces: "Provinces",
 
-      records: "records",
-
-      familyUnit: "families",
-
-      provinceUnit: "provinces",
-
       edit: "Edit",
 
-      view: "View Details",
+      view: "View",
 
       noPlants: "No plant records yet",
 
       noPlantsDescription:
-        "Begin your personal herbarium by adding your first plant specimen.",
+        "Begin your personal collection by adding your first specimen.",
 
-      loading: "Opening your botanical workspace...",
+      loading: "Opening your workspace...",
 
-      loadingPlants: "Loading your plant records...",
+      loadingPlants: "Loading your plants...",
 
       family: "Family",
 
       province: "Province",
 
-      location: "Location",
-
-      collectedBy: "Collected by",
-
-      specimen: "Specimen number",
-
-      accountSecurity: "Account Security",
-
-      securityLabel: "ACCOUNT SECURITY",
-
-      securityDescription: "Manage access to your account and password.",
-
-      changePassword: "Change Password",
+      specimen: "Specimen",
 
       login: "Login",
 
@@ -242,7 +194,7 @@ export default function AccountPage() {
       notLoggedIn: "You are not signed in",
 
       notLoggedDescription:
-        "Sign in to open your personal workspace and manage your plant collection.",
+        "Sign in to manage your account and plant collection.",
 
       loadError: "Unable to load your plants.",
 
@@ -250,7 +202,9 @@ export default function AccountPage() {
 
       unknownPlant: "Unnamed Plant",
 
-      collection: "Digital Herbarium Collection",
+      morePlants: "More plants",
+
+      showAll: "View all",
     },
   };
 
@@ -275,12 +229,6 @@ export default function AccountPage() {
       if (error) {
         console.error("Load profile error:", error);
 
-        /*
-         * ไม่หยุดหน้า Account
-         * หาก profiles ไม่มีหรือมีปัญหา
-         * จะใช้ข้อมูลจาก Supabase Auth แทน
-         */
-
         return null;
       }
 
@@ -300,6 +248,7 @@ export default function AccountPage() {
     if (!userId) return;
 
     setPlantsLoading(true);
+
     setError("");
 
     try {
@@ -312,8 +261,6 @@ export default function AccountPage() {
         });
 
       if (error) {
-        console.error("Fetch my plants error:", error);
-
         throw error;
       }
 
@@ -330,7 +277,7 @@ export default function AccountPage() {
   }
 
   /* =====================================================
-     INITIAL ACCOUNT LOAD
+     INITIAL LOAD
   ===================================================== */
 
   useEffect(() => {
@@ -338,6 +285,7 @@ export default function AccountPage() {
 
     async function init() {
       setLoading(true);
+
       setError("");
 
       try {
@@ -354,7 +302,9 @@ export default function AccountPage() {
 
         if (!currentUser) {
           setUser(null);
+
           setProfile(null);
+
           setPlants([]);
 
           return;
@@ -372,9 +322,7 @@ export default function AccountPage() {
       } catch (err) {
         console.error("Account loading error:", err);
 
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         setError(
           err?.message ||
@@ -398,9 +346,7 @@ export default function AccountPage() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       const currentUser = session?.user || null;
 
@@ -408,6 +354,7 @@ export default function AccountPage() {
 
       if (!currentUser) {
         setProfile(null);
+
         setPlants([]);
 
         return;
@@ -415,9 +362,7 @@ export default function AccountPage() {
 
       const profileData = await fetchProfile(currentUser);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setProfile(profileData);
 
@@ -436,11 +381,10 @@ export default function AccountPage() {
   ===================================================== */
 
   async function handleLogout() {
-    if (loggingOut) {
-      return;
-    }
+    if (loggingOut) return;
 
     setLoggingOut(true);
+
     setError("");
 
     try {
@@ -451,10 +395,13 @@ export default function AccountPage() {
       }
 
       setUser(null);
+
       setProfile(null);
+
       setPlants([]);
 
       router.push("/");
+
       router.refresh();
     } catch (err) {
       console.error("Logout error:", err);
@@ -489,34 +436,66 @@ export default function AccountPage() {
   }, [plants]);
 
   /* =====================================================
+     MOBILE PREVIEW
+
+     สูงสุด 4 block
+     ถ้ามากกว่า 4 -> 3 plant + 1 remaining
+  ===================================================== */
+
+  const mobilePreview = useMemo(() => {
+    if (plants.length <= 4) {
+      return {
+        items: plants,
+        remaining: 0,
+      };
+    }
+
+    return {
+      items: plants.slice(0, 3),
+      remaining: plants.length - 3,
+    };
+  }, [plants]);
+
+  /* =====================================================
+     DESKTOP PREVIEW
+
+     สูงสุด 6 block
+     ถ้ามากกว่า 6 -> 5 plant + 1 remaining
+  ===================================================== */
+
+  const desktopPreview = useMemo(() => {
+    if (plants.length <= 6) {
+      return {
+        items: plants,
+        remaining: 0,
+      };
+    }
+
+    return {
+      items: plants.slice(0, 5),
+      remaining: plants.length - 5,
+    };
+  }, [plants]);
+
+  /* =====================================================
      LOADING
   ===================================================== */
 
   if (loading) {
     return (
-      <main className="page">
+      <main className="page overflow-x-hidden">
         <Navbar />
 
-        <section className="relative flex min-h-[calc(100svh-78px)] items-center justify-center overflow-hidden">
-          <div
-            className={`pointer-events-none absolute left-1/2 top-[-220px] h-[650px] w-[900px] -translate-x-1/2 rounded-full blur-3xl ${
-              darkMode ? "bg-emerald-500/[0.07]" : "bg-emerald-800/[0.06]"
-            }`}
-          />
-
-          <div className="relative text-center">
-            <div
-              className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border ${
-                darkMode
-                  ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300"
-                  : "border-emerald-800/10 bg-emerald-800/[0.06] text-emerald-800"
+        <section className="flex min-h-[60dvh] items-center justify-center px-5">
+          <div className="text-center">
+            <LoadingIcon
+              className={`mx-auto h-8 w-8 animate-spin ${
+                darkMode ? "text-emerald-300" : "text-emerald-700"
               }`}
-            >
-              <LoadingIcon className="h-7 w-7 animate-spin" />
-            </div>
+            />
 
             <p
-              className={`mt-5 text-sm font-semibold ${
+              className={`mt-4 text-sm font-semibold ${
                 darkMode ? "text-gray-400" : "text-slate-500"
               }`}
             >
@@ -534,10 +513,10 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <main className="page overflow-hidden">
+      <main className="page overflow-x-hidden">
         <Navbar />
 
-        <section className="relative isolate flex min-h-[calc(100svh-78px)] items-center justify-center overflow-hidden px-5 py-16">
+        <section className="relative isolate flex min-h-[calc(100dvh-58px)] items-center justify-center overflow-hidden px-5 py-10 md:min-h-[calc(100dvh-78px)]">
           <div
             className="absolute inset-0 -z-30 bg-cover bg-center"
             style={{
@@ -547,39 +526,29 @@ export default function AccountPage() {
 
           <div
             className={`absolute inset-0 -z-20 ${
-              darkMode
-                ? "bg-[linear-gradient(90deg,rgba(2,9,5,0.94),rgba(3,14,7,0.78))]"
-                : "bg-[linear-gradient(90deg,rgba(238,246,236,0.94),rgba(236,245,234,0.78))]"
+              darkMode ? "bg-black/75" : "bg-[#edf5eb]/85"
             }`}
           />
 
           <div
-            className={`relative w-full max-w-lg rounded-[2rem] border p-8 text-center shadow-2xl backdrop-blur-2xl sm:p-10 ${
+            className={`w-full max-w-md rounded-[24px] border p-6 text-center shadow-xl backdrop-blur-xl sm:p-8 ${
               darkMode
-                ? "border-white/10 bg-[#07130c]/82 shadow-black/40"
-                : "border-white/60 bg-white/80 shadow-emerald-950/15"
+                ? "border-white/10 bg-[#07130c]/85"
+                : "border-white/60 bg-white/85"
             }`}
           >
             <div
-              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${
+              className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ${
                 darkMode
                   ? "bg-emerald-400/10 text-emerald-300"
                   : "bg-emerald-800/10 text-emerald-800"
               }`}
             >
-              <UserIcon className="h-7 w-7" />
+              <UserIcon className="h-6 w-6" />
             </div>
 
-            <p
-              className={`mt-6 text-[10px] font-black tracking-[0.18em] ${
-                darkMode ? "text-emerald-400" : "text-emerald-700"
-              }`}
-            >
-              PERSONAL HERBARIUM
-            </p>
-
             <h1
-              className={`mt-3 text-2xl font-black tracking-tight sm:text-3xl ${
+              className={`mt-5 text-2xl font-black leading-tight ${
                 darkMode ? "text-white" : "text-[#14271a]"
               }`}
             >
@@ -587,27 +556,27 @@ export default function AccountPage() {
             </h1>
 
             <p
-              className={`mx-auto mt-3 max-w-md text-sm leading-7 ${
+              className={`mt-2 text-sm leading-7 ${
                 darkMode ? "text-gray-400" : "text-slate-500"
               }`}
             >
               {t.notLoggedDescription}
             </p>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <div className="mt-6 grid grid-cols-2 gap-2.5">
               <Link
                 href="/login"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-emerald-700 px-6 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-emerald-600"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-black text-white transition hover:bg-emerald-600"
               >
                 {t.login}
               </Link>
 
               <Link
                 href="/register"
-                className={`inline-flex min-h-12 items-center justify-center rounded-xl border px-6 text-sm font-black transition ${
+                className={`inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-black transition ${
                   darkMode
-                    ? "border-white/10 bg-white/[0.05] text-white hover:bg-white/[0.09]"
-                    : "border-emerald-950/10 bg-white/80 text-slate-700 hover:bg-white"
+                    ? "border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
+                    : "border-emerald-950/10 bg-white text-slate-700 hover:bg-emerald-50"
                 }`}
               >
                 {t.register}
@@ -652,15 +621,15 @@ export default function AccountPage() {
   ===================================================== */
 
   return (
-    <main className="page overflow-hidden">
+    <main className="page overflow-x-hidden">
       <Navbar />
 
       {/* =====================================================
-          FOREST DASHBOARD HERO
+          HERO
       ===================================================== */}
 
       <section className="relative isolate overflow-hidden">
-        {/* IMAGE */}
+        {/* FOREST */}
 
         <div
           className="absolute inset-0 -z-30 bg-cover bg-center"
@@ -674,67 +643,49 @@ export default function AccountPage() {
         <div
           className={`absolute inset-0 -z-20 ${
             darkMode
-              ? "bg-[linear-gradient(90deg,rgba(2,9,5,0.97)_0%,rgba(3,14,7,0.88)_52%,rgba(3,14,7,0.65)_100%)]"
-              : "bg-[linear-gradient(90deg,rgba(238,246,236,0.97)_0%,rgba(238,246,236,0.90)_52%,rgba(235,244,233,0.73)_100%)]"
+              ? "bg-[linear-gradient(90deg,rgba(2,9,5,.95),rgba(3,14,7,.72))]"
+              : "bg-[linear-gradient(90deg,rgba(240,247,238,.96),rgba(236,245,234,.72))]"
           }`}
         />
 
-        {/* BOTTOM */}
+        {/* BOTTOM FADE */}
 
         <div
-          className={`absolute inset-x-0 bottom-0 -z-10 h-32 ${
+          className={`absolute inset-x-0 bottom-0 -z-10 h-24 ${
             darkMode
-              ? "bg-gradient-to-t from-[#07100b] to-transparent"
-              : "bg-gradient-to-t from-[#f1f6f1] to-transparent"
-          }`}
+              ? "bg-gradient-to-t from-[#07100b]"
+              : "bg-gradient-to-t from-[#f1f6f1]"
+          } to-transparent`}
         />
 
-        {/* LIGHT */}
-
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div
-            className={`absolute -top-52 right-[10%] h-[700px] w-28 rotate-[24deg] blur-3xl ${
-              darkMode
-                ? "bg-gradient-to-b from-emerald-100/10 to-transparent"
-                : "bg-gradient-to-b from-white/60 to-transparent"
-            }`}
-          />
-
-          <div className="forest-particle left-[15%] top-[35%]" />
-
-          <div className="forest-particle right-[22%] top-[28%] [animation-delay:-3s]" />
-
-          <div className="forest-particle right-[8%] top-[64%] [animation-delay:-5s]" />
-        </div>
-
         <div className="container">
-          <div className="py-14 sm:py-18 lg:py-20">
-            {/* TOP */}
+          <div className="py-7 sm:py-10 lg:py-12">
+            <div className="max-w-3xl">
+              {/* BADGE */}
 
-            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl page-enter">
-                <div
-                  className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
-                    darkMode
-                      ? "border-emerald-300/20 bg-black/20 text-emerald-200"
-                      : "border-emerald-950/15 bg-white/55 text-emerald-900"
+              <div
+                className={`inline-flex items-center gap-2.5 rounded-full border px-3.5 py-1.5 backdrop-blur-xl ${
+                  darkMode
+                    ? "border-emerald-300/20 bg-black/20 text-emerald-200"
+                    : "border-emerald-950/10 bg-white/60 text-emerald-900"
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${
+                    darkMode ? "bg-emerald-400" : "bg-emerald-700"
                   }`}
-                >
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      darkMode
-                        ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
-                        : "bg-emerald-700"
-                    }`}
-                  />
+                />
 
-                  <span className="text-[10px] font-black tracking-[0.22em]">
-                    {t.eyebrow}
-                  </span>
-                </div>
+                <span className="text-[9px] font-black tracking-[0.2em]">
+                  {t.eyebrow}
+                </span>
+              </div>
 
+              {/* TEXT */}
+
+              <div className="mt-4 flex max-w-3xl flex-col gap-2.5 sm:mt-5 sm:gap-3">
                 <p
-                  className={`mt-7 text-sm font-bold ${
+                  className={`text-[13px] font-bold leading-6 sm:text-sm sm:leading-6 ${
                     darkMode ? "text-emerald-300" : "text-emerald-800"
                   }`}
                 >
@@ -742,74 +693,49 @@ export default function AccountPage() {
                 </p>
 
                 <h1
-                  className={`mt-3 text-4xl font-black leading-tight tracking-[-0.05em] sm:text-6xl ${
-                    darkMode ? "text-white" : "text-[#102218]"
-                  }`}
+                  className={`font-black ${
+                    isEnglish
+                      ? "text-[2rem] leading-[1.12] tracking-[-0.04em] sm:text-4xl sm:leading-[1.12] lg:text-5xl"
+                      : "text-[2.05rem] leading-[1.28] tracking-[-0.025em] sm:text-[2.8rem] sm:leading-[1.24] lg:text-[3.4rem] lg:leading-[1.2]"
+                  } ${darkMode ? "text-white" : "text-[#102218]"}`}
                 >
                   {t.title}
                 </h1>
 
                 <p
-                  className={`mt-5 max-w-2xl text-base leading-8 ${
-                    darkMode ? "text-[#bdccc1]" : "text-[#475f4e]"
+                  className={`max-w-2xl text-[13px] font-medium leading-6 sm:text-[15px] sm:leading-7 ${
+                    darkMode ? "text-[#bdccc1]" : "text-[#4d6354]"
                   }`}
                 >
                   {t.subtitle}
                 </p>
               </div>
-
-              {/* ACTIONS */}
-
-              <div className="flex flex-col gap-3 sm:flex-row lg:pb-1">
-                <Link
-                  href="/account/plants"
-                  className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-bold backdrop-blur-xl transition hover:-translate-y-0.5 ${
-                    darkMode
-                      ? "border-white/15 bg-white/[0.06] text-white hover:bg-white/[0.11]"
-                      : "border-emerald-950/15 bg-white/55 text-emerald-950 hover:bg-white"
-                  }`}
-                >
-                  <CollectionIcon className="h-5 w-5" />
-
-                  {t.managePlants}
-                </Link>
-
-                <Link
-                  href="/account/plants/new"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.30)] transition hover:-translate-y-0.5 hover:bg-emerald-600"
-                >
-                  <PlusIcon className="h-5 w-5" />
-
-                  {t.addPlant}
-                </Link>
-              </div>
             </div>
 
-            {/* STATS */}
+            {/* =================================================
+                STATS
+            ================================================= */}
 
-            <div className="mt-10 grid gap-3 sm:grid-cols-3 lg:max-w-4xl">
+            <div className="mt-6 grid grid-cols-3 gap-2.5 sm:mt-7 sm:gap-4 lg:max-w-[840px] lg:gap-5">
               <StatCard
                 darkMode={darkMode}
-                icon={<LeafIcon className="h-5 w-5" />}
+                icon={<LeafIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
                 label={t.totalPlants}
                 value={stats.plants}
-                suffix={t.records}
               />
 
               <StatCard
                 darkMode={darkMode}
-                icon={<BranchIcon className="h-5 w-5" />}
-                label={t.families}
-                value={stats.families}
-                suffix={t.familyUnit}
-              />
-
-              <StatCard
-                darkMode={darkMode}
-                icon={<PinIcon className="h-5 w-5" />}
+                icon={<PinIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
                 label={t.provinces}
                 value={stats.provinces}
-                suffix={t.provinceUnit}
+              />
+
+              <StatCard
+                darkMode={darkMode}
+                icon={<BranchIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
+                label={t.families}
+                value={stats.families}
               />
             </div>
           </div>
@@ -817,48 +743,44 @@ export default function AccountPage() {
       </section>
 
       {/* =====================================================
-          DASHBOARD
+          BODY
       ===================================================== */}
 
-      <section className="container py-10 sm:py-14">
-        <div className="space-y-6">
+      <section className="container py-5 sm:py-8 lg:py-10">
+        <div className="space-y-5 lg:space-y-6">
           {/* =================================================
-              ACCOUNT PROFILE
+              PROFILE
           ================================================= */}
 
           <section
-            className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-xl sm:p-8 ${
+            className={`relative overflow-hidden rounded-[22px] border p-4 shadow-lg sm:p-6 ${
               darkMode
-                ? "border-white/10 bg-[#0a1710] shadow-black/20"
-                : "border-emerald-950/10 bg-white/85 shadow-emerald-950/10"
+                ? "border-white/10 bg-[#0a1710]"
+                : "border-emerald-950/[0.08] bg-white/90"
             }`}
           >
-            <div
-              className={`absolute inset-x-14 top-0 h-px ${
-                darkMode
-                  ? "bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent"
-                  : "bg-gradient-to-r from-transparent via-emerald-700/25 to-transparent"
-              }`}
-            />
+            {/* SUBTLE GLOW */}
 
             <div
-              className={`pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full blur-3xl ${
-                darkMode ? "bg-emerald-400/[0.045]" : "bg-emerald-800/[0.05]"
+              className={`pointer-events-none absolute -right-20 -top-24 h-60 w-60 rounded-full blur-3xl ${
+                darkMode ? "bg-emerald-400/[0.04]" : "bg-emerald-700/[0.035]"
               }`}
             />
 
             <div className="relative">
-              <div className="flex flex-col gap-7 xl:flex-row xl:items-center xl:justify-between">
+              {/* TOP AREA */}
+
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
                 {/* USER */}
 
-                <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 items-center gap-3.5 sm:gap-5">
                   <ProfileAvatar
                     avatarUrl={avatarUrl}
                     username={username}
                     darkMode={darkMode}
                   />
 
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p
                       className={`text-[9px] font-black tracking-[0.18em] ${
                         darkMode ? "text-emerald-400" : "text-emerald-700"
@@ -868,7 +790,7 @@ export default function AccountPage() {
                     </p>
 
                     <h2
-                      className={`mt-2 truncate text-2xl font-black tracking-tight sm:text-3xl ${
+                      className={`mt-1 truncate text-[1.65rem] font-black leading-[1.18] tracking-tight sm:text-3xl ${
                         darkMode ? "text-white" : "text-[#14271a]"
                       }`}
                     >
@@ -876,87 +798,108 @@ export default function AccountPage() {
                     </h2>
 
                     <p
-                      className={`mt-1 truncate text-sm ${
+                      className={`mt-1 truncate text-[12px] leading-5 sm:text-sm ${
                         darkMode ? "text-gray-400" : "text-slate-500"
                       }`}
                     >
                       {email}
                     </p>
 
-                    <div className="mt-3">
-                      {user.email_confirmed_at ? (
-                        <StatusBadge
-                          darkMode={darkMode}
-                          verified
-                          text={t.verified}
-                        />
-                      ) : (
-                        <StatusBadge darkMode={darkMode} text={t.unverified} />
-                      )}
+                    <div className="mt-2.5">
+                      <StatusBadge
+                        darkMode={darkMode}
+                        verified={Boolean(user.email_confirmed_at)}
+                        text={
+                          user.email_confirmed_at ? t.verified : t.unverified
+                        }
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* BUTTONS */}
+                {/* ACTIONS */}
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-2.5 lg:w-[360px] lg:shrink-0">
                   <Link
                     href="/account/edit"
-                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-bold transition ${
+                    className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition sm:text-sm ${
                       darkMode
-                        ? "border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
-                        : "border-emerald-950/10 bg-[#f7faf6] text-slate-700 hover:bg-emerald-50"
+                        ? "border-white/10 bg-white/[0.045] text-gray-100 hover:border-emerald-400/20 hover:bg-white/[0.08]"
+                        : "border-emerald-950/10 bg-[#f8faf7] text-slate-700 hover:border-emerald-700/20 hover:bg-emerald-50"
                     }`}
                   >
-                    <EditIcon className="h-4 w-4" />
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition ${
+                        darkMode
+                          ? "bg-white/[0.05] text-emerald-300 group-hover:bg-emerald-400/10"
+                          : "bg-emerald-800/[0.07] text-emerald-800 group-hover:bg-emerald-100"
+                      }`}
+                    >
+                      <EditIcon className="h-3.5 w-3.5" />
+                    </span>
 
-                    {t.editProfile}
+                    <span className="truncate">{t.editProfile}</span>
                   </Link>
 
                   <button
                     type="button"
                     onClick={handleLogout}
                     disabled={loggingOut}
-                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition sm:text-sm disabled:cursor-not-allowed disabled:opacity-50 ${
                       darkMode
-                        ? "bg-red-400/[0.08] text-red-300 hover:bg-red-400/[0.13]"
-                        : "bg-red-50 text-red-700 hover:bg-red-100"
+                        ? "border-red-400/10 bg-red-400/[0.055] text-red-300 hover:border-red-400/20 hover:bg-red-400/[0.1]"
+                        : "border-red-100 bg-red-50/80 text-red-700 hover:border-red-200 hover:bg-red-100"
                     }`}
                   >
-                    <LogoutIcon className="h-4 w-4" />
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                        darkMode ? "bg-red-400/[0.08]" : "bg-red-100"
+                      }`}
+                    >
+                      <LogoutIcon className="h-3.5 w-3.5" />
+                    </span>
 
-                    {loggingOut ? t.loggingOut : t.logout}
+                    <span className="truncate">
+                      {loggingOut ? t.loggingOut : t.logout}
+                    </span>
                   </button>
                 </div>
               </div>
 
-              {/* INFO */}
+              {/* MEMBER SINCE */}
 
               <div
-                className={`mt-8 grid gap-4 border-t pt-8 md:grid-cols-3 ${
-                  darkMode ? "border-white/10" : "border-emerald-950/10"
+                className={`mt-4 flex items-center gap-3 border-t pt-4 ${
+                  darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.07]"
                 }`}
               >
-                <InfoBox
-                  darkMode={darkMode}
-                  icon={<UserIcon className="h-5 w-5" />}
-                  label={t.username}
-                  value={username}
-                />
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                    darkMode
+                      ? "bg-emerald-400/[0.08] text-emerald-300"
+                      : "bg-emerald-800/[0.06] text-emerald-700"
+                  }`}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                </div>
 
-                <InfoBox
-                  darkMode={darkMode}
-                  icon={<MailIcon className="h-5 w-5" />}
-                  label={t.email}
-                  value={email}
-                />
+                <div className="flex min-w-0 items-baseline gap-2">
+                  <span
+                    className={`shrink-0 text-[10px] font-bold ${
+                      darkMode ? "text-gray-500" : "text-slate-400"
+                    }`}
+                  >
+                    {t.memberSince}
+                  </span>
 
-                <InfoBox
-                  darkMode={darkMode}
-                  icon={<CalendarIcon className="h-5 w-5" />}
-                  label={t.memberSince}
-                  value={joinedDate}
-                />
+                  <span
+                    className={`truncate text-[12px] font-bold sm:text-sm ${
+                      darkMode ? "text-gray-200" : "text-slate-700"
+                    }`}
+                  >
+                    {joinedDate}
+                  </span>
+                </div>
               </div>
             </div>
           </section>
@@ -966,16 +909,16 @@ export default function AccountPage() {
           ================================================= */}
 
           <section
-            className={`rounded-[2rem] border p-6 shadow-xl sm:p-8 ${
+            className={`rounded-[22px] border p-4 shadow-lg sm:p-6 lg:p-7 ${
               darkMode
-                ? "border-white/10 bg-[#0a1710] shadow-black/20"
-                : "border-emerald-950/10 bg-white/85 shadow-emerald-950/10"
+                ? "border-white/10 bg-[#0a1710]"
+                : "border-emerald-950/[0.08] bg-white/90"
             }`}
           >
             {/* HEADER */}
 
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
                 <p
                   className={`text-[9px] font-black tracking-[0.18em] ${
                     darkMode ? "text-emerald-400" : "text-emerald-700"
@@ -985,7 +928,7 @@ export default function AccountPage() {
                 </p>
 
                 <h2
-                  className={`mt-2 text-2xl font-black tracking-tight sm:text-3xl ${
+                  className={`mt-1.5 text-[1.75rem] font-black leading-[1.25] tracking-tight sm:text-3xl ${
                     darkMode ? "text-white" : "text-[#14271a]"
                   }`}
                 >
@@ -993,7 +936,7 @@ export default function AccountPage() {
                 </h2>
 
                 <p
-                  className={`mt-3 text-sm leading-7 ${
+                  className={`mt-1.5 text-[12px] leading-5 sm:text-sm sm:leading-6 ${
                     darkMode ? "text-gray-400" : "text-slate-500"
                   }`}
                 >
@@ -1001,10 +944,12 @@ export default function AccountPage() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+              {/* COLLECTION ACTIONS */}
+
+              <div className="grid grid-cols-2 gap-2 sm:w-auto">
                 <Link
                   href="/account/plants"
-                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-bold transition ${
+                  className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-[11px] font-bold transition sm:text-[12px] ${
                     darkMode
                       ? "border-white/10 bg-white/[0.035] text-gray-200 hover:bg-white/[0.08]"
                       : "border-emerald-950/10 bg-[#f7faf6] text-slate-700 hover:bg-emerald-50"
@@ -1012,16 +957,16 @@ export default function AccountPage() {
                 >
                   <CollectionIcon className="h-4 w-4" />
 
-                  {t.managePlants}
+                  <span className="truncate">{t.managePlants}</span>
                 </Link>
 
                 <Link
                   href="/account/plants/new"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white transition hover:bg-emerald-600"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 text-[11px] font-black text-white transition hover:bg-emerald-600 sm:text-[12px]"
                 >
                   <PlusIcon className="h-4 w-4" />
 
-                  {t.addPlant}
+                  <span className="truncate">{t.addPlant}</span>
                 </Link>
               </div>
             </div>
@@ -1030,38 +975,26 @@ export default function AccountPage() {
 
             {error && (
               <div
-                className={`mt-7 rounded-2xl border p-5 ${
+                className={`mt-5 flex items-start gap-3 rounded-xl border p-4 ${
                   darkMode
-                    ? "border-red-400/15 bg-red-400/[0.06]"
-                    : "border-red-200 bg-red-50"
+                    ? "border-red-400/15 bg-red-400/[0.06] text-red-200"
+                    : "border-red-200 bg-red-50 text-red-700"
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  <AlertIcon
-                    className={`mt-0.5 h-5 w-5 shrink-0 ${
-                      darkMode ? "text-red-300" : "text-red-700"
-                    }`}
-                  />
+                <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
 
-                  <div>
-                    <p
-                      className={`text-sm font-semibold leading-6 ${
-                        darkMode ? "text-red-200" : "text-red-700"
-                      }`}
-                    >
-                      {error}
-                    </p>
+                <div>
+                  <p className="text-sm leading-6">{error}</p>
 
-                    <button
-                      type="button"
-                      onClick={() => fetchMyPlants(user.id)}
-                      className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white transition hover:bg-red-700"
-                    >
-                      <RefreshIcon className="h-4 w-4" />
+                  <button
+                    type="button"
+                    onClick={() => fetchMyPlants(user.id)}
+                    className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg bg-red-600 px-3 text-xs font-bold text-white"
+                  >
+                    <RefreshIcon className="h-3.5 w-3.5" />
 
-                      {t.retry}
-                    </button>
-                  </div>
+                    {t.retry}
+                  </button>
                 </div>
               </div>
             )}
@@ -1069,16 +1002,16 @@ export default function AccountPage() {
             {/* LOADING */}
 
             {plantsLoading && (
-              <div className="grid min-h-[320px] place-items-center">
+              <div className="grid min-h-[180px] place-items-center">
                 <div className="text-center">
                   <LoadingIcon
-                    className={`mx-auto h-8 w-8 animate-spin ${
+                    className={`mx-auto h-7 w-7 animate-spin ${
                       darkMode ? "text-emerald-300" : "text-emerald-700"
                     }`}
                   />
 
                   <p
-                    className={`mt-5 text-sm ${
+                    className={`mt-3 text-xs ${
                       darkMode ? "text-gray-400" : "text-slate-500"
                     }`}
                   >
@@ -1092,24 +1025,20 @@ export default function AccountPage() {
 
             {!plantsLoading && !error && plants.length === 0 && (
               <div
-                className={`mt-8 rounded-[1.7rem] border border-dashed px-6 py-16 text-center ${
+                className={`mt-5 rounded-[18px] border border-dashed px-5 py-10 text-center ${
                   darkMode
                     ? "border-white/15 bg-white/[0.02]"
                     : "border-emerald-950/10 bg-[#f7faf6]"
                 }`}
               >
-                <div
-                  className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl ${
-                    darkMode
-                      ? "bg-emerald-400/10 text-emerald-300"
-                      : "bg-emerald-800/10 text-emerald-800"
+                <LeafIcon
+                  className={`mx-auto h-9 w-9 ${
+                    darkMode ? "text-emerald-300" : "text-emerald-700"
                   }`}
-                >
-                  <LeafIcon className="h-8 w-8" />
-                </div>
+                />
 
                 <h3
-                  className={`mt-6 text-xl font-black ${
+                  className={`mt-4 text-lg font-black ${
                     darkMode ? "text-white" : "text-[#14271a]"
                   }`}
                 >
@@ -1117,7 +1046,7 @@ export default function AccountPage() {
                 </h3>
 
                 <p
-                  className={`mx-auto mt-3 max-w-md text-sm leading-7 ${
+                  className={`mx-auto mt-2 max-w-sm text-xs leading-6 ${
                     darkMode ? "text-gray-400" : "text-slate-500"
                   }`}
                 >
@@ -1126,7 +1055,7 @@ export default function AccountPage() {
 
                 <Link
                   href="/account/plants/new"
-                  className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-emerald-600"
+                  className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-700 px-5 text-xs font-black text-white transition hover:bg-emerald-600"
                 >
                   <PlusIcon className="h-4 w-4" />
 
@@ -1135,92 +1064,59 @@ export default function AccountPage() {
               </div>
             )}
 
-            {/* PLANT GRID */}
+            {/* =================================================
+                MOBILE GRID
+                2 ต่อแถว / สูงสุด 4 block
+            ================================================= */}
 
             {!plantsLoading && !error && plants.length > 0 && (
-              <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {plants.map((plant) => (
-                  <MyPlantCard
-                    key={plant.id || plant.plant_id}
-                    plant={plant}
-                    isEnglish={isEnglish}
-                    darkMode={darkMode}
-                    t={t}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="mt-5 grid grid-cols-2 gap-3 md:hidden">
+                  {mobilePreview.items.map((plant) => (
+                    <MyPlantCard
+                      key={plant.id || plant.plant_id}
+                      plant={plant}
+                      darkMode={darkMode}
+                      t={t}
+                      mobile
+                    />
+                  ))}
+
+                  {mobilePreview.remaining > 0 && (
+                    <MorePlantsCard
+                      count={mobilePreview.remaining}
+                      darkMode={darkMode}
+                      t={t}
+                      mobile
+                    />
+                  )}
+                </div>
+
+                {/* =================================================
+                    DESKTOP GRID
+                    3 ต่อแถว / สูงสุด 6 block
+                ================================================= */}
+
+                <div className="mt-6 hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-3">
+                  {desktopPreview.items.map((plant) => (
+                    <MyPlantCard
+                      key={plant.id || plant.plant_id}
+                      plant={plant}
+                      darkMode={darkMode}
+                      t={t}
+                    />
+                  ))}
+
+                  {desktopPreview.remaining > 0 && (
+                    <MorePlantsCard
+                      count={desktopPreview.remaining}
+                      darkMode={darkMode}
+                      t={t}
+                    />
+                  )}
+                </div>
+              </>
             )}
-          </section>
-
-          {/* =================================================
-              SECURITY
-          ================================================= */}
-
-          <section
-            className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-xl sm:p-8 ${
-              darkMode
-                ? "border-white/10 bg-[#0a1710] shadow-black/20"
-                : "border-emerald-950/10 bg-white/85 shadow-emerald-950/10"
-            }`}
-          >
-            <div
-              className={`pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full blur-3xl ${
-                darkMode ? "bg-emerald-400/[0.045]" : "bg-emerald-800/[0.05]"
-              }`}
-            />
-
-            <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-4">
-                <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                    darkMode
-                      ? "bg-emerald-400/10 text-emerald-300"
-                      : "bg-emerald-800/10 text-emerald-800"
-                  }`}
-                >
-                  <ShieldIcon className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <p
-                    className={`text-[9px] font-black tracking-[0.16em] ${
-                      darkMode ? "text-emerald-400" : "text-emerald-700"
-                    }`}
-                  >
-                    {t.securityLabel}
-                  </p>
-
-                  <h2
-                    className={`mt-1 text-xl font-black ${
-                      darkMode ? "text-white" : "text-[#14271a]"
-                    }`}
-                  >
-                    {t.accountSecurity}
-                  </h2>
-
-                  <p
-                    className={`mt-2 text-sm ${
-                      darkMode ? "text-gray-400" : "text-slate-500"
-                    }`}
-                  >
-                    {t.securityDescription}
-                  </p>
-                </div>
-              </div>
-
-              <Link
-                href="/forgot-password"
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-bold transition ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]"
-                    : "border-emerald-950/10 bg-[#f7faf6] text-slate-700 hover:bg-emerald-50"
-                }`}
-              >
-                <KeyIcon className="h-4 w-4" />
-
-                {t.changePassword}
-              </Link>
-            </div>
           </section>
         </div>
       </section>
@@ -1245,7 +1141,7 @@ function ProfileAvatar({ avatarUrl, username, darkMode }) {
 
   return (
     <div
-      className={`h-24 w-24 shrink-0 overflow-hidden rounded-[1.7rem] border ${
+      className={`h-[66px] w-[66px] shrink-0 overflow-hidden rounded-[18px] border sm:h-20 sm:w-20 sm:rounded-[22px] ${
         darkMode
           ? "border-white/10 bg-emerald-400/10"
           : "border-emerald-950/10 bg-emerald-800/10"
@@ -1260,7 +1156,7 @@ function ProfileAvatar({ avatarUrl, username, darkMode }) {
         />
       ) : (
         <div
-          className={`flex h-full w-full items-center justify-center text-3xl font-black ${
+          className={`flex h-full w-full items-center justify-center text-xl font-black sm:text-2xl ${
             darkMode ? "text-emerald-300" : "text-emerald-800"
           }`}
         >
@@ -1275,10 +1171,10 @@ function ProfileAvatar({ avatarUrl, username, darkMode }) {
    STATUS BADGE
 ========================================================= */
 
-function StatusBadge({ darkMode, verified = false, text }) {
+function StatusBadge({ darkMode, verified, text }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
         verified
           ? darkMode
             ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
@@ -1289,7 +1185,7 @@ function StatusBadge({ darkMode, verified = false, text }) {
       }`}
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
           verified ? "bg-emerald-400" : "bg-amber-400"
         }`}
       />
@@ -1303,105 +1199,57 @@ function StatusBadge({ darkMode, verified = false, text }) {
    STAT CARD
 ========================================================= */
 
-function StatCard({ darkMode, icon, label, value, suffix }) {
+function StatCard({ darkMode, icon, label, value }) {
   return (
     <div
-      className={`rounded-2xl border p-4 backdrop-blur-xl transition duration-300 hover:-translate-y-1 ${
+      className={`group min-w-0 rounded-[18px] border px-2 py-4 text-center backdrop-blur-xl transition duration-300 sm:min-h-[170px] sm:rounded-[28px] sm:px-5 sm:py-5 lg:min-h-[185px] lg:px-6 lg:py-6 lg:hover:-translate-y-1 ${
         darkMode
-          ? "border-white/10 bg-black/20"
-          : "border-emerald-950/10 bg-white/55"
+          ? "border-white/10 bg-black/25 shadow-[0_14px_38px_rgba(0,0,0,0.18)]"
+          : "border-white/80 bg-white/80 shadow-[0_14px_40px_rgba(28,65,38,0.08)]"
       }`}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex h-full flex-col items-center justify-center">
+        {/* ICON */}
+
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] sm:h-14 sm:w-14 sm:rounded-[17px] lg:h-16 lg:w-16 lg:rounded-[20px] ${
             darkMode
               ? "bg-emerald-400/10 text-emerald-300"
-              : "bg-emerald-800/10 text-emerald-800"
+              : "bg-[#eaf3ee] text-emerald-700"
           }`}
         >
           {icon}
         </div>
 
-        <div>
-          <p
-            className={`text-[10px] font-bold ${
-              darkMode ? "text-gray-400" : "text-slate-500"
-            }`}
-          >
-            {label}
-          </p>
+        {/* NUMBER */}
 
-          <div className="mt-0.5 flex items-baseline gap-2">
-            <span
-              className={`text-2xl font-black ${
-                darkMode ? "text-white" : "text-[#173321]"
-              }`}
-            >
-              {value}
-            </span>
+        <p
+          className={`mt-2.5 text-[28px] font-black leading-none tracking-[-0.04em] sm:mt-3 sm:text-[42px] lg:text-[48px] ${
+            darkMode ? "text-white" : "text-[#123d24]"
+          }`}
+        >
+          {value}
+        </p>
 
-            <span
-              className={`text-[10px] ${
-                darkMode ? "text-gray-500" : "text-slate-400"
-              }`}
-            >
-              {suffix}
-            </span>
-          </div>
-        </div>
+        {/* LABEL */}
+
+        <p
+          className={`mt-1.5 max-w-full truncate text-[9px] font-bold leading-4 sm:mt-2 sm:text-[12px] lg:text-[13px] ${
+            darkMode ? "text-gray-400" : "text-[#61718a]"
+          }`}
+        >
+          {label}
+        </p>
       </div>
     </div>
   );
 }
 
 /* =========================================================
-   INFO BOX
+   PLANT CARD
 ========================================================= */
 
-function InfoBox({ darkMode, icon, label, value }) {
-  return (
-    <div
-      className={`rounded-2xl border p-5 ${
-        darkMode
-          ? "border-white/[0.08] bg-white/[0.025]"
-          : "border-emerald-950/[0.08] bg-[#f7faf6]"
-      }`}
-    >
-      <div
-        className={`flex h-9 w-9 items-center justify-center rounded-xl ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-800/[0.08] text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <p
-        className={`mt-4 text-[9px] font-bold uppercase tracking-[0.12em] ${
-          darkMode ? "text-gray-500" : "text-slate-400"
-        }`}
-      >
-        {label}
-      </p>
-
-      <p
-        className={`mt-1 break-words text-sm font-bold leading-6 ${
-          darkMode ? "text-gray-200" : "text-slate-800"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
-   MY PLANT CARD
-========================================================= */
-
-function MyPlantCard({ plant, isEnglish, darkMode, t }) {
+function MyPlantCard({ plant, darkMode, t, mobile = false }) {
   const plantId = plant.id || plant.plant_id;
 
   const image = plant.image_url || "";
@@ -1414,204 +1262,219 @@ function MyPlantCard({ plant, isEnglish, darkMode, t }) {
 
   const province = plant.province || "";
 
-  const location = plant.location || "";
-
-  const collectedBy = plant.collected_by || "";
-
   const specimen = plant.specimen_number || "";
 
   return (
     <article
-      className={`group relative overflow-hidden rounded-[1.7rem] border transition duration-300 hover:-translate-y-1.5 ${
+      className={`group min-w-0 overflow-hidden rounded-[17px] border transition duration-300 ${
         darkMode
-          ? "border-white/10 bg-[#08140d] hover:border-emerald-400/25 hover:shadow-[0_20px_50px_rgba(0,0,0,0.32)]"
-          : "border-emerald-950/10 bg-white hover:border-emerald-700/20 hover:shadow-[0_20px_45px_rgba(25,55,34,0.12)]"
+          ? "border-white/10 bg-[#08140d] hover:border-emerald-400/20"
+          : "border-emerald-950/[0.09] bg-white hover:border-emerald-700/20"
       }`}
     >
       {/* IMAGE */}
 
-      <div className="relative aspect-[1.45/1] overflow-hidden">
-        {image ? (
-          <img
-            src={image}
-            alt={name}
-            loading="lazy"
-            className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.055]"
-          />
-        ) : (
-          <div
-            className={`flex h-full w-full items-center justify-center ${
-              darkMode
-                ? "bg-[radial-gradient(circle_at_center,rgba(52,140,78,0.16),transparent_65%),#102218]"
-                : "bg-[radial-gradient(circle_at_center,rgba(30,110,62,0.12),transparent_65%),#edf5ed]"
-            }`}
-          >
-            <LeafIcon
-              className={`h-16 w-16 ${
-                darkMode ? "text-emerald-400/35" : "text-emerald-800/25"
-              }`}
+      <Link href={plantId ? `/plants/${plantId}` : "/plants"} className="block">
+        <div
+          className={`relative overflow-hidden ${
+            mobile ? "aspect-[1.25/1]" : "aspect-[1.55/1]"
+          }`}
+        >
+          {image ? (
+            <img
+              src={image}
+              alt={name}
+              loading="lazy"
+              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
             />
-          </div>
-        )}
+          ) : (
+            <div
+              className={`flex h-full w-full items-center justify-center ${
+                darkMode ? "bg-[#102218]" : "bg-[#edf5ed]"
+              }`}
+            >
+              <LeafIcon
+                className={`h-9 w-9 ${
+                  darkMode ? "text-emerald-400/35" : "text-emerald-800/25"
+                }`}
+              />
+            </div>
+          )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#020b05]/80 via-transparent to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/5" />
 
-        <div className="absolute left-4 top-4">
-          <span className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-[9px] font-black tracking-[0.15em] text-white backdrop-blur-xl">
-            MY SPECIMEN
-          </span>
-        </div>
-
-        {botanicalName && (
-          <div className="absolute bottom-0 left-0 right-0 p-5">
-            <p className="truncate text-sm font-semibold italic text-emerald-200">
+          {botanicalName && (
+            <p className="absolute inset-x-3 bottom-2.5 truncate text-[10px] font-semibold italic text-emerald-100 sm:text-xs">
               {botanicalName}
             </p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </Link>
 
-      {/* CONTENT */}
+      {/* BODY */}
 
-      <div className="p-5">
+      <div className={mobile ? "p-3" : "p-4"}>
         <h3
-          className={`line-clamp-2 text-xl font-black leading-7 ${
-            darkMode ? "text-white" : "text-[#14271a]"
-          }`}
+          className={`line-clamp-2 font-black ${
+            mobile
+              ? "min-h-[38px] text-[15px] leading-[19px]"
+              : "min-h-[44px] text-lg leading-[22px]"
+          } ${darkMode ? "text-white" : "text-[#14271a]"}`}
         >
           {name}
         </h3>
 
-        {family && (
-          <div className="mt-3">
-            <span
-              className={`inline-flex max-w-full truncate rounded-full border px-3 py-1.5 text-[10px] font-bold ${
-                darkMode
-                  ? "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300"
-                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
-              }`}
-            >
-              {isEnglish ? `Family: ${family}` : `วงศ์: ${family}`}
-            </span>
+        {/* MOBILE META */}
+
+        {mobile ? (
+          <div className="mt-2.5 space-y-1.5">
+            {family && (
+              <MiniMeta darkMode={darkMode} label={t.family} value={family} />
+            )}
+
+            {province && (
+              <MiniMeta
+                darkMode={darkMode}
+                label={t.province}
+                value={province}
+              />
+            )}
+          </div>
+        ) : (
+          /* DESKTOP META */
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {family && (
+              <MiniMeta darkMode={darkMode} label={t.family} value={family} />
+            )}
+
+            {province && (
+              <MiniMeta
+                darkMode={darkMode}
+                label={t.province}
+                value={province}
+              />
+            )}
+
+            {specimen && (
+              <div className="col-span-2">
+                <MiniMeta
+                  darkMode={darkMode}
+                  label={t.specimen}
+                  value={specimen}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        <div className="mt-5 space-y-3">
-          {province && (
-            <DetailLine
-              darkMode={darkMode}
-              icon={<PinIcon className="h-4 w-4" />}
-              label={t.province}
-              value={province}
-            />
-          )}
+        {/* ACTION */}
 
-          {location && (
-            <DetailLine
-              darkMode={darkMode}
-              icon={<LocationIcon className="h-4 w-4" />}
-              label={t.location}
-              value={location}
-            />
-          )}
-
-          {collectedBy && (
-            <DetailLine
-              darkMode={darkMode}
-              icon={<UserIcon className="h-4 w-4" />}
-              label={t.collectedBy}
-              value={collectedBy}
-            />
-          )}
-
-          {specimen && (
-            <DetailLine
-              darkMode={darkMode}
-              icon={<DocumentIcon className="h-4 w-4" />}
-              label={t.specimen}
-              value={specimen}
-            />
-          )}
-        </div>
-
-        {/* ACTIONS */}
-
-        <div
-          className={`mt-6 grid grid-cols-2 gap-2 border-t pt-5 ${
-            darkMode ? "border-white/10" : "border-emerald-950/10"
-          }`}
-        >
-          {plantId ? (
+        {plantId && (
+          <div
+            className={`mt-3 grid grid-cols-2 gap-1.5 border-t pt-3 ${
+              darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.07]"
+            }`}
+          >
             <Link
               href={`/plants/${plantId}`}
-              className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold transition ${
+              className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border px-2 text-[10px] font-bold transition sm:text-[11px] ${
                 darkMode
-                  ? "border-white/10 bg-white/[0.03] text-gray-200 hover:bg-white/[0.08]"
-                  : "border-emerald-950/10 bg-[#f7faf6] text-slate-700 hover:bg-emerald-50"
+                  ? "border-white/10 bg-white/[0.03] text-gray-200 hover:bg-white/[0.07]"
+                  : "border-emerald-950/[0.08] bg-[#f7faf6] text-slate-700 hover:bg-emerald-50"
               }`}
             >
-              <EyeIcon className="h-4 w-4" />
+              <EyeIcon className="h-3.5 w-3.5" />
 
               {t.view}
             </Link>
-          ) : (
-            <span />
-          )}
 
-          {plantId && (
             <Link
               href={`/account/plants/${plantId}/edit`}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 text-sm font-black text-white transition hover:bg-emerald-600"
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-2 text-[10px] font-black text-white transition hover:bg-emerald-600 sm:text-[11px]"
             >
-              <EditIcon className="h-4 w-4" />
+              <EditIcon className="h-3.5 w-3.5" />
 
               {t.edit}
             </Link>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-
-      <div className="absolute bottom-0 left-1/2 h-px w-0 -translate-x-1/2 bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent transition-all duration-500 group-hover:w-3/4" />
     </article>
   );
 }
 
 /* =========================================================
-   DETAIL LINE
+   MINI META
 ========================================================= */
 
-function DetailLine({ darkMode, icon, label, value }) {
+function MiniMeta({ darkMode, label, value }) {
   return (
-    <div className="flex min-w-0 items-start gap-3">
-      <div
-        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-          darkMode
-            ? "bg-white/[0.04] text-emerald-300"
-            : "bg-emerald-800/[0.07] text-emerald-800"
+    <div className="min-w-0">
+      <p
+        className={`truncate text-[8px] font-bold uppercase tracking-[0.06em] ${
+          darkMode ? "text-gray-500" : "text-slate-400"
         }`}
       >
-        {icon}
-      </div>
+        {label}
+      </p>
 
-      <div className="min-w-0">
-        <p
-          className={`text-[9px] font-bold uppercase tracking-[0.1em] ${
-            darkMode ? "text-gray-500" : "text-slate-400"
-          }`}
-        >
-          {label}
-        </p>
-
-        <p
-          className={`mt-0.5 truncate text-xs font-semibold ${
-            darkMode ? "text-gray-300" : "text-slate-700"
-          }`}
-          title={value}
-        >
-          {value}
-        </p>
-      </div>
+      <p
+        className={`mt-0.5 truncate text-[10px] font-bold leading-4 sm:text-[11px] ${
+          darkMode ? "text-gray-300" : "text-slate-700"
+        }`}
+        title={value}
+      >
+        {value}
+      </p>
     </div>
+  );
+}
+
+/* =========================================================
+   MORE PLANTS CARD
+========================================================= */
+
+function MorePlantsCard({ count, darkMode, t, mobile = false }) {
+  return (
+    <Link
+      href="/account/plants"
+      className={`flex min-w-0 flex-col items-center justify-center rounded-[17px] border text-center transition duration-300 ${
+        mobile ? "min-h-[250px] p-3" : "min-h-[330px] p-5"
+      } ${
+        darkMode
+          ? "border-white/10 bg-[#08140d] hover:border-emerald-400/20"
+          : "border-emerald-950/[0.09] bg-[#f8fbf7] hover:border-emerald-700/20"
+      }`}
+    >
+      <div
+        className={`flex items-center justify-center rounded-full font-black ${
+          mobile ? "h-14 w-14 text-xl" : "h-20 w-20 text-3xl"
+        } ${
+          darkMode
+            ? "bg-emerald-400/10 text-emerald-300"
+            : "bg-emerald-100 text-emerald-800"
+        }`}
+      >
+        +{count}
+      </div>
+
+      <p
+        className={`mt-3 font-black leading-5 ${
+          mobile ? "text-[12px]" : "text-base"
+        } ${darkMode ? "text-white" : "text-[#14271a]"}`}
+      >
+        {t.morePlants}
+      </p>
+
+      <p
+        className={`mt-1 text-[10px] ${
+          darkMode ? "text-gray-500" : "text-slate-500"
+        }`}
+      >
+        {t.showAll}
+      </p>
+    </Link>
   );
 }
 
@@ -1632,6 +1495,7 @@ function LeafIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
+
       <path d="M4 20c4-5 7-7 13-10" />
     </svg>
   );
@@ -1650,9 +1514,13 @@ function BranchIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M12 20V6" />
+
       <path d="M12 9 7 5" />
+
       <path d="M12 13l5-4" />
+
       <path d="M7 5 5 3" />
+
       <path d="M17 9l2-2" />
     </svg>
   );
@@ -1671,25 +1539,8 @@ function PinIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  );
-}
 
-function LocationIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="3" />
-      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="10" r="2.5" />
     </svg>
   );
 }
@@ -1713,25 +1564,6 @@ function UserIcon({ className = "" }) {
   );
 }
 
-function MailIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-
-      <path d="m4 7 8 6 8-6" />
-    </svg>
-  );
-}
-
 function CalendarIcon({ className = "" }) {
   return (
     <svg
@@ -1747,28 +1579,10 @@ function CalendarIcon({ className = "" }) {
       <rect x="3" y="5" width="18" height="16" rx="2" />
 
       <path d="M8 3v4" />
-      <path d="M16 3v4" />
-      <path d="M3 10h18" />
-    </svg>
-  );
-}
 
-function DocumentIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 3h8l4 4v14H6z" />
-      <path d="M14 3v5h5" />
-      <path d="M9 13h6" />
-      <path d="M9 17h6" />
+      <path d="M16 3v4" />
+
+      <path d="M3 10h18" />
     </svg>
   );
 }
@@ -1788,7 +1602,9 @@ function CollectionIcon({ className = "" }) {
       <rect x="4" y="3" width="16" height="18" rx="2" />
 
       <path d="M8 7h8" />
+
       <path d="M8 11h8" />
+
       <path d="M8 15h5" />
     </svg>
   );
@@ -1806,6 +1622,7 @@ function PlusIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M12 5v14" />
+
       <path d="M5 12h14" />
     </svg>
   );
@@ -1824,6 +1641,7 @@ function EditIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M12 20h9" />
+
       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
     </svg>
   );
@@ -1861,47 +1679,10 @@ function LogoutIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M10 17l5-5-5-5" />
+
       <path d="M15 12H3" />
+
       <path d="M21 19V5a2 2 0 0 0-2-2h-6" />
-    </svg>
-  );
-}
-
-function ShieldIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 3 20 6v5c0 5.2-3.4 8.6-8 10-4.6-1.4-8-4.8-8-10V6Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
-function KeyIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="12" r="4" />
-
-      <path d="M12 12h9" />
-      <path d="M18 12v3" />
-      <path d="M15 12v2" />
     </svg>
   );
 }
@@ -1921,6 +1702,7 @@ function AlertIcon({ className = "" }) {
       <circle cx="12" cy="12" r="9" />
 
       <path d="M12 8v5" />
+
       <path d="M12 16.5h.01" />
     </svg>
   );
@@ -1939,8 +1721,11 @@ function RefreshIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M20 11a8.1 8.1 0 0 0-14.9-3.9L3 10" />
+
       <path d="M3 4v6h6" />
+
       <path d="M4 13a8.1 8.1 0 0 0 14.9 3.9L21 14" />
+
       <path d="M21 20v-6h-6" />
     </svg>
   );

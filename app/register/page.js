@@ -15,6 +15,10 @@ import { useSiteSettings } from "@/components/SiteSettingsContext";
 const FOREST_IMAGE =
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=90";
 
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default function RegisterPage() {
   const router = useRouter();
 
@@ -50,12 +54,7 @@ export default function RegisterPage() {
 
   const text = {
     TH: {
-      eyebrow: "JOIN THE HERBARIUM",
-
-      forestTitle: "ร่วมสร้างคลังความรู้จากธรรมชาติ",
-
-      forestDescription:
-        "สร้างบัญชีเพื่อบันทึกตัวอย่างพรรณไม้ จัดการข้อมูลจากภาคสนาม และร่วมเก็บรักษาความรู้ทางพฤกษศาสตร์ในรูปแบบดิจิทัล",
+      eyebrow: "MEMBER REGISTRATION",
 
       title: "สมัครสมาชิก",
 
@@ -63,7 +62,7 @@ export default function RegisterPage() {
 
       username: "ชื่อผู้ใช้",
 
-      usernamePlaceholder: "เช่น Somchai หรือ herbarium_user",
+      usernamePlaceholder: "เช่น สมชาย หรือ herbarium_user",
 
       email: "อีเมล",
 
@@ -71,7 +70,7 @@ export default function RegisterPage() {
 
       password: "รหัสผ่าน",
 
-      passwordPlaceholder: "ตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษร",
+      passwordPlaceholder: "อย่างน้อย 8 ตัวอักษร",
 
       confirmPassword: "ยืนยันรหัสผ่าน",
 
@@ -81,15 +80,13 @@ export default function RegisterPage() {
 
       passwordHint: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
 
-      confirmHint: "กรุณาพิมพ์รหัสผ่านอีกครั้งเพื่อยืนยัน",
-
-      register: "สร้างบัญชี",
+      register: "สมัครสมาชิก",
 
       registering: "กำลังสร้างบัญชี...",
 
-      alreadyLabel: "มีบัญชีอยู่แล้ว?",
+      alreadyAccount: "มีบัญชีอยู่แล้ว?",
 
-      alreadyAccount: "เข้าสู่ระบบ",
+      login: "เข้าสู่ระบบ",
 
       back: "กลับหน้าแรก",
 
@@ -108,16 +105,16 @@ export default function RegisterPage() {
 
       emailExists: "อีเมลนี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ",
 
-      registerFailed: "ไม่สามารถสมัครสมาชิกได้",
+      registerFailed: "ไม่สามารถสมัครสมาชิกได้ กรุณาลองใหม่อีกครั้ง",
 
-      accountCreated: "สร้างบัญชีสำเร็จ",
+      accountCreated: "สมัครสมาชิกสำเร็จ",
 
       confirmationSent: "ระบบได้ส่งลิงก์ยืนยันบัญชีไปยัง",
 
       confirmationCheck:
-        "กรุณาตรวจสอบ Inbox หรือ Spam และกดลิงก์ยืนยันก่อนเข้าสู่ระบบ",
+        "กรุณาตรวจสอบ Inbox หรือ Spam แล้วกดลิงก์ยืนยันก่อนเข้าสู่ระบบ",
 
-      noConfirmation: "บัญชีของคุณถูกสร้างเรียบร้อยแล้ว",
+      noConfirmation: "บัญชีถูกสร้างแล้ว กำลังพาคุณเข้าสู่บัญชี",
 
       goLogin: "ไปหน้าเข้าสู่ระบบ",
 
@@ -125,31 +122,17 @@ export default function RegisterPage() {
 
       passwordNotMatch: "รหัสผ่านยังไม่ตรงกัน",
 
+      showPassword: "แสดงรหัสผ่าน",
+
+      hidePassword: "ซ่อนรหัสผ่าน",
+
       secure: "SECURE REGISTRATION",
 
-      secureText:
-        "ข้อมูลบัญชีและรหัสผ่านได้รับการจัดการผ่านระบบยืนยันตัวตนของ Supabase",
-
-      feature1: "My Plant Collection",
-
-      feature1Text: "บันทึกและจัดการตัวอย่างพรรณไม้ของคุณ",
-
-      feature2: "Field Information",
-
-      feature2Text: "เก็บข้อมูลสถานที่ ถิ่นอาศัย และรายละเอียดการเก็บตัวอย่าง",
-
-      feature3: "Digital Herbarium",
-
-      feature3Text: "ร่วมสร้างคลังข้อมูลพรรณไม้ที่สามารถค้นหาและเรียนรู้ได้",
+      secureText: "ข้อมูลบัญชีจะถูกส่งผ่านระบบยืนยันตัวตนของ Virtual Herbarium",
     },
 
     EN: {
-      eyebrow: "JOIN THE HERBARIUM",
-
-      forestTitle: "Help preserve knowledge from nature",
-
-      forestDescription:
-        "Create an account to record plant specimens, manage field information and contribute to a growing digital collection of botanical knowledge.",
+      eyebrow: "MEMBER REGISTRATION",
 
       title: "Create Account",
 
@@ -165,7 +148,7 @@ export default function RegisterPage() {
 
       password: "Password",
 
-      passwordPlaceholder: "Create a password with at least 8 characters",
+      passwordPlaceholder: "At least 8 characters",
 
       confirmPassword: "Confirm Password",
 
@@ -176,15 +159,13 @@ export default function RegisterPage() {
 
       passwordHint: "Password must contain at least 8 characters",
 
-      confirmHint: "Type your password again to confirm it",
-
       register: "Create Account",
 
       registering: "Creating account...",
 
-      alreadyLabel: "Already have an account?",
+      alreadyAccount: "Already have an account?",
 
-      alreadyAccount: "Login",
+      login: "Login",
 
       back: "Back to Home",
 
@@ -203,7 +184,7 @@ export default function RegisterPage() {
 
       emailExists: "This email is already registered. Please login.",
 
-      registerFailed: "Unable to create your account",
+      registerFailed: "Unable to create your account. Please try again.",
 
       accountCreated: "Account created successfully",
 
@@ -212,7 +193,8 @@ export default function RegisterPage() {
       confirmationCheck:
         "Please check your Inbox or Spam folder and confirm your email before logging in.",
 
-      noConfirmation: "Your account has been created successfully.",
+      noConfirmation:
+        "Your account has been created. Taking you to your account.",
 
       goLogin: "Go to Login",
 
@@ -220,44 +202,39 @@ export default function RegisterPage() {
 
       passwordNotMatch: "Passwords do not match",
 
+      showPassword: "Show password",
+
+      hidePassword: "Hide password",
+
       secure: "SECURE REGISTRATION",
 
       secureText:
-        "Your account and password are handled through Supabase authentication.",
-
-      feature1: "My Plant Collection",
-
-      feature1Text: "Record and manage your own plant specimens",
-
-      feature2: "Field Information",
-
-      feature2Text:
-        "Preserve locations, habitats and specimen collection details",
-
-      feature3: "Digital Herbarium",
-
-      feature3Text:
-        "Contribute to an accessible collection of botanical knowledge",
+        "Your account information is handled through secure authentication.",
     },
   };
 
   const t = isEnglish ? text.EN : text.TH;
 
   /* =====================================================
-     BLOCK CLIPBOARD ON CONFIRM PASSWORD
-     เก็บพฤติกรรมเดิมของโปรเจกต์ไว้
+     HELPERS
   ===================================================== */
 
-  function blockClipboard(e) {
-    e.preventDefault();
+  function clearFeedback() {
+    if (error) {
+      setError("");
+    }
+
+    if (success) {
+      setSuccess("");
+    }
   }
 
   /* =====================================================
      REGISTER
   ===================================================== */
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
 
     if (loading) return;
 
@@ -268,9 +245,9 @@ export default function RegisterPage() {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    /* -----------------------------------------------------
+    /* =================================================
        REQUIRED
-    ----------------------------------------------------- */
+    ================================================= */
 
     if (!cleanUsername || !cleanEmail || !password || !confirmPassword) {
       setError(t.required);
@@ -278,9 +255,9 @@ export default function RegisterPage() {
       return;
     }
 
-    /* -----------------------------------------------------
-       USERNAME LENGTH
-    ----------------------------------------------------- */
+    /* =================================================
+       USERNAME
+    ================================================= */
 
     if (cleanUsername.length < 3) {
       setError(t.usernameLength);
@@ -288,27 +265,15 @@ export default function RegisterPage() {
       return;
     }
 
-    /* -----------------------------------------------------
-       USERNAME VALIDATION
-
-       รองรับ:
-       - ภาษาไทย
-       - ภาษาอังกฤษ
-       - ตัวเลข
-       - .
-       - _
-       - -
-    ----------------------------------------------------- */
-
     if (!/^[a-zA-Zก-๙0-9._-]+$/.test(cleanUsername)) {
       setError(t.usernameInvalid);
 
       return;
     }
 
-    /* -----------------------------------------------------
+    /* =================================================
        EMAIL
-    ----------------------------------------------------- */
+    ================================================= */
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setError(t.invalidEmail);
@@ -316,19 +281,15 @@ export default function RegisterPage() {
       return;
     }
 
-    /* -----------------------------------------------------
+    /* =================================================
        PASSWORD
-    ----------------------------------------------------- */
+    ================================================= */
 
     if (password.length < 8) {
       setError(t.passwordLength);
 
       return;
     }
-
-    /* -----------------------------------------------------
-       CONFIRM PASSWORD
-    ----------------------------------------------------- */
 
     if (password !== confirmPassword) {
       setError(t.passwordMismatch);
@@ -362,21 +323,21 @@ export default function RegisterPage() {
       ================================================= */
 
       if (signUpError) {
-        const message = signUpError.message || "";
-
-        const lowerMessage = message.toLowerCase();
-
         console.error("Register error:", signUpError);
 
+        const message = signUpError.message?.toLowerCase() || "";
+
         if (
-          lowerMessage.includes("already registered") ||
-          lowerMessage.includes("already exists") ||
-          lowerMessage.includes("user already")
+          message.includes("already registered") ||
+          message.includes("already exists") ||
+          message.includes("user already")
         ) {
           setError(t.emailExists);
-        } else {
-          setError(`${t.registerFailed}: ${message}`);
+
+          return;
         }
+
+        setError(t.registerFailed);
 
         return;
       }
@@ -391,13 +352,27 @@ export default function RegisterPage() {
         return;
       }
 
+      /*
+       * Supabase บาง configuration
+       * จะไม่ throw error เมื่อ email มีอยู่แล้ว
+       */
+
+      if (
+        Array.isArray(data.user.identities) &&
+        data.user.identities.length === 0
+      ) {
+        setError(t.emailExists);
+
+        return;
+      }
+
       /* =================================================
          EMAIL CONFIRMATION ENABLED
       ================================================= */
 
       if (!data.session) {
         setSuccess(
-          `${t.confirmationSent} ${cleanEmail}. ${t.confirmationCheck}`,
+          `${t.accountCreated}. ${t.confirmationSent} ${cleanEmail}. ${t.confirmationCheck}`,
         );
 
         return;
@@ -424,28 +399,23 @@ export default function RegisterPage() {
   }
 
   /* =====================================================
-     PASSWORD STATE
+     PASSWORD STATUS
   ===================================================== */
 
-  const passwordHasValue = password.length > 0;
+  const hasConfirmPassword = confirmPassword.length > 0;
 
-  const confirmHasValue = confirmPassword.length > 0;
-
-  const passwordsMatch =
-    passwordHasValue && confirmHasValue && password === confirmPassword;
-
-  const passwordsDoNotMatch =
-    passwordHasValue && confirmHasValue && password !== confirmPassword;
+  const passwordMatches =
+    password && confirmPassword && password === confirmPassword;
 
   /* =====================================================
      PAGE
   ===================================================== */
 
   return (
-    <main className="page overflow-hidden">
+    <main className="page overflow-x-hidden">
       <Navbar />
 
-      <section className="relative isolate min-h-[calc(100svh-78px)] overflow-hidden">
+      <section className="relative isolate min-h-[calc(100dvh-58px)] overflow-x-hidden md:min-h-[calc(100dvh-78px)]">
         {/* =================================================
             FOREST BACKGROUND
         ================================================= */}
@@ -462,8 +432,8 @@ export default function RegisterPage() {
         <div
           className={`absolute inset-0 -z-20 ${
             darkMode
-              ? "bg-[linear-gradient(90deg,rgba(2,9,5,0.96)_0%,rgba(3,14,7,0.86)_48%,rgba(3,14,7,0.70)_100%)]"
-              : "bg-[linear-gradient(90deg,rgba(238,246,236,0.96)_0%,rgba(238,246,236,0.90)_48%,rgba(235,244,233,0.74)_100%)]"
+              ? "bg-[linear-gradient(180deg,rgba(2,9,5,0.91)_0%,rgba(3,13,7,0.85)_48%,rgba(3,13,7,0.94)_100%)] md:bg-[linear-gradient(90deg,rgba(2,9,5,0.96)_0%,rgba(3,13,7,0.84)_48%,rgba(3,13,7,0.70)_100%)]"
+              : "bg-[linear-gradient(180deg,rgba(238,246,236,0.93)_0%,rgba(238,246,236,0.90)_48%,rgba(235,244,233,0.96)_100%)] md:bg-[linear-gradient(90deg,rgba(238,246,236,0.96)_0%,rgba(238,246,236,0.90)_48%,rgba(235,244,233,0.76)_100%)]"
           }`}
         />
 
@@ -472,8 +442,8 @@ export default function RegisterPage() {
         <div
           className={`absolute inset-0 -z-10 ${
             darkMode
-              ? "bg-[linear-gradient(180deg,rgba(2,8,4,0.18)_0%,transparent_40%,rgba(2,8,4,0.52)_100%)]"
-              : "bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,transparent_45%,rgba(230,240,228,0.48)_100%)]"
+              ? "bg-[linear-gradient(180deg,rgba(2,8,4,0.14)_0%,transparent_40%,rgba(2,8,4,0.52)_100%)]"
+              : "bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,transparent_45%,rgba(230,240,228,0.48)_100%)]"
           }`}
         />
 
@@ -481,18 +451,16 @@ export default function RegisterPage() {
 
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
           <div
-            className={`absolute -top-52 right-[9%] h-[740px] w-28 rotate-[24deg] blur-3xl ${
+            className={`absolute -top-52 right-[8%] h-[720px] w-28 rotate-[24deg] blur-3xl ${
               darkMode
                 ? "bg-gradient-to-b from-emerald-100/10 to-transparent"
                 : "bg-gradient-to-b from-white/60 to-transparent"
             }`}
           />
 
-          <div className="forest-particle left-[12%] top-[20%]" />
+          <div className="forest-particle left-[10%] top-[24%]" />
 
-          <div className="forest-particle left-[37%] top-[62%] [animation-delay:-2s]" />
-
-          <div className="forest-particle right-[20%] top-[28%] [animation-delay:-4s]" />
+          <div className="forest-particle right-[20%] top-[30%] [animation-delay:-4s]" />
 
           <div className="forest-particle right-[8%] top-[68%] [animation-delay:-6s]" />
         </div>
@@ -502,82 +470,13 @@ export default function RegisterPage() {
         ================================================= */}
 
         <div className="container">
-          <div className="grid min-h-[calc(100svh-78px)] items-start gap-12 py-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:gap-20 lg:py-16">
-            {/* =================================================
-                LEFT INTRO
-            ================================================= */}
+          <div className="flex min-h-[calc(100dvh-58px)] items-center justify-center py-6 sm:py-8 md:min-h-[calc(100dvh-78px)] md:py-10 lg:py-12">
+            <div className="w-full max-w-[540px] page-enter">
+              {/* =================================================
+                  MOBILE / PAGE BADGE
+              ================================================= */}
 
-            <div className="hidden max-w-xl lg:block page-enter">
-              <div
-                className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
-                  darkMode
-                    ? "border-emerald-300/20 bg-black/20 text-emerald-200"
-                    : "border-emerald-950/15 bg-white/55 text-emerald-900"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    darkMode
-                      ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
-                      : "bg-emerald-700"
-                  }`}
-                />
-
-                <span className="text-[10px] font-black tracking-[0.22em]">
-                  {t.eyebrow}
-                </span>
-              </div>
-
-              <h1
-                className={`mt-7 text-5xl font-black leading-[1.03] tracking-[-0.05em] xl:text-6xl ${
-                  darkMode ? "text-white" : "text-[#102218]"
-                }`}
-              >
-                {t.forestTitle}
-              </h1>
-
-              <p
-                className={`mt-6 max-w-lg text-base leading-8 ${
-                  darkMode ? "text-[#bdccc1]" : "text-[#475f4e]"
-                }`}
-              >
-                {t.forestDescription}
-              </p>
-
-              {/* FEATURES */}
-
-              <div className="mt-10 space-y-3">
-                <FeatureRow
-                  darkMode={darkMode}
-                  icon={<LeafIcon className="h-5 w-5" />}
-                  title={t.feature1}
-                  text={t.feature1Text}
-                />
-
-                <FeatureRow
-                  darkMode={darkMode}
-                  icon={<PinIcon className="h-5 w-5" />}
-                  title={t.feature2}
-                  text={t.feature2Text}
-                />
-
-                <FeatureRow
-                  darkMode={darkMode}
-                  icon={<BookIcon className="h-5 w-5" />}
-                  title={t.feature3}
-                  text={t.feature3Text}
-                />
-              </div>
-            </div>
-
-            {/* =================================================
-                REGISTER CARD
-            ================================================= */}
-
-            <div className="mx-auto w-full max-w-xl page-enter">
-              {/* MOBILE BADGE */}
-
-              <div className="mb-6 text-center lg:hidden">
+              <div className="mb-4 text-center sm:mb-5">
                 <div
                   className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
                     darkMode
@@ -587,27 +486,33 @@ export default function RegisterPage() {
                 >
                   <span
                     className={`h-2 w-2 rounded-full ${
-                      darkMode ? "bg-emerald-400" : "bg-emerald-700"
+                      darkMode
+                        ? "bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.8)]"
+                        : "bg-emerald-700"
                     }`}
                   />
 
                   <span className="text-[10px] font-black tracking-[0.2em]">
-                    VIRTUAL HERBARIUM
+                    {t.eyebrow}
                   </span>
                 </div>
               </div>
 
+              {/* =================================================
+                  CARD
+              ================================================= */}
+
               <div
-                className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl backdrop-blur-2xl sm:p-8 ${
+                className={`relative overflow-hidden rounded-[24px] border p-5 shadow-2xl backdrop-blur-2xl min-[390px]:p-6 sm:rounded-[28px] sm:p-7 lg:p-8 ${
                   darkMode
                     ? "border-white/10 bg-[#07130c]/82 shadow-black/40"
-                    : "border-white/60 bg-white/78 shadow-emerald-950/15"
+                    : "border-white/60 bg-white/80 shadow-emerald-950/15"
                 }`}
               >
                 {/* TOP LIGHT */}
 
                 <div
-                  className={`absolute inset-x-14 top-0 h-px ${
+                  className={`absolute inset-x-12 top-0 h-px ${
                     darkMode
                       ? "bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent"
                       : "bg-gradient-to-r from-transparent via-emerald-700/30 to-transparent"
@@ -623,48 +528,59 @@ export default function RegisterPage() {
                 />
 
                 <div className="relative">
-                  {/* ICON */}
+                  {/* HEADER */}
 
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
-                      darkMode
-                        ? "border-emerald-400/15 bg-emerald-400/10 text-emerald-300"
-                        : "border-emerald-800/10 bg-emerald-800/10 text-emerald-800"
-                    }`}
-                  >
-                    <UserPlusIcon className="h-6 w-6" />
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+                        darkMode
+                          ? "border-emerald-400/15 bg-emerald-400/10 text-emerald-300"
+                          : "border-emerald-800/10 bg-emerald-800/10 text-emerald-800"
+                      }`}
+                    >
+                      <UserPlusIcon className="h-6 w-6" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h1
+                        className={`text-[2rem] font-black leading-tight tracking-[-0.04em] sm:text-3xl ${
+                          darkMode ? "text-white" : "text-[#14271a]"
+                        }`}
+                      >
+                        {t.title}
+                      </h1>
+
+                      <p
+                        className={`mt-1.5 text-sm leading-6 ${
+                          darkMode ? "text-gray-400" : "text-slate-500"
+                        }`}
+                      >
+                        {t.subtitle}
+                      </p>
+                    </div>
                   </div>
-
-                  {/* TITLE */}
-
-                  <h2
-                    className={`mt-6 text-3xl font-black tracking-[-0.04em] ${
-                      darkMode ? "text-white" : "text-[#14271a]"
-                    }`}
-                  >
-                    {t.title}
-                  </h2>
-
-                  <p
-                    className={`mt-2 text-sm leading-6 ${
-                      darkMode ? "text-gray-400" : "text-slate-500"
-                    }`}
-                  >
-                    {t.subtitle}
-                  </p>
 
                   {/* =================================================
                       FORM
                   ================================================= */}
 
-                  <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                  <form
+                    onSubmit={handleSubmit}
+                    aria-busy={loading}
+                    className="mt-6 space-y-5 sm:mt-7"
+                  >
                     {/* USERNAME */}
 
-                    <FormField
-                      darkMode={darkMode}
-                      label={t.username}
-                      hint={t.usernameHint}
-                    >
+                    <div>
+                      <label
+                        htmlFor="register-username"
+                        className={`mb-2 block text-sm font-bold ${
+                          darkMode ? "text-gray-200" : "text-slate-700"
+                        }`}
+                      >
+                        {t.username}
+                      </label>
+
                       <div className="relative">
                         <UserIcon
                           className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${
@@ -673,22 +589,48 @@ export default function RegisterPage() {
                         />
 
                         <input
+                          id="register-username"
                           type="text"
                           value={username}
-                          onChange={(e) => setUsername(e.target.value)}
+                          onChange={(event) => {
+                            setUsername(event.target.value);
+
+                            clearFeedback();
+                          }}
                           placeholder={t.usernamePlaceholder}
                           autoComplete="username"
                           maxLength={30}
                           disabled={loading}
                           required
-                          className={inputClass(darkMode)}
+                          className={`h-[52px] w-full rounded-xl border pl-12 pr-4 text-sm outline-none transition ${
+                            darkMode
+                              ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 hover:border-white/15 focus:border-emerald-400/45 focus:bg-black/30 focus:ring-4 focus:ring-emerald-400/[0.06]"
+                              : "border-emerald-950/10 bg-white/70 text-slate-900 placeholder:text-slate-400 hover:border-emerald-950/20 focus:border-emerald-700/35 focus:bg-white focus:ring-4 focus:ring-emerald-700/[0.06]"
+                          }`}
                         />
                       </div>
-                    </FormField>
+
+                      <p
+                        className={`mt-1.5 text-[10px] leading-5 ${
+                          darkMode ? "text-gray-500" : "text-slate-500"
+                        }`}
+                      >
+                        {t.usernameHint}
+                      </p>
+                    </div>
 
                     {/* EMAIL */}
 
-                    <FormField darkMode={darkMode} label={t.email}>
+                    <div>
+                      <label
+                        htmlFor="register-email"
+                        className={`mb-2 block text-sm font-bold ${
+                          darkMode ? "text-gray-200" : "text-slate-700"
+                        }`}
+                      >
+                        {t.email}
+                      </label>
+
                       <div className="relative">
                         <MailIcon
                           className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${
@@ -697,115 +639,215 @@ export default function RegisterPage() {
                         />
 
                         <input
+                          id="register-email"
                           type="email"
+                          inputMode="email"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(event) => {
+                            setEmail(event.target.value);
+
+                            clearFeedback();
+                          }}
                           placeholder={t.emailPlaceholder}
                           autoComplete="email"
+                          autoCapitalize="none"
+                          spellCheck={false}
                           disabled={loading}
                           required
-                          className={inputClass(darkMode)}
-                        />
-                      </div>
-                    </FormField>
-
-                    {/* PASSWORD */}
-
-                    <FormField
-                      darkMode={darkMode}
-                      label={t.password}
-                      hint={t.passwordHint}
-                    >
-                      <div className="relative">
-                        <LockIcon
-                          className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${
-                            darkMode ? "text-gray-500" : "text-slate-400"
+                          className={`h-[52px] w-full rounded-xl border pl-12 pr-4 text-sm outline-none transition ${
+                            darkMode
+                              ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 hover:border-white/15 focus:border-emerald-400/45 focus:bg-black/30 focus:ring-4 focus:ring-emerald-400/[0.06]"
+                              : "border-emerald-950/10 bg-white/70 text-slate-900 placeholder:text-slate-400 hover:border-emerald-950/20 focus:border-emerald-700/35 focus:bg-white focus:ring-4 focus:ring-emerald-700/[0.06]"
                           }`}
                         />
-
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder={t.passwordPlaceholder}
-                          autoComplete="new-password"
-                          minLength={8}
-                          disabled={loading}
-                          required
-                          className={`${inputClass(darkMode)} pr-12`}
-                        />
-
-                        <PasswordButton
-                          darkMode={darkMode}
-                          visible={showPassword}
-                          onClick={() => setShowPassword((current) => !current)}
-                        />
                       </div>
-                    </FormField>
+                    </div>
 
-                    {/* CONFIRM PASSWORD */}
+                    {/* PASSWORDS */}
 
-                    <FormField
-                      darkMode={darkMode}
-                      label={t.confirmPassword}
-                      hint={t.confirmHint}
-                    >
-                      <div className="relative">
-                        <LockIcon
-                          className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${
-                            darkMode ? "text-gray-500" : "text-slate-400"
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      {/* PASSWORD */}
+
+                      <div className="min-w-0">
+                        <label
+                          htmlFor="register-password"
+                          className={`mb-2 block text-sm font-bold ${
+                            darkMode ? "text-gray-200" : "text-slate-700"
                           }`}
-                        />
+                        >
+                          {t.password}
+                        </label>
 
-                        <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          onPaste={blockClipboard}
-                          onCopy={blockClipboard}
-                          onCut={blockClipboard}
-                          onDrop={blockClipboard}
-                          onContextMenu={blockClipboard}
-                          placeholder={t.confirmPasswordPlaceholder}
-                          autoComplete="new-password"
-                          minLength={8}
-                          disabled={loading}
-                          required
-                          className={`${inputClass(darkMode)} pr-12`}
-                        />
+                        <div className="relative">
+                          <LockIcon
+                            className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${
+                              darkMode ? "text-gray-500" : "text-slate-400"
+                            }`}
+                          />
 
-                        <PasswordButton
-                          darkMode={darkMode}
-                          visible={showConfirmPassword}
-                          onClick={() =>
-                            setShowConfirmPassword((current) => !current)
-                          }
-                        />
+                          <input
+                            id="register-password"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(event) => {
+                              setPassword(event.target.value);
+
+                              clearFeedback();
+                            }}
+                            placeholder={t.passwordPlaceholder}
+                            autoComplete="new-password"
+                            minLength={8}
+                            disabled={loading}
+                            required
+                            className={`h-[52px] w-full rounded-xl border pl-12 pr-12 text-sm outline-none transition ${
+                              darkMode
+                                ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 hover:border-white/15 focus:border-emerald-400/45 focus:bg-black/30 focus:ring-4 focus:ring-emerald-400/[0.06]"
+                                : "border-emerald-950/10 bg-white/70 text-slate-900 placeholder:text-slate-400 hover:border-emerald-950/20 focus:border-emerald-700/35 focus:bg-white focus:ring-4 focus:ring-emerald-700/[0.06]"
+                            }`}
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPassword((current) => !current)
+                            }
+                            aria-label={
+                              showPassword ? t.hidePassword : t.showPassword
+                            }
+                            title={
+                              showPassword ? t.hidePassword : t.showPassword
+                            }
+                            className={`absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg transition ${
+                              darkMode
+                                ? "text-gray-500 hover:bg-white/[0.06] hover:text-gray-200"
+                                : "text-slate-400 hover:bg-emerald-950/[0.05] hover:text-slate-700"
+                            }`}
+                          >
+                            {showPassword ? (
+                              <EyeOffIcon className="h-5 w-5" />
+                            ) : (
+                              <EyeIcon className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    </FormField>
+
+                      {/* CONFIRM PASSWORD */}
+
+                      <div className="min-w-0">
+                        <label
+                          htmlFor="register-confirm-password"
+                          className={`mb-2 block text-sm font-bold ${
+                            darkMode ? "text-gray-200" : "text-slate-700"
+                          }`}
+                        >
+                          {t.confirmPassword}
+                        </label>
+
+                        <div className="relative">
+                          <LockIcon
+                            className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${
+                              darkMode ? "text-gray-500" : "text-slate-400"
+                            }`}
+                          />
+
+                          <input
+                            id="register-confirm-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(event) => {
+                              setConfirmPassword(event.target.value);
+
+                              clearFeedback();
+                            }}
+                            placeholder={t.confirmPasswordPlaceholder}
+                            autoComplete="new-password"
+                            minLength={8}
+                            disabled={loading}
+                            required
+                            className={`h-[52px] w-full rounded-xl border pl-12 pr-12 text-sm outline-none transition ${
+                              darkMode
+                                ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 hover:border-white/15 focus:border-emerald-400/45 focus:bg-black/30 focus:ring-4 focus:ring-emerald-400/[0.06]"
+                                : "border-emerald-950/10 bg-white/70 text-slate-900 placeholder:text-slate-400 hover:border-emerald-950/20 focus:border-emerald-700/35 focus:bg-white focus:ring-4 focus:ring-emerald-700/[0.06]"
+                            }`}
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmPassword((current) => !current)
+                            }
+                            aria-label={
+                              showConfirmPassword
+                                ? t.hidePassword
+                                : t.showPassword
+                            }
+                            title={
+                              showConfirmPassword
+                                ? t.hidePassword
+                                : t.showPassword
+                            }
+                            className={`absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg transition ${
+                              darkMode
+                                ? "text-gray-500 hover:bg-white/[0.06] hover:text-gray-200"
+                                : "text-slate-400 hover:bg-emerald-950/[0.05] hover:text-slate-700"
+                            }`}
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOffIcon className="h-5 w-5" />
+                            ) : (
+                              <EyeIcon className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PASSWORD HINT */}
+
+                    <div
+                      className={`flex items-start gap-2.5 rounded-xl px-3.5 py-3 ${
+                        darkMode ? "bg-white/[0.025]" : "bg-emerald-950/[0.035]"
+                      }`}
+                    >
+                      <InfoIcon
+                        className={`mt-0.5 h-4 w-4 shrink-0 ${
+                          darkMode ? "text-emerald-400" : "text-emerald-700"
+                        }`}
+                      />
+
+                      <p
+                        className={`text-[10px] leading-5 ${
+                          darkMode ? "text-gray-500" : "text-slate-500"
+                        }`}
+                      >
+                        {t.passwordHint}
+                      </p>
+                    </div>
 
                     {/* PASSWORD MATCH */}
 
-                    {(passwordsMatch || passwordsDoNotMatch) && (
+                    {hasConfirmPassword && (
                       <div
-                        className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
-                          passwordsMatch
+                        role="status"
+                        className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 ${
+                          passwordMatches
                             ? darkMode
                               ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-200"
                               : "border-emerald-200 bg-emerald-50 text-emerald-800"
                             : darkMode
-                              ? "border-red-400/15 bg-red-400/[0.06] text-red-200"
+                              ? "border-red-400/15 bg-red-400/[0.05] text-red-200"
                               : "border-red-200 bg-red-50 text-red-700"
                         }`}
                       >
-                        {passwordsMatch ? (
-                          <CheckIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                        {passwordMatches ? (
+                          <CheckIcon className="h-4 w-4 shrink-0" />
                         ) : (
-                          <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                          <AlertIcon className="h-4 w-4 shrink-0" />
                         )}
 
-                        <p className="text-sm">
-                          {passwordsMatch
+                        <p className="text-xs font-bold">
+                          {passwordMatches
                             ? t.passwordMatch
                             : t.passwordNotMatch}
                         </p>
@@ -834,56 +876,39 @@ export default function RegisterPage() {
                     {success && (
                       <div
                         role="status"
-                        className={`rounded-2xl border p-5 ${
+                        aria-live="polite"
+                        className={`rounded-xl border p-4 ${
                           darkMode
-                            ? "border-emerald-400/15 bg-emerald-400/[0.06]"
-                            : "border-emerald-200 bg-emerald-50"
+                            ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-200"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800"
                         }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                              darkMode
-                                ? "bg-emerald-400/10 text-emerald-300"
-                                : "bg-emerald-100 text-emerald-800"
-                            }`}
-                          >
-                            <CheckIcon className="h-5 w-5" />
-                          </div>
+                          <CheckIcon className="mt-0.5 h-5 w-5 shrink-0" />
 
-                          <div>
-                            <p
-                              className={`font-black ${
-                                darkMode
-                                  ? "text-emerald-200"
-                                  : "text-emerald-900"
-                              }`}
-                            >
+                          <div className="min-w-0">
+                            <p className="text-sm font-black">
                               {t.accountCreated}
                             </p>
 
-                            <p
-                              className={`mt-2 text-sm leading-6 ${
-                                darkMode
-                                  ? "text-emerald-200/75"
-                                  : "text-emerald-800"
-                              }`}
-                            >
+                            <p className="mt-1.5 break-words text-xs leading-6">
                               {success}
                             </p>
-
-                            <Link
-                              href="/login"
-                              className={`mt-4 inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold transition ${
-                                darkMode
-                                  ? "bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15"
-                                  : "bg-emerald-700 text-white hover:bg-emerald-800"
-                              }`}
-                            >
-                              {t.goLogin}
-                            </Link>
                           </div>
                         </div>
+
+                        <Link
+                          href="/login"
+                          className={`mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-black transition ${
+                            darkMode
+                              ? "bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15"
+                              : "bg-emerald-700/10 text-emerald-800 hover:bg-emerald-700/15"
+                          }`}
+                        >
+                          {t.goLogin}
+
+                          <ArrowRightIcon className="h-4 w-4" />
+                        </Link>
                       </div>
                     )}
 
@@ -892,7 +917,7 @@ export default function RegisterPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.28)] transition hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-[0_16px_35px_rgba(6,78,45,0.35)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+                      className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.28)] transition active:scale-[0.99] hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-[0_16px_35px_rgba(6,78,45,0.35)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
                     >
                       {loading ? (
                         <>
@@ -910,20 +935,22 @@ export default function RegisterPage() {
                     </button>
                   </form>
 
-                  {/* LOGIN */}
+                  {/* =================================================
+                      LOGIN
+                  ================================================= */}
 
                   <div
-                    className={`mt-7 border-t pt-6 ${
+                    className={`mt-6 border-t pt-5 ${
                       darkMode ? "border-white/10" : "border-emerald-950/10"
                     }`}
                   >
-                    <div className="flex flex-col items-center justify-center gap-1 text-center sm:flex-row sm:gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
                       <span
                         className={`text-sm ${
                           darkMode ? "text-gray-500" : "text-slate-500"
                         }`}
                       >
-                        {t.alreadyLabel}
+                        {t.alreadyAccount}
                       </span>
 
                       <Link
@@ -934,15 +961,17 @@ export default function RegisterPage() {
                             : "text-emerald-700 hover:text-emerald-800"
                         }`}
                       >
-                        {t.alreadyAccount}
+                        {t.login}
                       </Link>
                     </div>
                   </div>
 
-                  {/* SECURITY */}
+                  {/* =================================================
+                      SECURITY
+                  ================================================= */}
 
                   <div
-                    className={`mt-6 flex items-start gap-3 rounded-xl p-4 ${
+                    className={`mt-5 flex items-start gap-3 rounded-xl p-3.5 ${
                       darkMode ? "bg-white/[0.025]" : "bg-emerald-950/[0.035]"
                     }`}
                   >
@@ -973,7 +1002,7 @@ export default function RegisterPage() {
 
                   {/* HOME */}
 
-                  <div className="mt-5 text-center">
+                  <div className="mt-4 text-center">
                     <Link
                       href="/"
                       className={`text-xs font-bold transition ${
@@ -1000,117 +1029,6 @@ export default function RegisterPage() {
 }
 
 /* =========================================================
-   INPUT CLASS
-========================================================= */
-
-function inputClass(darkMode) {
-  return `h-[52px] w-full rounded-xl border pl-12 pr-4 text-sm outline-none transition ${
-    darkMode
-      ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 hover:border-white/15 focus:border-emerald-400/45 focus:bg-black/30 focus:ring-4 focus:ring-emerald-400/[0.06]"
-      : "border-emerald-950/10 bg-white/70 text-slate-900 placeholder:text-slate-400 hover:border-emerald-950/20 focus:border-emerald-700/35 focus:bg-white focus:ring-4 focus:ring-emerald-700/[0.06]"
-  }`;
-}
-
-/* =========================================================
-   FORM FIELD
-========================================================= */
-
-function FormField({ darkMode, label, hint, children }) {
-  return (
-    <div>
-      <label
-        className={`mb-2 block text-sm font-bold ${
-          darkMode ? "text-gray-200" : "text-slate-700"
-        }`}
-      >
-        {label}
-      </label>
-
-      {children}
-
-      {hint && (
-        <p
-          className={`mt-2 text-xs leading-5 ${
-            darkMode ? "text-gray-500" : "text-slate-500"
-          }`}
-        >
-          {hint}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* =========================================================
-   PASSWORD BUTTON
-========================================================= */
-
-function PasswordButton({ darkMode, visible, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={visible ? "Hide password" : "Show password"}
-      className={`absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg transition ${
-        darkMode
-          ? "text-gray-500 hover:bg-white/[0.06] hover:text-gray-200"
-          : "text-slate-400 hover:bg-emerald-950/[0.05] hover:text-slate-700"
-      }`}
-    >
-      {visible ? (
-        <EyeOffIcon className="h-5 w-5" />
-      ) : (
-        <EyeIcon className="h-5 w-5" />
-      )}
-    </button>
-  );
-}
-
-/* =========================================================
-   FEATURE ROW
-========================================================= */
-
-function FeatureRow({ darkMode, icon, title, text }) {
-  return (
-    <div
-      className={`flex items-center gap-4 rounded-2xl border p-4 backdrop-blur-xl ${
-        darkMode
-          ? "border-white/10 bg-black/15"
-          : "border-emerald-950/10 bg-white/45"
-      }`}
-    >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-800/10 text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <div>
-        <p
-          className={`text-sm font-black ${
-            darkMode ? "text-white" : "text-[#173321]"
-          }`}
-        >
-          {title}
-        </p>
-
-        <p
-          className={`mt-0.5 text-xs ${
-            darkMode ? "text-gray-400" : "text-slate-500"
-          }`}
-        >
-          {text}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
    ICONS
 ========================================================= */
 
@@ -1121,16 +1039,17 @@ function UserPlusIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
       <circle cx="9" cy="8" r="4" />
 
-      <path d="M2 21a7 7 0 0 1 14 0" />
+      <path d="M2.5 21a7 7 0 0 1 13 0" />
 
       <path d="M19 8v6" />
+
       <path d="M16 11h6" />
     </svg>
   );
@@ -1235,7 +1154,7 @@ function EyeOffIcon({ className = "" }) {
   );
 }
 
-function CheckIcon({ className = "" }) {
+function InfoIcon({ className = "" }) {
   return (
     <svg
       className={className}
@@ -1249,7 +1168,9 @@ function CheckIcon({ className = "" }) {
     >
       <circle cx="12" cy="12" r="9" />
 
-      <path d="m8 12 2.5 2.5L16.5 9" />
+      <path d="M12 11v5" />
+
+      <path d="M12 8h.01" />
     </svg>
   );
 }
@@ -1269,7 +1190,27 @@ function AlertIcon({ className = "" }) {
       <circle cx="12" cy="12" r="9" />
 
       <path d="M12 8v5" />
+
       <path d="M12 16.5h.01" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+
+      <path d="m8 12 2.5 2.5L16.5 9" />
     </svg>
   );
 }
@@ -1293,59 +1234,21 @@ function ShieldIcon({ className = "" }) {
   );
 }
 
-function LeafIcon({ className = "" }) {
+function ArrowRightIcon({ className = "" }) {
   return (
     <svg
       className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
+      <path d="M5 12h14" />
 
-      <path d="M4 20c4-5 7-7 13-10" />
-    </svg>
-  );
-}
-
-function PinIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  );
-}
-
-function BookIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5Z" />
-
-      <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5Z" />
+      <path d="m15 8 4 4-4 4" />
     </svg>
   );
 }

@@ -88,6 +88,10 @@ export default function LoginPage() {
       secureText:
         "ข้อมูลบัญชีของคุณได้รับการจัดการผ่านระบบยืนยันตัวตนที่ปลอดภัย",
 
+      showPassword: "แสดงรหัสผ่าน",
+
+      hidePassword: "ซ่อนรหัสผ่าน",
+
       collection: "Plant Collection",
 
       records: "จัดการข้อมูลพรรณไม้ของคุณ",
@@ -145,6 +149,10 @@ export default function LoginPage() {
 
       secureText: "Your account is protected through secure authentication.",
 
+      showPassword: "Show password",
+
+      hidePassword: "Hide password",
+
       collection: "Plant Collection",
 
       records: "Manage your botanical records",
@@ -177,6 +185,7 @@ export default function LoginPage() {
 
     if (!cleanEmail || !password) {
       setError(t.required);
+
       return;
     }
 
@@ -231,10 +240,10 @@ export default function LoginPage() {
   ===================================================== */
 
   return (
-    <main className="page overflow-hidden">
+    <main className="page overflow-x-hidden">
       <Navbar />
 
-      <section className="relative isolate min-h-[calc(100svh-78px)] overflow-hidden">
+      <section className="relative isolate min-h-[calc(100dvh-58px)] overflow-x-hidden md:min-h-[calc(100dvh-78px)]">
         {/* =================================================
             FOREST BACKGROUND
         ================================================= */}
@@ -291,51 +300,63 @@ export default function LoginPage() {
         ================================================= */}
 
         <div className="container">
-          <div className="grid min-h-[calc(100svh-78px)] items-center gap-10 py-10 lg:grid-cols-[1fr_0.85fr] lg:gap-20 lg:py-14">
+          <div className="grid min-h-[calc(100dvh-58px)] items-center gap-8 py-6 sm:py-8 md:min-h-[calc(100dvh-78px)] lg:grid-cols-[1.02fr_0.88fr] lg:gap-16 lg:py-10 xl:gap-20 xl:py-12">
             {/* =================================================
-                LEFT INTRO
-            ================================================= */}
+    LEFT INTRO
+================================================= */}
 
-            <div className="hidden max-w-2xl lg:block page-enter">
-              <div
-                className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
-                  darkMode
-                    ? "border-emerald-300/20 bg-black/20 text-emerald-200"
-                    : "border-emerald-950/15 bg-white/55 text-emerald-900"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
+            <div className="hidden max-w-[650px] lg:block page-enter">
+              {/* MEMBER ACCESS */}
+
+              <div>
+                <div
+                  className={`inline-flex min-h-[42px] items-center gap-3 rounded-full border px-5 py-2.5 backdrop-blur-xl ${
                     darkMode
-                      ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
-                      : "bg-emerald-700"
+                      ? "border-emerald-300/20 bg-black/20 text-emerald-200"
+                      : "border-emerald-950/15 bg-white/55 text-emerald-900"
                   }`}
-                />
+                >
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      darkMode
+                        ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
+                        : "bg-emerald-700"
+                    }`}
+                  />
 
-                <span className="text-[10px] font-black tracking-[0.22em]">
-                  {t.eyebrow}
-                </span>
+                  <span className="text-[10px] font-black tracking-[0.22em]">
+                    {t.eyebrow}
+                  </span>
+                </div>
               </div>
 
-              <h1
-                className={`mt-7 max-w-2xl text-5xl font-black leading-[1.03] tracking-[-0.05em] xl:text-6xl ${
-                  darkMode ? "text-white" : "text-[#102218]"
-                }`}
-              >
-                {t.forestTitle}
-              </h1>
+              {/* =================================================
+                  TITLE AREA
+                  ================================================= */}
 
-              <p
-                className={`mt-6 max-w-xl text-base leading-8 ${
-                  darkMode ? "text-[#bdccc1]" : "text-[#475f4e]"
-                }`}
-              >
-                {t.forestDescription}
-              </p>
+              <div className="pt-7">
+                <h2
+                  className={`max-w-[650px] pb-1 font-black tracking-[-0.035em] ${
+                    isEnglish
+                      ? "text-5xl leading-[1.08] xl:text-6xl"
+                      : "text-[3.15rem] leading-[1.24] xl:text-[3.75rem] xl:leading-[1.22]"
+                  } ${darkMode ? "text-white" : "text-[#102218]"}`}
+                >
+                  {t.forestTitle}
+                </h2>
+
+                <p
+                  className={`mt-4 max-w-[610px] text-[16px] font-medium leading-[1.85] xl:text-[17px] ${
+                    darkMode ? "text-[#bdccc1]" : "text-[#475f4e]"
+                  }`}
+                >
+                  {t.forestDescription}
+                </p>
+              </div>
 
               {/* FEATURES */}
 
-              <div className="mt-10 grid max-w-xl gap-3">
+              <div className="mt-7 grid max-w-[610px] gap-3">
                 <FeatureRow
                   darkMode={darkMode}
                   icon={<LeafIcon className="h-5 w-5" />}
@@ -363,10 +384,10 @@ export default function LoginPage() {
                 LOGIN PANEL
             ================================================= */}
 
-            <div className="mx-auto w-full max-w-md page-enter">
+            <div className="mx-auto w-full max-w-[460px] page-enter">
               {/* MOBILE HEADER */}
 
-              <div className="mb-6 text-center lg:hidden">
+              <div className="mb-4 text-center sm:mb-5 lg:hidden">
                 <div
                   className={`mx-auto inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
                     darkMode
@@ -381,7 +402,7 @@ export default function LoginPage() {
                   />
 
                   <span className="text-[10px] font-black tracking-[0.2em]">
-                    VIRTUAL HERBARIUM
+                    {t.eyebrow}
                   </span>
                 </div>
               </div>
@@ -389,7 +410,7 @@ export default function LoginPage() {
               {/* CARD */}
 
               <div
-                className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl backdrop-blur-2xl sm:p-8 ${
+                className={`relative overflow-hidden rounded-[24px] border p-5 shadow-2xl backdrop-blur-2xl min-[390px]:p-6 sm:rounded-[28px] sm:p-7 lg:p-8 ${
                   darkMode
                     ? "border-white/10 bg-[#07130c]/80 shadow-black/40"
                     : "border-white/60 bg-white/75 shadow-emerald-950/15"
@@ -428,13 +449,13 @@ export default function LoginPage() {
 
                   {/* TITLE */}
 
-                  <h2
-                    className={`mt-6 text-3xl font-black tracking-[-0.04em] ${
+                  <h1
+                    className={`mt-5 text-[2rem] font-black tracking-[-0.04em] sm:text-3xl ${
                       darkMode ? "text-white" : "text-[#14271a]"
                     }`}
                   >
                     {t.title}
-                  </h2>
+                  </h1>
 
                   <p
                     className={`mt-2 text-sm leading-6 ${
@@ -448,7 +469,11 @@ export default function LoginPage() {
                       FORM
                   ================================================= */}
 
-                  <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                  <form
+                    onSubmit={handleSubmit}
+                    aria-busy={loading}
+                    className="mt-6 space-y-5 sm:mt-7"
+                  >
                     {/* EMAIL */}
 
                     <div>
@@ -472,7 +497,13 @@ export default function LoginPage() {
                           id="login-email"
                           type="email"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+
+                            if (error) {
+                              setError("");
+                            }
+                          }}
                           placeholder={t.emailPlaceholder}
                           autoComplete="email"
                           disabled={loading}
@@ -501,7 +532,7 @@ export default function LoginPage() {
 
                         <Link
                           href="/forgot-password"
-                          className={`text-xs font-bold transition ${
+                          className={`inline-flex min-h-8 items-center text-xs font-bold transition ${
                             darkMode
                               ? "text-emerald-300 hover:text-emerald-200"
                               : "text-emerald-700 hover:text-emerald-800"
@@ -522,7 +553,13 @@ export default function LoginPage() {
                           id="login-password"
                           type={showPassword ? "text" : "password"}
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+
+                            if (error) {
+                              setError("");
+                            }
+                          }}
                           placeholder={t.passwordPlaceholder}
                           autoComplete="current-password"
                           disabled={loading}
@@ -538,7 +575,7 @@ export default function LoginPage() {
                           type="button"
                           onClick={() => setShowPassword((current) => !current)}
                           aria-label={
-                            showPassword ? "Hide password" : "Show password"
+                            showPassword ? t.hidePassword : t.showPassword
                           }
                           className={`absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg transition ${
                             darkMode
@@ -594,7 +631,7 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.28)] transition hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-[0_16px_35px_rgba(6,78,45,0.35)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
+                      className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(6,78,45,0.28)] transition active:scale-[0.99] hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-[0_16px_35px_rgba(6,78,45,0.35)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
                     >
                       {loading ? (
                         <>
@@ -617,11 +654,11 @@ export default function LoginPage() {
                   ================================================= */}
 
                   <div
-                    className={`mt-7 border-t pt-6 ${
+                    className={`mt-6 border-t pt-5 sm:mt-7 sm:pt-6 ${
                       darkMode ? "border-white/10" : "border-emerald-950/10"
                     }`}
                   >
-                    <div className="flex flex-col items-center justify-center gap-1 text-center sm:flex-row sm:gap-2">
+                    <div className="flex items-center justify-center gap-2 whitespace-nowrap text-center">
                       <span
                         className={`text-sm ${
                           darkMode ? "text-gray-500" : "text-slate-500"
@@ -648,7 +685,7 @@ export default function LoginPage() {
                   ================================================= */}
 
                   <div
-                    className={`mt-6 flex items-start gap-3 rounded-xl p-4 ${
+                    className={`mt-5 flex items-start gap-3 rounded-xl p-3.5 sm:mt-6 sm:p-4 ${
                       darkMode ? "bg-white/[0.025]" : "bg-emerald-950/[0.035]"
                     }`}
                   >
@@ -679,7 +716,7 @@ export default function LoginPage() {
 
                   {/* HOME */}
 
-                  <div className="mt-5 text-center">
+                  <div className="mt-4 text-center sm:mt-5">
                     <Link
                       href="/"
                       className={`text-xs font-bold transition ${
@@ -712,7 +749,7 @@ export default function LoginPage() {
 function FeatureRow({ darkMode, icon, title, text }) {
   return (
     <div
-      className={`flex items-center gap-4 rounded-2xl border p-4 backdrop-blur-xl ${
+      className={`flex min-h-[72px] items-center gap-4 rounded-2xl border p-4 backdrop-blur-xl ${
         darkMode
           ? "border-white/10 bg-black/15"
           : "border-emerald-950/10 bg-white/45"
@@ -766,6 +803,7 @@ function LeafIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
+
       <path d="M4 20c4-5 7-7 13-10" />
     </svg>
   );
@@ -883,7 +921,9 @@ function LoginIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M10 17l5-5-5-5" />
+
       <path d="M15 12H3" />
+
       <path d="M21 19V5a2 2 0 0 0-2-2h-6" />
     </svg>
   );
@@ -904,6 +944,7 @@ function AlertIcon({ className = "" }) {
       <circle cx="12" cy="12" r="9" />
 
       <path d="M12 8v5" />
+
       <path d="M12 16.5h.01" />
     </svg>
   );
@@ -962,7 +1003,9 @@ function DocumentIcon({ className = "" }) {
       <path d="M6 3h8l4 4v14H6z" />
 
       <path d="M14 3v5h5" />
+
       <path d="M9 13h6" />
+
       <path d="M9 17h6" />
     </svg>
   );
