@@ -7,11 +7,8 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
-const FOREST_IMAGE =
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=88";
-
 export default function MyPlantsPage() {
-  const { language, darkMode } = useSiteSettings();
+  const { language } = useSiteSettings();
 
   const isEnglish = language === "EN";
 
@@ -27,11 +24,15 @@ export default function MyPlantsPage() {
 
   const [search, setSearch] = useState("");
   const [familyFilter, setFamilyFilter] = useState("");
-  const [provinceFilter, setProvinceFilter] = useState("");
+  const [localityFilter, setLocalityFilter] = useState("");
   const [sort, setSort] = useState("newest");
 
   const [isMobile, setIsMobile] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [deletingPlantId, setDeletingPlantId] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [actionError, setActionError] = useState("");
 
   /* =====================================================
      TEXT
@@ -39,30 +40,22 @@ export default function MyPlantsPage() {
 
   const text = {
     TH: {
-      eyebrow: "MY BOTANICAL COLLECTION",
+      eyebrow: "PLANT COLLECTION",
 
-      title: "คลังพรรณไม้ของฉัน",
+      title: "จัดการคลังพรรณไม้",
 
       subtitle:
-        "ค้นหา ตรวจสอบ และจัดการตัวอย่างพรรณไม้ที่คุณเพิ่มเข้าสู่ Virtual Herbarium ได้จากพื้นที่เดียว",
+        "ค้นหา ตรวจสอบ และจัดการตัวอย่างพรรณไม้ทั้งหมดใน Virtual Herbarium",
 
       backAccount: "กลับไปหน้าบัญชี",
 
       searchTitle: "ค้นหาและกรองข้อมูล",
 
-      searchPlaceholder: "ค้นหาชื่อพรรณไม้ ชื่อวิทยาศาสตร์ วงศ์ หรือสถานที่...",
+      searchPlaceholder: "ค้นหา PNU, ชื่อวิทยาศาสตร์, วงศ์, ผู้เก็บ หรือสถานที่",
 
-      allFamilies: "ทุกวงศ์",
-      allProvinces: "ทุกจังหวัด",
+      clearSearch: "ล้างคำค้น",
 
-      newest: "เพิ่มล่าสุด",
-      oldest: "เพิ่มเก่าสุด",
-      nameAZ: "ชื่อ A-Z",
-      nameZA: "ชื่อ Z-A",
-
-      clear: "ล้างตัวกรอง",
-
-      collectionLabel: "MY SPECIMENS",
+      collectionLabel: "SPECIMENS",
       collectionTitle: "รายการพรรณไม้",
 
       addPlant: "เพิ่มข้อมูลพรรณไม้",
@@ -70,6 +63,7 @@ export default function MyPlantsPage() {
 
       total: "ทั้งหมด",
       result: "รายการ",
+      found: "พบ",
 
       location: "สถานที่",
       collector: "ผู้เก็บตัวอย่าง",
@@ -78,15 +72,42 @@ export default function MyPlantsPage() {
       view: "รายละเอียด",
       viewShort: "ดู",
       edit: "แก้ไข",
+      delete: "ลบ",
+      deleting: "กำลังลบ...",
+      deleteConfirm: "ต้องการลบข้อมูลพรรณไม้นี้ใช่หรือไม่?",
+      deleteDescription:
+        "ข้อมูลตัวอย่างนี้จะถูกลบออกจากคลังอย่างถาวร และไม่สามารถกู้คืนได้",
+      cancel: "ยกเลิก",
+      deleteError: "ไม่สามารถลบข้อมูลพรรณไม้ได้",
+      imageDeleteError:
+        "ลบข้อมูลพรรณไม้แล้ว แต่ไม่สามารถลบรูปภาพออกจากที่จัดเก็บได้",
+      dismiss: "ปิด",
 
       noPlants: "ยังไม่มีข้อมูลพรรณไม้",
-
       noPlantsDescription:
-        "เมื่อคุณเพิ่มตัวอย่างพรรณไม้ ข้อมูลจะปรากฏในพื้นที่นี้",
+        "คลังของคุณยังว่างอยู่ เริ่มบันทึกตัวอย่างพรรณไม้ชิ้นแรกได้เลย",
 
       noResults: "ไม่พบข้อมูลที่ตรงกับการค้นหา",
 
       noResultsDescription: "ลองเปลี่ยนคำค้นหา หรือล้างตัวกรองบางรายการ",
+
+      clear: "ล้างตัวกรอง",
+
+      familyLabel: "วงศ์",
+      allFamilies: "ทุกวงศ์",
+      localityLabel: "สถานที่",
+      allLocalities: "ทุกสถานที่",
+      sortLabel: "เรียงตาม",
+      sortNewest: "เพิ่มล่าสุด",
+      sortOldest: "เก่าที่สุด",
+      sortAZ: "ชื่อ ก–ฮ / A–Z",
+      sortZA: "ชื่อ ฮ–ก / Z–A",
+
+      colImage: "ภาพ",
+      colPnu: "PNU No.",
+      colName: "ชื่อวิทยาศาสตร์",
+      colFamily: "วงศ์",
+      colActions: "จัดการ",
 
       loading: "กำลังเปิดคลังพรรณไม้ของคุณ...",
 
@@ -100,11 +121,7 @@ export default function MyPlantsPage() {
 
       login: "เข้าสู่ระบบ",
 
-      register: "สมัครสมาชิก",
-
       unknownPlant: "ไม่ระบุชื่อพรรณไม้",
-
-      specimenBadge: "MY SPECIMEN",
 
       previous: "ก่อนหน้า",
       next: "ถัดไป",
@@ -113,30 +130,23 @@ export default function MyPlantsPage() {
     },
 
     EN: {
-      eyebrow: "MY BOTANICAL COLLECTION",
+      eyebrow: "PLANT COLLECTION",
 
-      title: "My Plant Collection",
+      title: "Manage Plant Collection",
 
       subtitle:
-        "Search, review and manage the plant specimens you have contributed to the Virtual Herbarium from one organized space.",
+        "Search, review and manage every plant specimen in Virtual Herbarium.",
 
       backAccount: "Back to Account",
 
       searchTitle: "Search & Filter",
 
-      searchPlaceholder: "Search plant, scientific name, family or location...",
+      searchPlaceholder:
+        "Search PNU, botanical name, family, collector or locality",
 
-      allFamilies: "All Families",
-      allProvinces: "All Provinces",
+      clearSearch: "Clear search",
 
-      newest: "Newest First",
-      oldest: "Oldest First",
-      nameAZ: "Name A-Z",
-      nameZA: "Name Z-A",
-
-      clear: "Clear Filters",
-
-      collectionLabel: "MY SPECIMENS",
+      collectionLabel: "SPECIMENS",
       collectionTitle: "Plant Records",
 
       addPlant: "Add Plant Record",
@@ -144,6 +154,7 @@ export default function MyPlantsPage() {
 
       total: "Total",
       result: "records",
+      found: "Found",
 
       location: "Location",
       collector: "Collected by",
@@ -152,16 +163,43 @@ export default function MyPlantsPage() {
       view: "Details",
       viewShort: "View",
       edit: "Edit",
+      delete: "Delete",
+      deleting: "Deleting...",
+      deleteConfirm: "Are you sure you want to delete this plant?",
+      deleteDescription:
+        "This specimen record will be permanently removed from your collection.",
+      cancel: "Cancel",
+      deleteError: "Unable to delete this plant record",
+      imageDeleteError:
+        "The plant record was deleted, but its image could not be removed from storage.",
+      dismiss: "Dismiss",
 
       noPlants: "No plant records yet",
-
       noPlantsDescription:
-        "Your plant specimens will appear here after you add them.",
+        "Your collection is still empty — begin by recording your first specimen.",
 
       noResults: "No matching plant records",
 
       noResultsDescription:
         "Try another search term or remove some active filters.",
+
+      clear: "Clear filters",
+
+      familyLabel: "Family",
+      allFamilies: "All families",
+      localityLabel: "Locality",
+      allLocalities: "All localities",
+      sortLabel: "Sort",
+      sortNewest: "Newest first",
+      sortOldest: "Oldest first",
+      sortAZ: "Name A–Z",
+      sortZA: "Name Z–A",
+
+      colImage: "Image",
+      colPnu: "PNU No.",
+      colName: "Botanical name",
+      colFamily: "Family",
+      colActions: "Actions",
 
       loading: "Opening your plant collection...",
 
@@ -175,11 +213,7 @@ export default function MyPlantsPage() {
 
       login: "Login",
 
-      register: "Register",
-
       unknownPlant: "Unnamed Plant",
-
-      specimenBadge: "MY SPECIMEN",
 
       previous: "Previous",
       next: "Next",
@@ -225,7 +259,6 @@ export default function MyPlantsPage() {
       const { data, error: fetchError } = await supabase
         .from("plants")
         .select("*")
-        .eq("user_id", userId)
         .order("created_at", {
           ascending: false,
         });
@@ -243,6 +276,84 @@ export default function MyPlantsPage() {
       setError(err?.message || t.loadError);
     }
   }
+
+  /* Opens the confirmation sheet (replaces window.confirm) */
+  function requestDelete(plant) {
+    if (!plant?.id) return;
+
+    setPendingDelete(plant);
+  }
+
+  function cancelDelete() {
+    if (deletingPlantId) return;
+
+    setPendingDelete(null);
+  }
+
+  async function deletePlant(plant) {
+    const plantId = plant?.id;
+
+    if (!plantId) return;
+
+    setDeletingPlantId(plantId);
+    setActionError("");
+
+    try {
+      const { data: deleted, error } = await supabase
+        .from("plants")
+        .delete()
+        .eq("id", plantId)
+        .select("id")
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      /* RLS can block a delete without returning an error */
+      if (!deleted) {
+        throw new Error(t.deleteError);
+      }
+
+      setPlants((prev) => prev.filter((item) => item.id !== plantId));
+
+      const imagePath = getPlantImageStoragePath(plant.image_url);
+
+      if (imagePath) {
+        const { error: storageError } = await supabase.storage
+          .from("plant-images")
+          .remove([imagePath]);
+
+        if (storageError) {
+          console.error("Delete plant image error:", storageError);
+
+          setActionError(t.imageDeleteError);
+        }
+      }
+    } catch (err) {
+      console.error("Delete plant error:", err);
+
+      setActionError(err?.message || t.deleteError);
+    } finally {
+      setDeletingPlantId("");
+      setPendingDelete(null);
+    }
+  }
+
+  /* Close the delete sheet with Escape */
+  useEffect(() => {
+    if (!pendingDelete) return;
+
+    function onKeyDown(event) {
+      if (event.key === "Escape" && !deletingPlantId) {
+        setPendingDelete(null);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pendingDelete, deletingPlantId]);
 
   /* =====================================================
      LOAD USER
@@ -267,7 +378,7 @@ export default function MyPlantsPage() {
           throw userError;
         }
 
-        if (!currentUser) {
+        if (!currentUser || currentUser.app_metadata?.role !== "admin") {
           setUser(null);
           setPlants([]);
           return;
@@ -296,7 +407,10 @@ export default function MyPlantsPage() {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
 
-      const currentUser = session?.user || null;
+      const sessionUser = session?.user || null;
+
+      const currentUser =
+        sessionUser?.app_metadata?.role === "admin" ? sessionUser : null;
 
       setUser(currentUser);
 
@@ -324,11 +438,34 @@ export default function MyPlantsPage() {
     ].sort((a, b) => a.localeCompare(b, isEnglish ? "en" : "th"));
   }, [plants, isEnglish]);
 
-  const provinces = useMemo(() => {
-    return [
-      ...new Set(plants.map((plant) => plant.province).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, isEnglish ? "en" : "th"));
-  }, [plants, isEnglish]);
+  const localityCounts = useMemo(() => {
+    const counts = new Map();
+
+    plants.forEach((plant) => {
+      const locality = plant.locality?.trim();
+
+      if (!locality) return;
+
+      counts.set(locality, (counts.get(locality) || 0) + 1);
+    });
+
+    return counts;
+  }, [plants]);
+
+  const localities = useMemo(() => {
+    return [...localityCounts.keys()].sort((a, b) =>
+      a.localeCompare(b, isEnglish ? "en" : "th"),
+    );
+  }, [localityCounts, isEnglish]);
+
+  const localityLabels = useMemo(() => {
+    return Object.fromEntries(
+      [...localityCounts].map(([locality, count]) => [
+        locality,
+        `${locality} (${count})`,
+      ]),
+    );
+  }, [localityCounts]);
 
   /* =====================================================
      FILTER + SORT
@@ -340,17 +477,25 @@ export default function MyPlantsPage() {
     const result = plants.filter((plant) => {
       const searchable = [
         plant.common_name,
+        plant.common_name_th,
+        plant.common_name_en,
         plant.botanical_name,
         plant.family,
+        plant.artificial_group,
         plant.province,
         plant.district,
         plant.location,
+        plant.locality,
         plant.habitat,
         plant.collected_by,
+        plant.collected_by_th,
+        plant.collected_by_en,
+        plant.pnu_no,
+        plant.collector_no,
         plant.specimen_number,
         plant.notes,
       ]
-        .filter(Boolean)
+        .filter((value) => value != null && value !== "")
         .join(" ")
         .toLowerCase();
 
@@ -358,10 +503,10 @@ export default function MyPlantsPage() {
 
       const matchesFamily = !familyFilter || plant.family === familyFilter;
 
-      const matchesProvince =
-        !provinceFilter || plant.province === provinceFilter;
+      const matchesLocality =
+        !localityFilter || plant.locality?.trim() === localityFilter;
 
-      return matchesSearch && matchesFamily && matchesProvince;
+      return matchesSearch && matchesFamily && matchesLocality;
     });
 
     result.sort((a, b) => {
@@ -385,7 +530,7 @@ export default function MyPlantsPage() {
     });
 
     return result;
-  }, [plants, search, familyFilter, provinceFilter, sort, isEnglish]);
+  }, [plants, search, familyFilter, localityFilter, sort, isEnglish]);
 
   /* =====================================================
      PAGINATION
@@ -406,7 +551,7 @@ export default function MyPlantsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, familyFilter, provinceFilter, sort, isMobile]);
+  }, [search, familyFilter, localityFilter, sort, isMobile]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
@@ -432,7 +577,7 @@ export default function MyPlantsPage() {
   ===================================================== */
 
   const hasFilters = Boolean(
-    search.trim() || familyFilter || provinceFilter || sort !== "newest",
+    search.trim() || familyFilter || localityFilter || sort !== "newest",
   );
 
   function clearFilters() {
@@ -440,12 +585,21 @@ export default function MyPlantsPage() {
 
     setFamilyFilter("");
 
-    setProvinceFilter("");
+    setLocalityFilter("");
 
     setSort("newest");
 
     setCurrentPage(1);
   }
+
+  const sortOptions = ["newest", "oldest", "nameAZ", "nameZA"];
+
+  const sortLabels = {
+    newest: t.sortNewest,
+    oldest: t.sortOldest,
+    nameAZ: t.sortAZ,
+    nameZA: t.sortZA,
+  };
 
   /* =====================================================
      LOADING
@@ -453,26 +607,14 @@ export default function MyPlantsPage() {
 
   if (loading) {
     return (
-      <main
-        className={`page min-h-screen overflow-x-hidden ${
-          darkMode ? "bg-[#07100b] text-white" : "bg-[#f2f7f2] text-slate-900"
-        }`}
-      >
+      <main className="page min-h-screen overflow-x-hidden text-ink">
         <Navbar />
 
         <section className="flex min-h-[65dvh] items-center justify-center px-5">
           <div className="text-center">
-            <LoadingIcon
-              className={`mx-auto h-7 w-7 animate-spin ${
-                darkMode ? "text-emerald-300" : "text-emerald-700"
-              }`}
-            />
+            <LoadingIcon className="mx-auto h-6 w-6 animate-spin text-moss" />
 
-            <p
-              className={`mt-4 text-[13px] font-medium ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
+            <p className="mt-4 font-serif text-[15px] italic text-muted">
               {t.loading}
             </p>
           </div>
@@ -487,65 +629,35 @@ export default function MyPlantsPage() {
 
   if (!user) {
     return (
-      <main className="page min-h-screen overflow-x-hidden">
+      <main className="page min-h-screen overflow-x-hidden text-ink">
         <Navbar />
 
-        <section className="relative isolate flex min-h-[calc(100dvh-58px)] items-center justify-center overflow-hidden px-4 py-10 md:min-h-[calc(100dvh-78px)]">
-          <div
-            className="absolute inset-0 -z-30 bg-cover bg-center"
-            style={{
-              backgroundImage: `url("${FOREST_IMAGE}")`,
-            }}
-          />
-
-          <div
-            className={`absolute inset-0 -z-20 ${
-              darkMode
-                ? "bg-[linear-gradient(90deg,rgba(2,9,5,.95),rgba(3,14,7,.82))]"
-                : "bg-[linear-gradient(90deg,rgba(239,247,237,.96),rgba(237,246,235,.86))]"
-            }`}
-          />
-
-          <div
-            className={`w-full max-w-md rounded-[24px] border p-6 text-center shadow-xl backdrop-blur-2xl sm:p-8 ${
-              darkMode
-                ? "border-white/10 bg-[#07130c]/85"
-                : "border-white/70 bg-white/85"
-            }`}
-          >
-            <CollectionIcon
-              className={`mx-auto h-8 w-8 ${
-                darkMode ? "text-emerald-300" : "text-emerald-700"
-              }`}
-            />
-
-            <h1 className="mt-5 text-xl font-black">{t.loginRequired}</h1>
-
-            <p
-              className={`mt-2 text-[13px] leading-6 ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
-              {t.loginDescription}
+        <section className="vh-grid-paper flex min-h-[calc(100dvh-58px)] items-center justify-center px-4 py-10 md:min-h-[calc(100dvh-78px)]">
+          <div className="vh-sheet page-enter w-full max-w-md p-6 sm:p-8">
+            <p className="vh-eyebrow flex items-center gap-3">
+              <span className="h-px w-6 bg-ochre" />
+              {t.eyebrow}
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <Link
-                href="/login"
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-700 text-sm font-black text-white"
-              >
-                {t.login}
-              </Link>
+            <div className="mt-5 flex items-start gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-rule bg-moss-soft text-moss">
+                <CollectionIcon className="h-5 w-5" />
+              </span>
 
-              <Link
-                href="/register"
-                className={`inline-flex min-h-11 items-center justify-center rounded-xl border text-sm font-bold ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.04]"
-                    : "border-emerald-950/10 bg-white"
-                }`}
-              >
-                {t.register}
+              <div className="min-w-0">
+                <h1 className="vh-display text-[1.8rem]">{t.loginRequired}</h1>
+
+                <p className="mt-2 text-[14px] leading-6 text-muted">
+                  {t.loginDescription}
+                </p>
+              </div>
+            </div>
+
+            <div className="vh-rule-double mt-6" />
+
+            <div className="mt-6">
+              <Link href="/login" className="vh-btn vh-btn-primary w-full">
+                {t.login}
               </Link>
             </div>
           </div>
@@ -558,280 +670,205 @@ export default function MyPlantsPage() {
      PAGE
   ===================================================== */
 
+  const pageStart = filteredPlants.length
+    ? (currentPage - 1) * itemsPerPage + 1
+    : 0;
+
+  const pageEnd = Math.min(currentPage * itemsPerPage, filteredPlants.length);
+
   return (
-    <main
-      className={`page min-h-screen overflow-x-hidden ${
-        darkMode ? "bg-[#07100b] text-white" : "bg-[#f2f7f2] text-slate-900"
-      }`}
-    >
+    <main className="page min-h-screen overflow-x-hidden text-ink">
       <Navbar />
 
-      {/* =================================================
-          HERO
-      ================================================= */}
-
-      <section className="relative isolate overflow-hidden">
-        <div
-          className="absolute inset-0 -z-30 bg-cover bg-center"
-          style={{
-            backgroundImage: `url("${FOREST_IMAGE}")`,
-          }}
-        />
-
-        <div
-          className={`absolute inset-0 -z-20 ${
-            darkMode
-              ? "bg-[linear-gradient(90deg,rgba(2,9,5,.97)_0%,rgba(3,14,7,.90)_62%,rgba(3,14,7,.72)_100%)]"
-              : "bg-[linear-gradient(90deg,rgba(240,247,239,.97)_0%,rgba(239,246,237,.94)_62%,rgba(237,245,235,.82)_100%)]"
-          }`}
-        />
-
-        <div
-          className={`absolute inset-x-0 bottom-0 -z-10 h-16 ${
-            darkMode
-              ? "bg-gradient-to-t from-[#07100b] to-transparent"
-              : "bg-gradient-to-t from-[#f2f7f2] to-transparent"
-          }`}
-        />
-
-        <div className="container">
-          <div className="py-6 sm:py-8 lg:py-9">
-            {/* DESKTOP BACK */}
-
-            <Link
-              href="/account"
-              className={`hidden min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold backdrop-blur-xl transition md:inline-flex ${
-                darkMode
-                  ? "border-white/10 bg-black/20 text-gray-300 hover:bg-white/[0.08]"
-                  : "border-emerald-950/10 bg-white/65 text-emerald-900 hover:bg-white"
-              }`}
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-
-              {t.backAccount}
-            </Link>
-
-            {/* TITLE */}
-
-            <div className="max-w-3xl md:mt-5">
-              <div
-                className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 backdrop-blur-xl ${
-                  darkMode
-                    ? "border-emerald-300/20 bg-black/20 text-emerald-200"
-                    : "border-emerald-950/15 bg-white/60 text-emerald-900"
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    darkMode ? "bg-emerald-400" : "bg-emerald-700"
-                  }`}
-                />
-
-                <span className="text-[8px] font-black tracking-[0.18em] sm:text-[9px]">
-                  {t.eyebrow}
-                </span>
-              </div>
-
-              <h1
-                className={`mt-3 font-black tracking-[-0.04em] ${
-                  isEnglish
-                    ? "text-[2rem] leading-[1.12] sm:text-[2.6rem]"
-                    : "text-[2rem] leading-[1.25] sm:text-[2.7rem]"
-                } ${darkMode ? "text-white" : "text-[#102218]"}`}
-              >
-                {t.title}
-              </h1>
-
-              <p
-                className={`mt-3 max-w-2xl text-[13px] leading-[1.8] sm:text-[14px] sm:leading-7 ${
-                  darkMode ? "text-[#bdccc1]" : "text-[#526858]"
-                }`}
-              >
-                {t.subtitle}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =================================================
-          CONTENT
-      ================================================= */}
-
-      <section className="container pb-[calc(106px+env(safe-area-inset-bottom))] pt-5 sm:pb-12 sm:pt-7 lg:pt-8">
+      <div className="vh-container page-enter pb-[calc(106px+env(safe-area-inset-bottom))] pt-6 sm:pb-16 md:pt-10">
         {/* =================================================
-            SEARCH
+            HEADER
         ================================================= */}
 
-        <section
-          className={`rounded-[20px] border p-4 shadow-sm sm:p-5 ${
-            darkMode
-              ? "border-white/[0.08] bg-[#0a1710]"
-              : "border-emerald-950/[0.07] bg-white"
-          }`}
+        <Link
+          href="/account"
+          className="vh-btn vh-btn-ghost vh-btn-sm -ml-3 hidden md:inline-flex"
         >
-          <div className="flex items-center justify-between gap-3">
-            <h2
-              className={`text-[17px] font-black sm:text-lg ${
-                darkMode ? "text-white" : "text-[#14271a]"
-              }`}
-            >
-              {t.searchTitle}
-            </h2>
+          <ArrowLeftIcon className="h-4 w-4" />
 
-            {hasFilters && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition sm:text-xs ${
-                  darkMode
-                    ? "bg-white/[0.05] text-gray-300"
-                    : "bg-emerald-50 text-emerald-800"
-                }`}
-              >
-                {t.clear}
-              </button>
-            )}
+          {t.backAccount}
+        </Link>
+
+        <header className="mt-2 flex flex-col gap-6 border-b border-rule-strong pb-7 md:mt-5 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0 max-w-3xl">
+            <p className="vh-eyebrow flex items-center gap-3">
+              <span className="h-px w-6 bg-ochre" />
+              {t.eyebrow}
+            </p>
+
+            <h1 className="vh-display mt-4 text-[2.2rem] sm:text-[2.8rem] lg:text-[3.2rem]">
+              {t.title}
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-[14px] leading-7 text-muted sm:text-[15px]">
+              {t.subtitle}
+            </p>
+
+            <p className="mt-4 font-mono text-[12px] tabular-nums text-faint">
+              <span className="text-ochre">{t.total}</span>{" "}
+              <span className="text-ink">
+                {String(plants.length).padStart(3, "0")}
+              </span>{" "}
+              {t.result}
+            </p>
           </div>
 
-          {/* SEARCH INPUT */}
+          <Link
+            href="/account/plants/new"
+            aria-label={t.addPlant}
+            className="vh-btn vh-btn-primary w-full shrink-0 sm:w-auto"
+          >
+            <PlusIcon className="h-4 w-4" />
 
-          <div className="relative mt-4">
-            <SearchIcon
-              className={`pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 ${
-                darkMode ? "text-gray-500" : "text-slate-400"
-              }`}
-            />
+            <span className="sm:hidden">{t.addMobile}</span>
+
+            <span className="hidden sm:inline">{t.addPlant}</span>
+          </Link>
+        </header>
+
+        {/* =================================================
+            TOOLBAR
+        ================================================= */}
+
+        <section aria-label={t.searchTitle} className="vh-panel mt-7 p-4 sm:p-5">
+          <h2 className="vh-eyebrow">{t.searchTitle}</h2>
+
+          {/* SEARCH */}
+
+          <div className="relative mt-3 min-w-0">
+            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-faint" />
 
             <input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={t.searchPlaceholder}
-              className={`h-[48px] w-full rounded-[14px] border pl-11 pr-4 text-[13px] outline-none transition sm:text-sm ${
-                darkMode
-                  ? "border-white/10 bg-black/20 text-white placeholder:text-gray-600 focus:border-emerald-400/40"
-                  : "border-emerald-950/10 bg-[#f8faf7] text-slate-900 placeholder:text-slate-400 focus:border-emerald-700/35 focus:bg-white"
-              }`}
+              aria-label={t.searchTitle}
+              className="vh-input h-12 truncate pl-11 pr-11 [&::-webkit-search-cancel-button]:appearance-none"
             />
+
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label={t.clearSearch}
+                title={t.clearSearch}
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-faint transition hover:bg-moss-soft hover:text-ink"
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {/* FILTERS */}
 
-          <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3">
+          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.4fr_0.9fr]">
             <SelectField
-              darkMode={darkMode}
+              label={t.familyLabel}
               value={familyFilter}
               onChange={setFamilyFilter}
-              placeholder={t.allFamilies}
               options={families}
+              placeholder={t.allFamilies}
             />
 
             <SelectField
-              darkMode={darkMode}
-              value={provinceFilter}
-              onChange={setProvinceFilter}
-              placeholder={t.allProvinces}
-              options={provinces}
+              label={t.localityLabel}
+              value={localityFilter}
+              onChange={setLocalityFilter}
+              options={localities}
+              labels={localityLabels}
+              placeholder={t.allLocalities}
             />
 
-            <div className="col-span-2 md:col-span-1">
-              <SelectField
-                darkMode={darkMode}
-                value={sort}
-                onChange={setSort}
-                options={["newest", "oldest", "nameAZ", "nameZA"]}
-                labels={{
-                  newest: t.newest,
-                  oldest: t.oldest,
-                  nameAZ: t.nameAZ,
-                  nameZA: t.nameZA,
-                }}
-              />
-            </div>
+            <SelectField
+              label={t.sortLabel}
+              value={sort}
+              onChange={setSort}
+              options={sortOptions}
+              labels={sortLabels}
+            />
           </div>
+
+          {/* ACTIVE FILTERS */}
+
+          {hasFilters && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {familyFilter && (
+                <FilterChip
+                  label={`${t.familyLabel}: ${familyFilter}`}
+                  onRemove={() => setFamilyFilter("")}
+                  removeLabel={t.clear}
+                />
+              )}
+
+              {localityFilter && (
+                <FilterChip
+                  label={`${t.localityLabel}: ${localityFilter}`}
+                  onRemove={() => setLocalityFilter("")}
+                  removeLabel={t.clear}
+                />
+              )}
+
+              {search.trim() && (
+                <FilterChip
+                  label={`“${search.trim()}”`}
+                  onRemove={() => setSearch("")}
+                  removeLabel={t.clearSearch}
+                />
+              )}
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="vh-btn vh-btn-ghost vh-btn-sm ml-auto"
+              >
+                <CloseIcon className="h-3.5 w-3.5" />
+                {t.clear}
+              </button>
+            </div>
+          )}
+
+          {/* RESULT COUNT */}
+
+          <p className="mt-4 border-t border-rule pt-3 text-[13px] text-muted">
+            {t.found}{" "}
+            <span className="font-mono tabular-nums text-ink">
+              {filteredPlants.length}
+            </span>{" "}
+            {t.of}{" "}
+            <span className="font-mono tabular-nums">{plants.length}</span>{" "}
+            {t.result}
+          </p>
         </section>
 
         {/* =================================================
-            SPECIMENS
+            REGISTER
         ================================================= */}
 
-        <section
-          id="my-specimens"
-          className={`mt-5 scroll-mt-24 rounded-[22px] border p-4 shadow-sm sm:mt-6 sm:p-5 lg:p-6 ${
-            darkMode
-              ? "border-white/[0.08] bg-[#09150f]"
-              : "border-emerald-950/[0.07] bg-white/90"
-          }`}
-        >
-          {/* =================================================
-              HEADER
-          ================================================= */}
+        <section id="my-specimens" className="mt-10 scroll-mt-24">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-rule pb-3">
+            <div className="min-w-0">
+              <p className="vh-eyebrow">{t.collectionLabel}</p>
 
-          <div
-            className={`flex items-start justify-between gap-4 border-b pb-4 sm:items-center sm:pb-5 ${
-              darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.08]"
-            }`}
-          >
-            {/* LEFT */}
-
-            <div className="min-w-0 flex-1">
-              <p
-                className={`text-[8px] font-black tracking-[0.19em] sm:text-[9px] ${
-                  darkMode ? "text-emerald-400" : "text-emerald-700"
-                }`}
-              >
-                {t.collectionLabel}
-              </p>
-
-              <div className="mt-1.5">
-                <h2
-                  className={`font-black tracking-[-0.025em] ${
-                    isEnglish
-                      ? "text-xl leading-7 sm:text-2xl"
-                      : "text-[1.4rem] leading-[1.35] sm:text-[1.7rem]"
-                  } ${darkMode ? "text-white" : "text-[#14271a]"}`}
-                >
-                  {t.collectionTitle}
-                </h2>
-
-                <p
-                  className={`mt-1.5 text-[10px] leading-5 sm:text-xs ${
-                    darkMode ? "text-gray-500" : "text-slate-500"
-                  }`}
-                >
-                  {t.total}{" "}
-                  <span
-                    className={`font-black ${
-                      darkMode ? "text-emerald-300" : "text-emerald-700"
-                    }`}
-                  >
-                    {filteredPlants.length}
-                  </span>{" "}
-                  {t.result}
-                </p>
-              </div>
+              <h2 className="vh-display mt-2 text-[1.6rem] sm:text-[1.9rem]">
+                {t.collectionTitle}
+              </h2>
             </div>
 
-            {/* =================================================
-                ADD PLANT BUTTON
-            ================================================= */}
-
-            <Link
-              href="/account/plants/new"
-              aria-label={t.addPlant}
-              className="group inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-[14px] bg-[#087f5b] px-3 py-2 text-white shadow-[0_8px_22px_rgba(5,110,78,0.24)] ring-1 ring-emerald-950/5 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#067354] hover:shadow-[0_11px_26px_rgba(5,110,78,0.28)] active:translate-y-0 active:scale-[0.98] sm:min-h-[46px] sm:gap-2.5 sm:px-4"
-            >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-white/15 text-white transition group-hover:bg-white/20 sm:h-8 sm:w-8">
-                <PlusIcon className="h-4 w-4 sm:h-[17px] sm:w-[17px]" />
-              </span>
-
-              <span className="whitespace-nowrap text-[11px] font-black leading-none text-white sm:text-[12px]">
-                <span className="sm:hidden">{t.addMobile}</span>
-
-                <span className="hidden sm:inline">{t.addPlant}</span>
-              </span>
-            </Link>
+            <p className="font-mono text-[12px] tabular-nums text-faint">
+              {filteredPlants.length > 0 && (
+                <>
+                  {pageStart}–{pageEnd} / {" "}
+                </>
+              )}
+              <span className="text-ink">{filteredPlants.length}</span>{" "}
+              {t.result}
+            </p>
           </div>
 
           {/* =================================================
@@ -840,37 +877,45 @@ export default function MyPlantsPage() {
 
           {error && (
             <div
-              className={`mt-4 rounded-[16px] border p-4 ${
-                darkMode
-                  ? "border-red-400/15 bg-red-400/[0.06]"
-                  : "border-red-200 bg-red-50"
-              }`}
+              role="alert"
+              className="vh-panel mt-5 flex items-start gap-3 border-clay/40 bg-clay-soft p-4"
             >
-              <div className="flex items-start gap-3">
-                <AlertIcon
-                  className={`mt-0.5 h-4 w-4 shrink-0 ${
-                    darkMode ? "text-red-300" : "text-red-700"
-                  }`}
-                />
+              <AlertIcon className="mt-0.5 h-4 w-4 shrink-0 text-clay" />
 
-                <div>
-                  <p
-                    className={`text-[12px] leading-5 ${
-                      darkMode ? "text-red-200" : "text-red-700"
-                    }`}
-                  >
-                    {error}
-                  </p>
+              <div className="min-w-0">
+                <p className="text-[14px] leading-6 text-clay">{error}</p>
 
-                  <button
-                    type="button"
-                    onClick={() => fetchPlants(user.id)}
-                    className="mt-3 rounded-lg bg-red-600 px-3 py-2 text-[11px] font-bold text-white"
-                  >
-                    {t.retry}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => fetchPlants(user.id)}
+                  className="vh-btn vh-btn-danger vh-btn-sm mt-3"
+                >
+                  {t.retry}
+                </button>
               </div>
+            </div>
+          )}
+
+          {actionError && (
+            <div
+              role="alert"
+              className="vh-panel mt-5 flex items-start gap-3 border-clay/40 bg-clay-soft p-4"
+            >
+              <AlertIcon className="mt-0.5 h-4 w-4 shrink-0 text-clay" />
+
+              <p className="min-w-0 flex-1 text-[14px] leading-6 text-clay">
+                {actionError}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setActionError("")}
+                aria-label={t.dismiss}
+                title={t.dismiss}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-clay transition hover:bg-clay-soft"
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
             </div>
           )}
 
@@ -879,26 +924,24 @@ export default function MyPlantsPage() {
           ================================================= */}
 
           {!error && plants.length === 0 && (
-            <div className="py-10 text-center sm:py-12">
-              <div
-                className={`mx-auto flex h-11 w-11 items-center justify-center rounded-xl ${
-                  darkMode
-                    ? "bg-emerald-400/10 text-emerald-300"
-                    : "bg-emerald-50 text-emerald-700"
-                }`}
-              >
-                <LeafIcon className="h-5 w-5" />
-              </div>
+            <div className="vh-panel mt-6 px-6 py-12 text-center sm:py-16">
+              <LeafIcon className="mx-auto h-7 w-7 text-faint" />
 
-              <h3 className="mt-4 text-base font-black">{t.noPlants}</h3>
+              <p className="mx-auto mt-5 max-w-md font-serif text-[1.35rem] italic leading-snug text-ink-soft">
+                {t.noPlants}
+              </p>
 
-              <p
-                className={`mx-auto mt-2 max-w-md text-[12px] leading-6 ${
-                  darkMode ? "text-gray-400" : "text-slate-500"
-                }`}
-              >
+              <p className="mx-auto mt-2 max-w-md text-[14px] leading-6 text-muted">
                 {t.noPlantsDescription}
               </p>
+
+              <Link
+                href="/account/plants/new"
+                className="vh-btn vh-btn-primary mt-6"
+              >
+                <PlusIcon className="h-4 w-4" />
+                {t.addPlant}
+              </Link>
             </div>
           )}
 
@@ -907,31 +950,21 @@ export default function MyPlantsPage() {
           ================================================= */}
 
           {!error && plants.length > 0 && filteredPlants.length === 0 && (
-            <div className="py-10 text-center sm:py-12">
-              <SearchIcon
-                className={`mx-auto h-7 w-7 ${
-                  darkMode ? "text-emerald-300" : "text-emerald-700"
-                }`}
-              />
+            <div className="vh-panel mt-6 px-6 py-12 text-center">
+              <SearchIcon className="mx-auto h-6 w-6 text-faint" />
 
-              <h3 className="mt-4 text-base font-black">{t.noResults}</h3>
+              <p className="mx-auto mt-5 max-w-md font-serif text-[1.25rem] italic leading-snug text-ink-soft">
+                {t.noResults}
+              </p>
 
-              <p
-                className={`mx-auto mt-2 max-w-md text-[12px] leading-6 ${
-                  darkMode ? "text-gray-400" : "text-slate-500"
-                }`}
-              >
+              <p className="mx-auto mt-2 max-w-md text-[14px] leading-6 text-muted">
                 {t.noResultsDescription}
               </p>
 
               <button
                 type="button"
                 onClick={clearFilters}
-                className={`mt-4 rounded-xl border px-4 py-2.5 text-xs font-bold ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.04]"
-                    : "border-emerald-950/10 bg-white"
-                }`}
+                className="vh-btn vh-btn-outline vh-btn-sm mt-5"
               >
                 {t.clear}
               </button>
@@ -939,230 +972,474 @@ export default function MyPlantsPage() {
           )}
 
           {/* =================================================
-              PLANT GRID
-
-              PHONE = 2 CARDS / ROW
-              DESKTOP = 3 CARDS / ROW
+              RECORDS
+              DESKTOP (lg+) = TABLE REGISTER
+              MOBILE / TABLET = STACKED ROWS
           ================================================= */}
 
           {!error && paginatedPlants.length > 0 && (
             <>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+              {/* DESKTOP TABLE */}
+
+              <div className="vh-panel mt-5 hidden overflow-x-auto lg:block">
+                <table className="vh-table">
+                  <thead>
+                    <tr>
+                      <th className="w-[76px]">
+                        <span className="sr-only">{t.colImage}</span>
+                      </th>
+                      <th>{t.colPnu}</th>
+                      <th>{t.colName}</th>
+                      <th>{t.colFamily}</th>
+                      <th>{t.collector}</th>
+                      <th>{t.location}</th>
+                      <th className="text-right">
+                        <span className="sr-only">{t.colActions}</span>
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {paginatedPlants.map((plant) => (
+                      <PlantTableRow
+                        key={plant.id || plant.plant_id}
+                        plant={plant}
+                        t={t}
+                        isEnglish={isEnglish}
+                        onDelete={requestDelete}
+                        deleting={
+                          deletingPlantId === (plant.id || plant.plant_id)
+                        }
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE / TABLET ROWS */}
+
+              <ul className="vh-panel mt-5 divide-y divide-rule lg:hidden">
                 {paginatedPlants.map((plant) => (
-                  <PlantCard
+                  <PlantMobileRow
                     key={plant.id || plant.plant_id}
                     plant={plant}
-                    darkMode={darkMode}
                     t={t}
                     isEnglish={isEnglish}
+                    onDelete={requestDelete}
+                    deleting={deletingPlantId === (plant.id || plant.plant_id)}
                   />
                 ))}
-              </div>
+              </ul>
 
               {totalPages > 1 && (
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={goToPage}
-                  darkMode={darkMode}
                   t={t}
                 />
               )}
             </>
           )}
         </section>
-      </section>
+      </div>
+
+      {/* =================================================
+          DELETE CONFIRMATION SHEET
+      ================================================= */}
+
+      {pendingDelete && (
+        <DeleteSheet
+          plant={pendingDelete}
+          t={t}
+          isEnglish={isEnglish}
+          deleting={Boolean(deletingPlantId)}
+          onCancel={cancelDelete}
+          onConfirm={() => deletePlant(pendingDelete)}
+        />
+      )}
     </main>
   );
 }
 
 /* =========================================================
-   PLANT CARD
+   HELPERS
 ========================================================= */
 
-function PlantCard({ plant, darkMode, t, isEnglish }) {
-  const plantId = plant.id || null;
+function hasText(value) {
+  return typeof value === "string" ? value.trim() !== "" : value != null;
+}
 
-  const image = plant.image_url || "";
+function localized(isEnglish, th, en, legacy) {
+  const values = isEnglish ? [en, th, legacy] : [th, en, legacy];
 
-  const name = plant.common_name || plant.botanical_name || t.unknownPlant;
+  const found = values.find((value) => hasText(value));
 
-  const botanicalName = plant.botanical_name || "";
+  return found != null ? String(found).trim() : "";
+}
 
-  const family = plant.family || "";
+function getPlantView(plant, t, isEnglish) {
+  const commonName = localized(
+    isEnglish,
+    plant.common_name_th,
+    plant.common_name_en,
+    plant.common_name,
+  );
 
-  const location = [plant.location, plant.district, plant.province]
-    .filter(Boolean)
-    .join(", ");
+  const collector = localized(
+    isEnglish,
+    plant.collected_by_th,
+    plant.collected_by_en,
+    plant.collected_by,
+  );
+
+  const locality = hasText(plant.locality)
+    ? String(plant.locality).trim()
+    : [
+        plant.location,
+        plant.district,
+        localized(isEnglish, plant.province_th, plant.province_en, plant.province),
+      ]
+        .filter(hasText)
+        .join(", ");
+
+  const accession = hasText(plant.pnu_no)
+    ? `PNU ${plant.pnu_no}`
+    : hasText(plant.specimen_number)
+      ? String(plant.specimen_number)
+      : "";
+
+  return {
+    plantId: plant.id || null,
+    image: plant.image_url || "",
+    botanicalName: plant.botanical_name || "",
+    commonName,
+    displayName: plant.botanical_name || commonName || t.unknownPlant,
+    family: plant.family || "",
+    collector,
+    collectorNo: hasText(plant.collector_no) ? String(plant.collector_no) : "",
+    locality,
+    accession,
+  };
+}
+
+/* =========================================================
+   THUMBNAIL
+========================================================= */
+
+function Thumb({ image, alt, size = "h-14 w-14" }) {
+  return (
+    <div
+      className={`${size} shrink-0 overflow-hidden rounded-[4px] border border-rule bg-paper-deep`}
+    >
+      {image ? (
+        <img
+          src={image}
+          alt={alt}
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <LeafIcon className="h-5 w-5 text-faint" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   NAME
+========================================================= */
+
+function PlantName({ view, t, className = "" }) {
+  return (
+    <div className={`min-w-0 ${className}`}>
+      {view.botanicalName ? (
+        <p className="vh-binomial truncate text-[16px] text-ink" title={view.botanicalName}>
+          {view.botanicalName}
+        </p>
+      ) : (
+        <p className="truncate text-[15px] text-ink">
+          {view.commonName || t.unknownPlant}
+        </p>
+      )}
+
+      {view.botanicalName && view.commonName && (
+        <p className="mt-0.5 truncate text-[13px] text-muted" title={view.commonName}>
+          {view.commonName}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   TABLE ROW (DESKTOP)
+========================================================= */
+
+function PlantTableRow({ plant, t, isEnglish, onDelete, deleting }) {
+  const view = getPlantView(plant, t, isEnglish);
 
   return (
-    <article
-      className={`group flex min-w-0 flex-col overflow-hidden rounded-[16px] border transition duration-300 sm:rounded-[20px] ${
-        darkMode
-          ? "border-white/[0.09] bg-[#07120c] hover:border-emerald-400/25"
-          : "border-emerald-950/[0.09] bg-white hover:border-emerald-700/20 hover:shadow-[0_12px_28px_rgba(25,55,34,0.08)]"
-      }`}
-    >
-      {/* IMAGE */}
+    <tr className="align-middle">
+      <td className="py-3 pr-0">
+        <Thumb image={view.image} alt={view.displayName} />
+      </td>
 
-      <div className="relative aspect-[4/3] overflow-hidden">
-        {image ? (
-          <img
-            src={image}
-            alt={name}
-            loading="lazy"
-            className="h-full w-full object-cover transition duration-500 sm:group-hover:scale-[1.03]"
-          />
-        ) : (
-          <div
-            className={`flex h-full w-full items-center justify-center ${
-              darkMode ? "bg-[#102218]" : "bg-[#edf5ed]"
-            }`}
-          >
-            <LeafIcon
-              className={`h-8 w-8 sm:h-11 sm:w-11 ${
-                darkMode ? "text-emerald-400/35" : "text-emerald-800/25"
-              }`}
-            />
-          </div>
-        )}
-
-        <div className="absolute inset-0 bg-gradient-to-t from-[#06100a]/80 via-transparent to-transparent" />
-
-        {/* BADGE */}
-
-        <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/35 px-2 py-1 text-[6px] font-black tracking-[0.1em] text-white backdrop-blur-md sm:left-3 sm:top-3 sm:px-3 sm:text-[8px]">
-          {t.specimenBadge}
+      <td className="whitespace-nowrap">
+        <span className="font-mono text-[12px] tabular-nums text-ink">
+          {view.accession || "—"}
         </span>
+      </td>
 
-        {/* BOTANICAL NAME */}
+      <td className="max-w-[260px]">
+        <PlantName view={view} t={t} />
+      </td>
 
-        {botanicalName && (
-          <p className="absolute bottom-2 left-2.5 right-2.5 truncate text-[9px] font-semibold italic text-emerald-200 sm:bottom-3 sm:left-3 sm:right-3 sm:text-[11px]">
-            {botanicalName}
-          </p>
-        )}
-      </div>
-
-      {/* CONTENT */}
-
-      <div className="flex flex-1 flex-col p-3 sm:p-4">
-        <h3
-          className={`line-clamp-2 font-black ${
-            isEnglish
-              ? "text-[13px] leading-[1.4] sm:text-base"
-              : "text-[14px] leading-[1.5] sm:text-[17px]"
-          } ${darkMode ? "text-white" : "text-[#14271a]"}`}
-        >
-          {name}
-        </h3>
-
-        {/* FAMILY */}
-
-        {family && (
-          <span
-            className={`mt-2.5 inline-flex w-fit max-w-full truncate rounded-full border px-2 py-1 text-[8px] font-bold sm:px-2.5 sm:text-[9px] ${
-              darkMode
-                ? "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300"
-                : "border-emerald-200 bg-emerald-50 text-emerald-700"
-            }`}
-          >
-            {isEnglish ? `Family: ${family}` : `วงศ์: ${family}`}
+      <td className="max-w-[160px]">
+        {view.family ? (
+          <span className="vh-family block truncate" title={view.family}>
+            {view.family}
           </span>
+        ) : (
+          <span className="text-faint">—</span>
         )}
+      </td>
 
-        {/* MOBILE DETAILS */}
+      <td className="max-w-[180px]">
+        <p className="truncate text-[13px]" title={view.collector}>
+          {view.collector || <span className="text-faint">—</span>}
+        </p>
 
-        <div className="mt-3 space-y-2 md:hidden">
-          {plant.province && (
-            <CompactDetail
-              darkMode={darkMode}
-              icon={<PinIcon className="h-3.5 w-3.5" />}
-              value={plant.province}
-            />
-          )}
+        {view.collectorNo && (
+          <p className="vh-catalog mt-0.5">No. {view.collectorNo}</p>
+        )}
+      </td>
 
-          {plant.specimen_number && (
-            <CompactDetail
-              darkMode={darkMode}
-              icon={<DocumentIcon className="h-3.5 w-3.5" />}
-              value={plant.specimen_number}
-            />
-          )}
-        </div>
+      <td className="max-w-[220px]">
+        <p className="truncate text-[13px]" title={view.locality}>
+          {view.locality || <span className="text-faint">—</span>}
+        </p>
+      </td>
 
-        {/* TABLET / DESKTOP DETAILS */}
-
-        <div className="mt-4 hidden space-y-3 md:block">
-          {location && (
-            <DetailRow
-              darkMode={darkMode}
-              icon={<PinIcon className="h-4 w-4" />}
-              label={t.location}
-              value={location}
-            />
-          )}
-
-          {plant.collected_by && (
-            <DetailRow
-              darkMode={darkMode}
-              icon={<UserIcon className="h-4 w-4" />}
-              label={t.collector}
-              value={plant.collected_by}
-            />
-          )}
-
-          {plant.specimen_number && (
-            <DetailRow
-              darkMode={darkMode}
-              icon={<DocumentIcon className="h-4 w-4" />}
-              label={t.specimen}
-              value={plant.specimen_number}
-            />
-          )}
-        </div>
-
-        {/* ACTIONS */}
-
-        <div
-          className={`mt-auto grid grid-cols-2 gap-2 border-t pt-3 md:mt-5 ${
-            darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.08]"
-          }`}
-        >
-          {plantId ? (
+      <td>
+        <div className="flex items-center justify-end gap-2">
+          {view.plantId && (
             <Link
-              href={`/plants/${plantId}`}
-              className={`inline-flex min-h-[36px] min-w-0 items-center justify-center gap-1 rounded-[10px] border px-1 text-[9px] font-bold transition sm:min-h-10 sm:gap-1.5 sm:px-2 sm:text-[11px] ${
-                darkMode
-                  ? "border-white/10 bg-white/[0.03] text-gray-200"
-                  : "border-emerald-950/10 bg-[#f8faf7] text-slate-700"
-              }`}
+              href={`/account/plants/${view.plantId}`}
+              className="vh-icon-btn"
+              aria-label={t.view}
+              title={t.view}
             >
-              <EyeIcon className="h-3.5 w-3.5 shrink-0" />
-
-              <span className="truncate sm:hidden">{t.viewShort}</span>
-
-              <span className="hidden truncate sm:inline">{t.view}</span>
+              <EyeIcon className="h-4 w-4" />
             </Link>
-          ) : (
-            <span />
           )}
 
-          {plantId ? (
+          {view.plantId && (
             <Link
-              href={`/account/plants/${plantId}/edit`}
-              className="inline-flex min-h-[36px] min-w-0 items-center justify-center gap-1 rounded-[10px] bg-emerald-700 px-1 text-[9px] font-black text-white transition hover:bg-emerald-600 sm:min-h-10 sm:gap-1.5 sm:px-2 sm:text-[11px]"
+              href={`/account/plants/${view.plantId}/edit`}
+              className="vh-btn vh-btn-outline vh-btn-sm"
             >
-              <EditIcon className="h-3.5 w-3.5 shrink-0" />
-
-              <span className="truncate">{t.edit}</span>
+              <EditIcon className="h-3.5 w-3.5" />
+              {t.edit}
             </Link>
-          ) : (
-            <span />
+          )}
+
+          <button
+            type="button"
+            onClick={() => onDelete(plant)}
+            disabled={deleting}
+            className="vh-icon-btn hover:border-clay/40 hover:bg-clay-soft hover:text-clay"
+            aria-label={deleting ? t.deleting : t.delete}
+            title={deleting ? t.deleting : t.delete}
+          >
+            {deleting ? (
+              <LoadingIcon className="h-4 w-4 animate-spin" />
+            ) : (
+              <TrashIcon className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/* =========================================================
+   STACKED ROW (MOBILE / TABLET)
+========================================================= */
+
+function PlantMobileRow({ plant, t, isEnglish, onDelete, deleting }) {
+  const view = getPlantView(plant, t, isEnglish);
+
+  return (
+    <li className="p-4">
+      <div className="flex min-w-0 gap-3.5">
+        <Thumb
+          image={view.image}
+          alt={view.displayName}
+          size="h-[72px] w-[72px]"
+        />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="truncate font-mono text-[11.5px] tabular-nums text-ink">
+              {view.accession || "—"}
+            </span>
+
+            {view.family && (
+              <span className="vh-family min-w-0 truncate" title={view.family}>
+                {view.family}
+              </span>
+            )}
+          </div>
+
+          <PlantName view={view} t={t} className="mt-1" />
+
+          {(view.collector || view.locality) && (
+            <dl className="mt-2 space-y-0.5 text-[12.5px]">
+              {view.collector && (
+                <div className="flex min-w-0 gap-2">
+                  <dt className="shrink-0 text-faint">{t.collector}</dt>
+                  <dd className="truncate text-ink-soft">{view.collector}</dd>
+                </div>
+              )}
+
+              {view.locality && (
+                <div className="flex min-w-0 gap-2">
+                  <dt className="shrink-0 text-faint">{t.location}</dt>
+                  <dd className="truncate text-ink-soft">{view.locality}</dd>
+                </div>
+              )}
+            </dl>
           )}
         </div>
       </div>
-    </article>
+
+      <div className="mt-3 flex items-center gap-2 border-t border-dashed border-rule-strong pt-3">
+        {view.plantId && (
+          <Link
+            href={`/account/plants/${view.plantId}`}
+            className="vh-btn vh-btn-ghost vh-btn-sm flex-1"
+          >
+            <EyeIcon className="h-4 w-4" />
+            {t.viewShort}
+          </Link>
+        )}
+
+        {view.plantId && (
+          <Link
+            href={`/account/plants/${view.plantId}/edit`}
+            className="vh-btn vh-btn-outline vh-btn-sm flex-1"
+          >
+            <EditIcon className="h-3.5 w-3.5" />
+            {t.edit}
+          </Link>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onDelete(plant)}
+          disabled={deleting}
+          className="vh-icon-btn hover:border-clay/40 hover:bg-clay-soft hover:text-clay"
+          aria-label={deleting ? t.deleting : t.delete}
+        >
+          {deleting ? (
+            <LoadingIcon className="h-4 w-4 animate-spin" />
+          ) : (
+            <TrashIcon className="h-4 w-4 text-clay" />
+          )}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+/* =========================================================
+   DELETE SHEET
+========================================================= */
+
+function DeleteSheet({ plant, t, isEnglish, deleting, onCancel, onConfirm }) {
+  const view = getPlantView(plant, t, isEnglish);
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/40 p-4 pb-[calc(16px+env(safe-area-inset-bottom))] sm:items-center"
+      onClick={onCancel}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-sheet-title"
+        aria-describedby="delete-sheet-description"
+        className="vh-sheet page-enter w-full max-w-md p-6 shadow-lift"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p className="vh-eyebrow flex items-center gap-3">
+          <span className="h-px w-6 bg-clay" />
+          {t.delete}
+        </p>
+
+        <h2
+          id="delete-sheet-title"
+          className="vh-display mt-3 text-[1.5rem] leading-tight"
+        >
+          {t.deleteConfirm}
+        </h2>
+
+        <div className="vh-label-card mt-5 flex items-center gap-3">
+          <Thumb image={view.image} alt={view.displayName} size="h-12 w-12" />
+
+          <div className="min-w-0">
+            {view.accession && (
+              <p className="font-mono text-[11.5px] tabular-nums text-ink">
+                {view.accession}
+              </p>
+            )}
+
+            <PlantName view={view} t={t} />
+
+            {view.family && (
+              <p className="vh-family mt-1 truncate">{view.family}</p>
+            )}
+          </div>
+        </div>
+
+        <p
+          id="delete-sheet-description"
+          className="mt-4 text-[14px] leading-6 text-muted"
+        >
+          {t.deleteDescription}
+        </p>
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={deleting}
+            className="vh-btn vh-btn-outline"
+            autoFocus
+          >
+            {t.cancel}
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={deleting}
+            className="vh-btn vh-btn-danger"
+          >
+            {deleting ? (
+              <LoadingIcon className="h-4 w-4 animate-spin" />
+            ) : (
+              <TrashIcon className="h-4 w-4" />
+            )}
+            {deleting ? t.deleting : t.delete}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1170,46 +1447,28 @@ function PlantCard({ plant, darkMode, t, isEnglish }) {
    PAGINATION
 ========================================================= */
 
-function Pagination({ currentPage, totalPages, onPageChange, darkMode, t }) {
+function Pagination({ currentPage, totalPages, onPageChange, t }) {
   const pages = getPageItems(currentPage, totalPages);
 
   return (
-    <div
-      className={`mt-5 border-t pt-4 sm:mt-6 sm:pt-5 ${
-        darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.08]"
-      }`}
-    >
+    <nav aria-label={t.page} className="mt-6 border-t border-rule pt-5">
       {/* MOBILE */}
 
-      <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 sm:hidden">
+      <div className="grid grid-cols-[40px_minmax(0,1fr)_40px] items-center gap-2 sm:hidden">
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           aria-label={t.previous}
-          className={`flex h-11 items-center justify-center rounded-xl border transition disabled:opacity-35 ${
-            darkMode
-              ? "border-white/10 bg-white/[0.03] text-gray-200"
-              : "border-emerald-950/10 bg-white text-slate-700"
-          }`}
+          className="vh-icon-btn"
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
 
-        <div
-          className={`text-center text-[11px] font-semibold ${
-            darkMode ? "text-gray-400" : "text-slate-500"
-          }`}
-        >
+        <div className="text-center text-[13px] text-muted">
           {t.page}{" "}
-          <span
-            className={`font-black ${
-              darkMode ? "text-white" : "text-[#173321]"
-            }`}
-          >
-            {currentPage}
-          </span>{" "}
-          {t.of} {totalPages}
+          <span className="font-mono tabular-nums text-ink">{currentPage}</span>{" "}
+          {t.of} <span className="font-mono tabular-nums">{totalPages}</span>
         </div>
 
         <button
@@ -1217,11 +1476,7 @@ function Pagination({ currentPage, totalPages, onPageChange, darkMode, t }) {
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           aria-label={t.next}
-          className={`flex h-11 items-center justify-center rounded-xl border transition disabled:opacity-35 ${
-            darkMode
-              ? "border-white/10 bg-white/[0.03] text-gray-200"
-              : "border-emerald-950/10 bg-white text-slate-700"
-          }`}
+          className="vh-icon-btn"
         >
           <ChevronRightIcon className="h-4 w-4" />
         </button>
@@ -1234,18 +1489,14 @@ function Pagination({ currentPage, totalPages, onPageChange, darkMode, t }) {
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold transition disabled:opacity-35 ${
-            darkMode
-              ? "border-white/10 bg-white/[0.03] text-gray-300"
-              : "border-emerald-950/10 bg-white text-slate-600"
-          }`}
+          className="vh-btn vh-btn-outline vh-btn-sm"
         >
           <ChevronLeftIcon className="h-4 w-4" />
 
           {t.previous}
         </button>
 
-        <div className="flex items-center justify-center gap-1.5">
+        <div className="flex items-center justify-center gap-1">
           {pages.map((item, index) =>
             typeof item === "number" ? (
               <button
@@ -1253,22 +1504,18 @@ function Pagination({ currentPage, totalPages, onPageChange, darkMode, t }) {
                 type="button"
                 aria-current={currentPage === item ? "page" : undefined}
                 onClick={() => onPageChange(item)}
-                className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-xs font-black transition ${
+                className={`flex h-9 min-w-9 items-center justify-center rounded-full px-2 font-mono text-[12px] tabular-nums transition ${
                   currentPage === item
-                    ? "bg-emerald-700 text-white shadow-sm"
-                    : darkMode
-                      ? "text-gray-400 hover:bg-white/[0.06] hover:text-white"
-                      : "text-slate-500 hover:bg-emerald-50 hover:text-emerald-800"
+                    ? "bg-moss text-on-moss"
+                    : "text-muted hover:bg-moss-soft hover:text-ink"
                 }`}
               >
-                {item}
+                {String(item).padStart(2, "0")}
               </button>
             ) : (
               <span
                 key={`${item}-${index}`}
-                className={`px-1 text-xs ${
-                  darkMode ? "text-gray-600" : "text-slate-400"
-                }`}
+                className="px-1 font-mono text-[12px] text-faint"
               >
                 …
               </span>
@@ -1280,18 +1527,14 @@ function Pagination({ currentPage, totalPages, onPageChange, darkMode, t }) {
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold transition disabled:opacity-35 ${
-            darkMode
-              ? "border-white/10 bg-white/[0.03] text-gray-300"
-              : "border-emerald-950/10 bg-white text-slate-600"
-          }`}
+          className="vh-btn vh-btn-outline vh-btn-sm"
         >
           {t.next}
 
           <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -1333,109 +1576,85 @@ function getPageItems(currentPage, totalPages) {
 }
 
 /* =========================================================
-   COMPACT DETAIL
-========================================================= */
-
-function CompactDetail({ darkMode, icon, value }) {
-  return (
-    <div
-      className={`flex min-w-0 items-center gap-1.5 text-[9px] font-semibold ${
-        darkMode ? "text-gray-400" : "text-slate-500"
-      }`}
-    >
-      <span
-        className={`shrink-0 ${
-          darkMode ? "text-emerald-300" : "text-emerald-700"
-        }`}
-      >
-        {icon}
-      </span>
-
-      <span className="truncate" title={value}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-/* =========================================================
-   DETAIL ROW
-========================================================= */
-
-function DetailRow({ darkMode, icon, label, value }) {
-  return (
-    <div className="flex min-w-0 items-start gap-2.5">
-      <div
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-          darkMode
-            ? "bg-white/[0.04] text-emerald-300"
-            : "bg-emerald-800/[0.07] text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <div className="min-w-0">
-        <p
-          className={`text-[8px] font-bold tracking-[0.07em] ${
-            darkMode ? "text-gray-500" : "text-slate-400"
-          }`}
-        >
-          {label}
-        </p>
-
-        <p
-          className={`mt-0.5 truncate text-[11px] font-semibold ${
-            darkMode ? "text-gray-300" : "text-slate-700"
-          }`}
-          title={value}
-        >
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
    SELECT FIELD
 ========================================================= */
 
-function SelectField({
-  darkMode,
-  value,
-  onChange,
-  options,
-  placeholder,
-  labels = {},
-}) {
+function SelectField({ label, value, onChange, options, placeholder, labels = {} }) {
   return (
-    <div className="relative min-w-0">
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`h-[46px] w-full appearance-none truncate rounded-[14px] border pl-3 pr-9 text-[11px] font-semibold outline-none transition sm:pl-4 sm:text-xs ${
-          darkMode
-            ? "border-white/10 bg-black/20 text-gray-200 focus:border-emerald-400/40"
-            : "border-emerald-950/10 bg-[#f8faf7] text-slate-700 focus:border-emerald-700/35 focus:bg-white"
-        }`}
-      >
-        {placeholder && <option value="">{placeholder}</option>}
+    <label className="block min-w-0">
+      <span className="vh-eyebrow mb-1.5 block !text-[10px]">{label}</span>
 
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {labels[option] || option}
-          </option>
-        ))}
-      </select>
+      <span className="relative block">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="vh-input appearance-none truncate pr-9 text-[14px]"
+        >
+          {placeholder && <option value="">{placeholder}</option>}
 
-      <ChevronDownIcon
-        className={`pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${
-          darkMode ? "text-gray-500" : "text-slate-400"
-        }`}
-      />
-    </div>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {labels[option] || option}
+            </option>
+          ))}
+        </select>
+
+        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
+      </span>
+    </label>
   );
+}
+
+/* =========================================================
+   FILTER CHIP
+========================================================= */
+
+function FilterChip({ label, onRemove, removeLabel }) {
+  return (
+    <span className="vh-tag vh-tag-moss max-w-full !pr-1">
+      <span className="truncate">{label}</span>
+
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`${removeLabel}: ${label}`}
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition hover:bg-moss hover:text-on-moss"
+      >
+        <CloseIcon className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
+
+/* =========================================================
+   STORAGE PATH
+   Same rule as the /account page
+========================================================= */
+
+function getPlantImageStoragePath(imageUrl) {
+  if (!imageUrl) {
+    return "";
+  }
+
+  const marker = "/storage/v1/object/public/plant-images/";
+
+  const url = String(imageUrl);
+
+  if (!url.includes(marker)) {
+    return "";
+  }
+
+  const encodedPath = url.split(marker)[1]?.split("?")[0] || "";
+
+  if (!encodedPath) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(encodedPath);
+  } catch {
+    return encodedPath;
+  }
 }
 
 /* =========================================================
@@ -1457,67 +1676,6 @@ function LeafIcon({ className = "" }) {
       <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
 
       <path d="M4 20c4-5 7-7 13-10" />
-    </svg>
-  );
-}
-
-function PinIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  );
-}
-
-function UserIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="8" r="4" />
-
-      <path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
-  );
-}
-
-function DocumentIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 3h8l4 4v14H6z" />
-
-      <path d="M14 3v5h5" />
-
-      <path d="M9 13h6" />
-
-      <path d="M9 17h6" />
     </svg>
   );
 }
@@ -1734,6 +1892,49 @@ function LoadingIcon({ className = "" }) {
         strokeWidth="2"
         strokeLinecap="round"
       />
+    </svg>
+  );
+}
+
+function TrashIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16" />
+
+      <path d="M9 7V4h6v3" />
+
+      <path d="M6 7l1 13h10l1-13" />
+
+      <path d="M10 11v6" />
+
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12" />
+
+      <path d="M18 6 6 18" />
     </svg>
   );
 }

@@ -6,11 +6,11 @@ const SiteSettingsContext = createContext(null);
 
 export function SiteSettingsProvider({ children }) {
   /*
-   * Dark Forest เป็นค่าเริ่มต้น
+   * Herbarium Journal (โหมดสว่าง) เป็นค่าเริ่มต้น
    * ถ้าเคยเลือกไว้แล้ว จะใช้ค่าจาก localStorage
    */
   const [language, setLanguage] = useState("TH");
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
 
   const [ready, setReady] = useState(false);
 
@@ -77,10 +77,10 @@ export function SiteSettingsProvider({ children }) {
 
       /*
        * ถ้ายังไม่เคยเลือก Theme
-       * ให้ Dark Forest เป็นค่าเริ่มต้น
+       * ให้โหมดสว่างเป็นค่าเริ่มต้น
        */
 
-      let initialDarkMode = true;
+      let initialDarkMode = false;
 
       if (savedDarkMode === "true") {
         initialDarkMode = true;
@@ -97,14 +97,14 @@ export function SiteSettingsProvider({ children }) {
 
       /*
        * ถ้า localStorage มีปัญหา
-       * ให้ใช้ Dark Forest + ภาษาไทย
+       * ให้ใช้ โหมดสว่าง + ภาษาไทย
        */
 
       setLanguage("TH");
-      setDarkMode(true);
+      setDarkMode(false);
 
       applyLanguage("TH");
-      applyTheme(true);
+      applyTheme(false);
     } finally {
       setReady(true);
     }

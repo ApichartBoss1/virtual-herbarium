@@ -1,297 +1,195 @@
 "use client";
 
 import Link from "next/link";
-
 import { useEffect, useRef, useState } from "react";
-
 import { useParams } from "next/navigation";
 
 import Navbar from "@/components/Navbar";
-
+import SiteFooter from "@/components/SiteFooter";
 import { supabase } from "@/lib/supabase";
-
 import { useSiteSettings } from "@/components/SiteSettingsContext";
+
 import "leaflet/dist/leaflet.css";
 
 /* =========================================================
-
    UUID
-
 ========================================================= */
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /* =========================================================
-
    PAGE
-
 ========================================================= */
 
 export default function PlantDetailPage() {
   const params = useParams();
-
   const plantId = params?.id;
 
-  const { language, darkMode } = useSiteSettings();
-
+  const { language } = useSiteSettings();
   const isEnglish = language === "EN";
 
   /* =====================================================
-
      STATE
-
   ===================================================== */
 
   const [plant, setPlant] = useState(null);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
-
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
-
   const [imageFailed, setImageFailed] = useState(false);
 
   /* =====================================================
-
      TEXT
-
   ===================================================== */
 
   const text = {
     TH: {
       back: "กลับไปยังคลังพรรณไม้",
-
       loading: "กำลังเปิดข้อมูลตัวอย่างพรรณไม้",
-
       errorTitle: "ไม่สามารถเปิดข้อมูลพรรณไม้ได้",
-
       invalidId: "รหัสตัวอย่างพรรณไม้ไม่ถูกต้อง",
-
       notFound: "ไม่พบข้อมูลตัวอย่างพรรณไม้นี้",
-
       retry: "ลองอีกครั้ง",
 
-      specimenLabel: "BOTANICAL SPECIMEN",
-
+      specimenLabel: "ตัวอย่างพรรณไม้",
       specimen: "ข้อมูลตัวอย่างพรรณไม้",
 
-      scientific: "ชื่อทางวิทยาศาสตร์",
-
-      common: "ชื่อพรรณไม้",
-
-      family: "วงศ์",
-
-      province: "จังหวัด",
-
-      district: "อำเภอ",
-
-      placeName: "ชื่อสถานที่",
-
-      subdistrict: "ตำบล / แขวง",
-
-      postcode: "รหัสไปรษณีย์",
-
-      location: "สถานที่เก็บตัวอย่าง",
-
-      elevation: "ระดับความสูง",
-
-      mapTitle: "ตำแหน่งบนแผนที่",
-
-      mapDescription: "ตำแหน่งที่บันทึกไว้ของตัวอย่างพรรณไม้",
-
-      coordinates: "พิกัด",
-
-      dmsCoordinates: "พิกัดแบบ DMS",
-
-      latitude: "ละติจูด",
-
-      longitude: "ลองจิจูด",
-
-      noCoordinates: "รายการนี้ยังไม่มีข้อมูลพิกัด",
-
-      mapHint: "แผนที่แสดงตำแหน่งที่บันทึกไว้ หมุดไม่สามารถลากเพื่อแก้ไขได้",
-
-      meters: "ม.",
-
-      collectionDate: "วันที่เก็บตัวอย่าง",
-
-      habitat: "ลักษณะถิ่นอาศัย",
+      scientific: "ชื่อวิทยาศาสตร์",
+      pnuNo: "หมายเลข PNU",
+      artificialGroup: "กลุ่มพรรณไม้",
+      family: "วงศ์พืช",
 
       collectedBy: "ผู้เก็บตัวอย่าง",
+      collectorNo: "หมายเลขผู้เก็บตัวอย่าง",
 
-      specimenNumber: "หมายเลขตัวอย่าง",
+      locality: "สถานที่ / อุทยานแห่งชาติ / จังหวัด",
+      latitude: "ละติจูด",
+      longitude: "ลองจิจูด",
+      elevation: "ระดับความสูงจากน้ำทะเล",
 
-      duplicates: "จำนวนสำเนา",
-
-      notes: "หมายเหตุ",
+      mapTitle: "ตำแหน่งบนแผนที่",
+      mapDescription: "ตำแหน่งพิกัดที่บันทึกไว้ของตัวอย่างพรรณไม้",
+      coordinates: "พิกัด",
+      dmsCoordinates: "พิกัดแบบองศา ลิปดา พิลิปดา (DMS)",
+      noCoordinates: "รายการนี้ยังไม่มีข้อมูลพิกัด",
+      mapHint: "แผนที่แสดงตำแหน่งจากละติจูดและลองจิจูดที่บันทึกไว้",
+      mapPinLabel: "ตำแหน่งนี้",
+      meters: "ม.",
 
       image: "ภาพตัวอย่างพรรณไม้",
-
-      imageHint: "แตะรูปเพื่อดูภาพเต็ม",
-
-      imageViewer: "ภาพตัวอย่าง",
-
+      imageHint: "แตะรูปเพื่อดูภาพขนาดเต็ม",
+      imageViewer: "ภาพตัวอย่างพรรณไม้",
       closeImage: "ปิดภาพ",
 
-      record: "SPECIMEN RECORD",
+      record: "ระเบียนตัวอย่างพรรณไม้",
+      recordTitle: "ข้อมูลพรรณไม้",
 
-      recordTitle: "รายละเอียดตัวอย่าง",
+      fieldInfo: "ข้อมูลสถานที่เก็บตัวอย่าง",
+      fieldTitle: "สถานที่และพิกัด",
 
-      recordId: "รหัสรายการ",
-
-      databaseId: "หมายเลขฐานข้อมูล",
-
-      addedDate: "เพิ่มเข้าคลัง",
-
-      fieldInfo: "FIELD INFORMATION",
-
-      fieldTitle: "ข้อมูลพื้นที่และการเก็บตัวอย่าง",
-
-      notesLabel: "OBSERVATION",
-
-      notesTitle: "บันทึกและรายละเอียดเพิ่มเติม",
+      collectorLabel: "ข้อมูลการเก็บตัวอย่าง",
+      collectorTitle: "ข้อมูลผู้เก็บตัวอย่าง",
 
       noData: "ไม่มีข้อมูล",
-
-      archived: "Digital Herbarium Record",
+      archived: "ระเบียนพรรณไม้ดิจิทัล",
 
       exploreMore: "สำรวจพรรณไม้อื่น",
-
-      collection: "Virtual Herbarium Collection",
-
+      collection: "คลังพรรณไม้เสมือน",
+      collectionSubtitle: "คลังข้อมูลพรรณไม้ดิจิทัล",
+      imageBadge: "ภาพตัวอย่างพรรณไม้",
+      copyright: "© 2026 Virtual Herbarium สงวนลิขสิทธิ์ทั้งหมด",
       footer: "ธรรมชาติ...คือห้องเรียนที่ดีที่สุด",
+
+      recorded: "วันที่บันทึก",
+      notes: "บันทึกเพิ่มเติม",
+      cite: "อ้างอิงระเบียนนี้",
+      copy: "คัดลอก",
+      copied: "คัดลอกแล้ว",
     },
 
     EN: {
       back: "Back to Plant Collection",
-
       loading: "Opening specimen record",
-
       errorTitle: "Unable to open plant information",
-
       invalidId: "The specimen identifier is invalid.",
-
       notFound: "This plant specimen could not be found.",
-
       retry: "Try Again",
 
       specimenLabel: "BOTANICAL SPECIMEN",
-
       specimen: "Specimen Information",
 
-      scientific: "Botanical name",
-
-      common: "Common name",
-
+      scientific: "Botanical Name",
+      pnuNo: "PNU No.",
+      artificialGroup: "Artificial Group",
       family: "Family",
 
-      province: "Province",
+      collectedBy: "Collector",
+      collectorNo: "Collector No.",
 
-      district: "District",
-
-      placeName: "Place name",
-
-      subdistrict: "Subdistrict",
-
-      postcode: "Postcode",
-
-      location: "Collection location",
-
-      elevation: "Elevation",
+      locality: "Locality / NP / Province",
+      latitude: "Latitude",
+      longitude: "Longitude",
+      elevation: "Elevation Above Sea Level",
 
       mapTitle: "Map Location",
-
-      mapDescription: "Saved collection point for this plant specimen",
-
+      mapDescription: "Saved coordinate location for this plant specimen",
       coordinates: "Coordinates",
-
       dmsCoordinates: "DMS Coordinates",
-
-      latitude: "Latitude",
-
-      longitude: "Longitude",
-
       noCoordinates: "No coordinates are saved for this record.",
-
       mapHint:
-        "The map shows the saved collection point. The marker cannot be dragged to edit it.",
-
+        "The map shows the position from the saved latitude and longitude.",
+      mapPinLabel: "This location",
       meters: "m",
 
-      collectionDate: "Collection date",
-
-      habitat: "Habitat",
-
-      collectedBy: "Collected by",
-
-      specimenNumber: "Specimen number",
-
-      duplicates: "Duplicates",
-
-      notes: "Notes",
-
       image: "Specimen image",
-
       imageHint: "Tap image to view full size",
-
       imageViewer: "Specimen Image",
-
       closeImage: "Close image",
 
       record: "SPECIMEN RECORD",
-
-      recordTitle: "Specimen details",
-
-      recordId: "Record ID",
-
-      databaseId: "Database number",
-
-      addedDate: "Added to collection",
+      recordTitle: "Plant information",
 
       fieldInfo: "FIELD INFORMATION",
+      fieldTitle: "Location and coordinates",
 
-      fieldTitle: "Collection and location data",
-
-      notesLabel: "OBSERVATION",
-
-      notesTitle: "Notes and observations",
+      collectorLabel: "COLLECTION INFORMATION",
+      collectorTitle: "Collector information",
 
       noData: "No information",
-
       archived: "Digital Herbarium Record",
 
       exploreMore: "Explore More Plants",
-
       collection: "Virtual Herbarium Collection",
-
+      collectionSubtitle: "Digital Plant Collection",
+      imageBadge: "SPECIMEN IMAGE",
+      copyright: "© 2026 Virtual Herbarium. All rights reserved.",
       footer: "Nature is the greatest classroom.",
+
+      recorded: "Recorded",
+      notes: "Notes",
+      cite: "Cite this record",
+      copy: "Copy",
+      copied: "Copied",
     },
   };
 
   const t = isEnglish ? text.EN : text.TH;
 
   /* =====================================================
-
      FETCH
-
   ===================================================== */
 
   async function fetchPlant() {
     if (!plantId) return;
 
     setLoading(true);
-
     setError("");
 
     if (!UUID_PATTERN.test(String(plantId))) {
       setPlant(null);
-
       setError(t.invalidId);
-
       setLoading(false);
-
       return;
     }
 
@@ -300,44 +198,16 @@ export default function PlantDetailPage() {
         .from("plants")
         .select(
           `
-          id,
-          plant_id,
+          pnu_no,
+          artificial_group,
           family,
-          common_name,
-          common_name_th,
-          common_name_en,
           botanical_name,
-          place_name_th,
-          place_name_en,
-          province,
-          province_th,
-          province_en,
-          district,
-          district_th,
-          district_en,
-          subdistrict,
-          subdistrict_th,
-          subdistrict_en,
-          postcode,
-          location,
-          address_th,
-          address_en,
+          collected_by,
+          collector_no,
+          locality,
           latitude,
           longitude,
           elevation,
-          collection_date,
-          habitat,
-          habitat_th,
-          habitat_en,
-          notes,
-          notes_th,
-          notes_en,
-          collected_by,
-          collected_by_th,
-          collected_by_en,
-          specimen_number,
-          duplicates,
-          created_at,
           image_url
         `,
         )
@@ -346,24 +216,19 @@ export default function PlantDetailPage() {
 
       if (error) {
         console.error("Fetch plant error:", error);
-
         throw error;
       }
 
       if (!data) {
         setPlant(null);
-
         setError(t.notFound);
-
         return;
       }
 
       setPlant(data);
     } catch (err) {
       console.error("Load plant failed:", err);
-
       setPlant(null);
-
       setError(err?.message || t.errorTitle);
     } finally {
       setLoading(false);
@@ -375,21 +240,16 @@ export default function PlantDetailPage() {
   }, [plantId]);
 
   /* =====================================================
-
      RESET IMAGE STATE
-
   ===================================================== */
 
   useEffect(() => {
     setImageFailed(false);
-
     setImageViewerOpen(false);
   }, [plant?.image_url]);
 
   /* =====================================================
-
      IMAGE VIEWER BODY LOCK
-
   ===================================================== */
 
   useEffect(() => {
@@ -428,9 +288,7 @@ export default function PlantDetailPage() {
   }, [imageViewerOpen]);
 
   /* =====================================================
-
      HELPERS
-
   ===================================================== */
 
   function hasValue(value) {
@@ -445,201 +303,88 @@ export default function PlantDetailPage() {
     return hasValue(value) ? value : t.noData;
   }
 
-  function localizedValue(thValue, enValue, legacyValue = "") {
-    if (isEnglish) {
-      return (
-        [enValue, thValue, legacyValue].find((value) => hasValue(value)) || ""
-      );
-    }
+  const displayName = hasValue(plant?.botanical_name)
+    ? plant.botanical_name
+    : hasValue(plant?.pnu_no)
+      ? `PNU ${plant.pnu_no}`
+      : t.noData;
 
-    return (
-      [thValue, enValue, legacyValue].find((value) => hasValue(value)) || ""
-    );
-  }
+  const hasImage = Boolean(plant?.image_url) && !imageFailed;
 
-  function formatDate(date) {
-    if (!hasValue(date)) {
-      return t.noData;
-    }
-
-    try {
-      const parsed = new Date(`${date}T00:00:00`);
-
-      if (Number.isNaN(parsed.getTime())) {
-        return date;
-      }
-
-      return new Intl.DateTimeFormat(
-        isEnglish ? "en-GB" : "th-TH-u-ca-gregory",
-        {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        },
-      ).format(parsed);
-    } catch {
-      return date;
-    }
-  }
-
-  function formatCreatedDate(date) {
-    if (!hasValue(date)) {
-      return t.noData;
-    }
-
-    try {
-      const parsed = new Date(date);
-
-      if (Number.isNaN(parsed.getTime())) {
-        return date;
-      }
-
-      return new Intl.DateTimeFormat(
-        isEnglish ? "en-GB" : "th-TH-u-ca-gregory",
-        {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        },
-      ).format(parsed);
-    } catch {
-      return date;
-    }
-  }
-
-  function getFullLocation() {
-    if (!plant) return "";
-
-    const location = localizedValue(
-      plant.address_th,
-      plant.address_en,
-      plant.location,
-    );
-
-    const district = localizedValue(
-      plant.district_th,
-      plant.district_en,
-      plant.district,
-    );
-
-    const province = localizedValue(
-      plant.province_th,
-      plant.province_en,
-      plant.province,
-    );
-
-    return [location, district, province].filter(Boolean).join(", ");
-  }
+  const plantNo = hasValue(plant?.pnu_no) ? `PNU ${plant.pnu_no}` : "";
 
   /* =====================================================
-
      LOADING
-
   ===================================================== */
 
   if (loading) {
     return (
-      <main className="page">
+      <main className="page flex min-h-[100dvh] flex-col">
         <Navbar />
 
-        <section className="relative flex min-h-[72dvh] items-center justify-center px-5">
-          <div
-            aria-hidden="true"
-            className={`pointer-events-none absolute left-1/2 top-1/2 h-[320px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl ${
-              darkMode ? "bg-emerald-500/[0.06]" : "bg-emerald-700/[0.05]"
-            }`}
-          />
+        <section
+          className="vh-container flex-1 pb-16 pt-6 md:pt-10"
+          aria-busy="true"
+        >
+          <div className="vh-skeleton h-3 w-40 rounded" />
 
-          <div className="relative text-center">
-            <div
-              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] border md:h-16 md:w-16 md:rounded-2xl ${
-                darkMode
-                  ? "border-emerald-400/15 bg-emerald-400/[0.06]"
-                  : "border-emerald-800/10 bg-emerald-800/[0.06]"
-              }`}
-            >
-              <div
-                className={`h-6 w-6 animate-spin rounded-full border-2 border-t-transparent md:h-7 md:w-7 ${
-                  darkMode ? "border-emerald-300" : "border-emerald-700"
-                }`}
-              />
+          <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] lg:gap-12">
+            <div className="vh-sheet p-3 md:p-4">
+              <div className="vh-skeleton h-[min(62dvh,520px)] min-h-[320px] rounded-[3px]" />
             </div>
 
-            <p
-              className={`mt-4 text-xs font-semibold md:mt-5 md:text-sm ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
-              {t.loading}
-            </p>
+            <div>
+              <div className="vh-skeleton h-3 w-24 rounded" />
+              <div className="vh-skeleton mt-4 h-10 w-4/5 rounded" />
+              <div className="vh-skeleton mt-3 h-4 w-1/2 rounded" />
+
+              <div className="vh-label-card mt-8 space-y-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="vh-skeleton h-4 rounded" />
+                ))}
+              </div>
+            </div>
           </div>
+
+          <p className="vh-eyebrow mt-8 text-center">{t.loading}</p>
         </section>
       </main>
     );
   }
 
   /* =====================================================
-
      ERROR
-
   ===================================================== */
 
   if (error || !plant) {
     return (
-      <main className="page">
+      <main className="page flex min-h-[100dvh] flex-col">
         <Navbar />
 
-        <section className="container flex min-h-[72dvh] items-center justify-center py-8 md:py-16">
-          <div
-            className={`w-full max-w-lg rounded-[22px] border p-6 text-center shadow-xl backdrop-blur-xl md:rounded-[2rem] md:p-10 ${
-              darkMode
-                ? "border-white/10 bg-[#0a1710]/92"
-                : "border-emerald-950/10 bg-white/92"
-            }`}
-          >
-            <div
-              className={`mx-auto flex h-12 w-12 items-center justify-center rounded-[15px] md:h-14 md:w-14 md:rounded-2xl ${
-                darkMode
-                  ? "bg-red-400/10 text-red-300"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              <AlertIcon className="h-5 w-5 md:h-6 md:w-6" />
-            </div>
+        <section className="vh-container flex flex-1 items-center justify-center py-12 md:py-20">
+          <div className="vh-panel w-full max-w-lg p-7 text-center md:p-10">
+            <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-clay-soft text-clay">
+              <AlertIcon className="h-5 w-5" />
+            </span>
 
-            <h1
-              className={`mt-5 text-xl font-black md:mt-6 md:text-2xl ${
-                darkMode ? "text-white" : "text-[#14271a]"
-              }`}
-            >
+            <h1 className="vh-display mt-5 text-[1.6rem] md:text-[1.9rem]">
               {t.errorTitle}
             </h1>
 
-            <p
-              className={`mt-2.5 text-xs leading-6 md:mt-3 md:text-sm md:leading-7 ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
+            <p className="mt-3 font-serif text-[15px] italic leading-7 text-muted">
               {error}
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-2 md:mt-7 md:flex md:justify-center md:gap-3">
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
               <button
                 type="button"
                 onClick={fetchPlant}
-                className="inline-flex min-h-12 items-center justify-center rounded-[14px] bg-emerald-700 px-4 text-xs font-black text-white transition active:scale-[0.98] md:rounded-xl md:px-5 md:text-sm md:hover:bg-emerald-600"
+                className="vh-btn vh-btn-primary"
               >
                 {t.retry}
               </button>
 
-              <Link
-                href="/plants"
-                className={`inline-flex min-h-12 items-center justify-center rounded-[14px] border px-4 text-xs font-black transition md:rounded-xl md:px-5 md:text-sm ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.03] text-gray-200 hover:bg-white/[0.07]"
-                    : "border-emerald-950/10 bg-white text-slate-700 hover:bg-emerald-50"
-                }`}
-              >
+              <Link href={"/plants"} className="vh-btn vh-btn-outline">
                 {t.back}
               </Link>
             </div>
@@ -649,744 +394,165 @@ export default function PlantDetailPage() {
     );
   }
 
-  const localizedCommonName = localizedValue(
-    plant.common_name_th,
-    plant.common_name_en,
-    plant.common_name,
-  );
-
-  const localizedPlaceName = localizedValue(
-    plant.place_name_th,
-    plant.place_name_en,
-  );
-
-  const localizedProvince = localizedValue(
-    plant.province_th,
-    plant.province_en,
-    plant.province,
-  );
-
-  const localizedDistrict = localizedValue(
-    plant.district_th,
-    plant.district_en,
-    plant.district,
-  );
-
-  const localizedLocation = localizedValue(
-    plant.address_th,
-    plant.address_en,
-    plant.location,
-  );
-
-  const localizedHabitat = localizedValue(
-    plant.habitat_th,
-    plant.habitat_en,
-    plant.habitat,
-  );
-
-  const localizedNotes = localizedValue(
-    plant.notes_th,
-    plant.notes_en,
-    plant.notes,
-  );
-
-  const localizedCollectedBy = localizedValue(
-    plant.collected_by_th,
-    plant.collected_by_en,
-    plant.collected_by,
-  );
-
-  const hasImage = Boolean(plant.image_url) && !imageFailed;
-
   /* =====================================================
-
      PAGE
-
   ===================================================== */
 
   return (
-    <main className="page overflow-x-hidden">
+    <main className="page flex min-h-[100dvh] flex-col overflow-x-hidden">
       <Navbar />
 
-      {/* =====================================================
-
-          MOBILE HERO
-
-      ===================================================== */}
-
-      <section className="md:hidden">
+      <div className="vh-container flex-1 pb-16 pt-5 md:pb-20 md:pt-9">
         {/* =================================================
-
-            FULL SPECIMEN IMAGE
-
+            BREADCRUMB
         ================================================= */}
 
-        <div
-          className={`relative h-[56dvh] min-h-[410px] max-h-[640px] w-full overflow-hidden ${
-            darkMode ? "bg-[#030a06]" : "bg-[#e8f0e6]"
-          }`}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted"
         >
-          {hasImage ? (
-            <button
-              type="button"
-              onClick={() => setImageViewerOpen(true)}
-              aria-label={t.imageHint}
-              className="absolute inset-0 block h-full w-full cursor-zoom-in"
-            >
-              {/* BLURRED BACKDROP */}
+          <Link
+            href={"/plants"}
+            className="group inline-flex items-center gap-1.5 transition hover:text-ink"
+          >
+            <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            {t.back}
+          </Link>
 
-              <img
-                src={plant.image_url}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full scale-[1.16] object-cover opacity-45 blur-2xl"
-              />
+          {plantNo && (
+            <>
+              <span aria-hidden="true" className="text-faint">
+                /
+              </span>
 
-              <div
-                className={`absolute inset-0 ${
-                  darkMode ? "bg-black/32" : "bg-white/12"
-                }`}
-              />
-
-              {/* FULL ORIGINAL IMAGE */}
-
-              <img
-                src={plant.image_url}
-                alt={
-                  localizedCommonName ||
-                  plant.botanical_name ||
-                  "Plant specimen"
-                }
-                onError={() => setImageFailed(true)}
-                className="relative z-10 h-full w-full object-contain"
-              />
-            </button>
-          ) : (
-            <ImageFallback darkMode={darkMode} text={t.noData} />
+              <span className="vh-catalog">{plantNo}</span>
+            </>
           )}
-
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 bg-gradient-to-b from-black/25 via-black/5 to-transparent" />
-
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-36 bg-gradient-to-t from-black/75 via-black/22 to-transparent" />
-
-          {/* SPECIMEN BADGE */}
-
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 p-4">
-            <div className="flex items-end justify-between gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-[9px] font-black tracking-[0.14em] text-emerald-200 backdrop-blur-xl">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_9px_rgba(74,222,128,0.85)]" />
-
-                {t.specimenLabel}
-              </div>
-
-              {hasImage && (
-                <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-[9px] font-bold text-white/85 backdrop-blur-xl">
-                  <ExpandIcon className="h-3 w-3" />
-
-                  {t.imageHint}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        </nav>
 
         {/* =================================================
-
-            PLANT IDENTITY
-
+            HERBARIUM SHEET: IMAGE + LABEL
         ================================================= */}
 
-        <div className="container pt-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p
-                className={`text-[9px] font-black uppercase tracking-[0.18em] ${
-                  darkMode ? "text-emerald-400" : "text-emerald-700"
-                }`}
-              >
-                {t.specimen}
-              </p>
+        <div className="mt-6 grid items-start gap-8 md:mt-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] lg:gap-12">
+          {/* IMAGE */}
 
-              <h1
-                className={`mt-2 break-words text-[2.05rem] font-black leading-[1.08] tracking-[-0.045em] min-[390px]:text-[2.2rem] ${
-                  darkMode ? "text-white" : "text-[#102218]"
-                }`}
-              >
-                {displayValue(localizedCommonName)}
-              </h1>
+          <figure className="page-enter lg:sticky lg:top-24">
+            <div className="vh-sheet p-3 md:p-4">
+              <div className="flex items-center justify-between gap-3 px-1 pb-3">
+                <span className="vh-eyebrow flex min-w-0 items-center gap-2 !text-[10px]">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-moss" />
+                  <span className="truncate">{t.imageBadge}</span>
+                </span>
 
-              <p
-                className={`mt-2.5 break-words text-[15px] font-semibold italic leading-6 ${
-                  darkMode ? "text-emerald-300" : "text-emerald-800"
-                }`}
-              >
-                {displayValue(plant.botanical_name)}
-              </p>
-            </div>
-
-            <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border ${
-                darkMode
-                  ? "border-emerald-400/15 bg-emerald-400/[0.07] text-emerald-300"
-                  : "border-emerald-800/10 bg-emerald-800/[0.07] text-emerald-800"
-              }`}
-            >
-              <LeafIcon className="h-[22px] w-[22px]" />
-            </div>
-          </div>
-
-          {/* QUICK META */}
-
-          <div className="mt-5 grid grid-cols-2 gap-2.5">
-            <MobileQuickMeta
-              darkMode={darkMode}
-              icon={<BranchIcon className="h-4 w-4" />}
-              label={t.family}
-              value={displayValue(plant.family)}
-            />
-
-            <MobileQuickMeta
-              darkMode={darkMode}
-              icon={<CalendarIcon className="h-4 w-4" />}
-              label={t.collectionDate}
-              value={formatDate(plant.collection_date)}
-            />
-
-            <div className="col-span-2">
-              <MobileQuickMeta
-                darkMode={darkMode}
-                icon={<PinIcon className="h-4 w-4" />}
-                label={t.location}
-                value={getFullLocation() || t.noData}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-
-          DESKTOP CINEMATIC HERO
-
-      ===================================================== */}
-
-      <section className="relative isolate hidden min-h-[410px] overflow-hidden md:block">
-        {hasImage ? (
-          <div
-            className="absolute inset-0 -z-30 scale-105 bg-cover bg-center"
-            style={{
-              backgroundImage: `url("${plant.image_url}")`,
-            }}
-          />
-        ) : (
-          <div
-            className={`absolute inset-0 -z-30 ${
-              darkMode
-                ? "bg-[radial-gradient(circle_at_70%_30%,rgba(44,135,72,0.22),transparent_32%),linear-gradient(135deg,#061009,#0c2114)]"
-                : "bg-[radial-gradient(circle_at_70%_30%,rgba(47,125,70,0.14),transparent_32%),linear-gradient(135deg,#e9f2e8,#f5f8f2)]"
-            }`}
-          />
-        )}
-
-        {hasImage && (
-          <div className="absolute inset-0 -z-20 backdrop-blur-[2px]" />
-        )}
-
-        <div
-          className={`absolute inset-0 -z-10 ${
-            darkMode
-              ? "bg-[linear-gradient(90deg,rgba(2,9,5,0.98)_0%,rgba(3,13,7,0.91)_48%,rgba(3,12,7,0.67)_100%)]"
-              : "bg-[linear-gradient(90deg,rgba(239,247,237,0.98)_0%,rgba(239,247,237,0.91)_50%,rgba(236,246,234,0.72)_100%)]"
-          }`}
-        />
-
-        <div
-          className={`absolute inset-x-0 bottom-0 -z-10 h-40 ${
-            darkMode
-              ? "bg-gradient-to-t from-[#07100b] to-transparent"
-              : "bg-gradient-to-t from-[#f1f6f1] to-transparent"
-          }`}
-        />
-
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="forest-particle left-[12%] top-[38%]" />
-
-          <div className="forest-particle right-[24%] top-[28%] [animation-delay:-3s]" />
-
-          <div className="forest-particle right-[9%] top-[62%] [animation-delay:-5s]" />
-        </div>
-
-        <div className="container">
-          <div className="flex min-h-[410px] items-center py-10 lg:py-12">
-            <div className="w-full max-w-4xl page-enter">
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  href="/plants"
-                  className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-[13px] font-bold backdrop-blur-xl transition ${
-                    darkMode
-                      ? "border-white/10 bg-black/25 text-gray-300 hover:bg-white/[0.08] hover:text-white"
-                      : "border-emerald-950/10 bg-white/55 text-emerald-900 hover:bg-white/85"
-                  }`}
-                >
-                  <ArrowLeftIcon className="h-4 w-4" />
-
-                  {t.back}
-                </Link>
-
-                <div
-                  className={`inline-flex min-h-10 items-center gap-3 rounded-full border px-4 backdrop-blur-xl ${
-                    darkMode
-                      ? "border-emerald-300/20 bg-black/25 text-emerald-200"
-                      : "border-emerald-950/15 bg-white/60 text-emerald-900"
-                  }`}
-                >
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      darkMode
-                        ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
-                        : "bg-emerald-700"
-                    }`}
-                  />
-
-                  <span className="text-[11px] font-black tracking-[0.2em]">
-                    {t.specimenLabel}
-                  </span>
-                </div>
-              </div>
-
-              <h1
-                className={`mt-7 max-w-4xl break-words text-5xl font-black leading-[1.06] tracking-[-0.045em] lg:text-6xl xl:text-[4.25rem] ${
-                  darkMode ? "text-white" : "text-[#102218]"
-                }`}
-              >
-                {displayValue(localizedCommonName)}
-              </h1>
-
-              <p
-                className={`mt-3.5 break-words text-[1.35rem] font-semibold italic lg:text-[1.5rem] ${
-                  darkMode ? "text-emerald-300" : "text-emerald-800"
-                }`}
-              >
-                {displayValue(plant.botanical_name)}
-              </p>
-
-              <div className="mt-7 flex flex-wrap gap-2.5">
-                {hasValue(plant.family) && (
-                  <HeroMeta
-                    darkMode={darkMode}
-                    icon={<BranchIcon className="h-3.5 w-3.5" />}
-                    value={plant.family}
-                  />
-                )}
-
-                {getFullLocation() && (
-                  <HeroMeta
-                    darkMode={darkMode}
-                    icon={<PinIcon className="h-3.5 w-3.5" />}
-                    value={getFullLocation()}
-                  />
-                )}
-
-                {hasValue(plant.collection_date) && (
-                  <HeroMeta
-                    darkMode={darkMode}
-                    icon={<CalendarIcon className="h-3.5 w-3.5" />}
-                    value={formatDate(plant.collection_date)}
-                  />
+                {plantNo && (
+                  <span className="vh-catalog shrink-0">{plantNo}</span>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* =====================================================
-
-          MAIN CONTENT
-
-      ===================================================== */}
-
-      <section className="relative">
-        <div className="container pb-8 pt-5 md:pb-14 md:pt-9 lg:pb-16 lg:pt-8">
-          {/* =================================================
-
-              DESKTOP IMAGE + RECORD
-
-          ================================================= */}
-
-          <div className="hidden items-start gap-5 md:grid lg:grid-cols-[minmax(0,1.04fr)_minmax(380px,0.96fr)] lg:gap-6">
-            {/* IMAGE CARD */}
-
-            <section
-              className={`overflow-hidden rounded-[1.8rem] border shadow-[0_18px_50px_rgba(0,0,0,0.08)] lg:sticky lg:top-[96px] ${
-                darkMode
-                  ? "border-white/10 bg-[#0a1710]"
-                  : "border-emerald-950/10 bg-white"
-              }`}
-            >
-              <div
-                className={`relative aspect-[4/3] overflow-hidden lg:aspect-[1.18/1] ${
-                  darkMode ? "bg-[#061009]" : "bg-[#e8f1e7]"
-                }`}
-              >
+              <div className="relative h-[min(68dvh,560px)] min-h-[320px] overflow-hidden rounded-[3px] bg-paper-deep lg:h-[calc(100dvh-220px)] lg:max-h-[860px] lg:min-h-[460px]">
                 {hasImage ? (
                   <button
                     type="button"
                     onClick={() => setImageViewerOpen(true)}
-                    className="absolute inset-0 block h-full w-full cursor-zoom-in"
                     aria-label={t.imageHint}
+                    className="group absolute inset-0 block h-full w-full cursor-zoom-in"
                   >
                     <img
                       src={plant.image_url}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full scale-110 object-cover opacity-45 blur-2xl"
-                    />
-
-                    <div
-                      className={`absolute inset-0 ${
-                        darkMode ? "bg-black/28" : "bg-white/12"
-                      }`}
-                    />
-
-                    <img
-                      src={plant.image_url}
-                      alt={
-                        localizedCommonName ||
-                        plant.botanical_name ||
-                        "Plant specimen"
-                      }
+                      alt={displayName}
                       onError={() => setImageFailed(true)}
-                      className="relative z-10 h-full w-full object-contain transition duration-500 hover:scale-[1.015]"
+                      className="h-full w-full object-contain transition duration-700 group-hover:scale-[1.02]"
                     />
+
+                    <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[11px] text-white/90 backdrop-blur-sm">
+                      <ExpandIcon className="h-3.5 w-3.5" />
+                      {t.imageHint}
+                    </span>
                   </button>
                 ) : (
-                  <ImageFallback darkMode={darkMode} text={t.noData} />
-                )}
-
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-28 bg-gradient-to-t from-black/60 to-transparent" />
-
-                <div className="pointer-events-none absolute left-5 top-5 z-30">
-                  <span className="inline-flex rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-[9px] font-black tracking-[0.18em] text-white backdrop-blur-xl">
-                    SPECIMEN IMAGE
-                  </span>
-                </div>
-
-                {hasImage && (
-                  <div className="pointer-events-none absolute bottom-5 right-5 z-30 flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-2 text-[9px] font-bold text-white backdrop-blur-xl">
-                    <ExpandIcon className="h-3.5 w-3.5" />
-
-                    {t.imageHint}
-                  </div>
+                  <ImageFallback text={t.noData} />
                 )}
               </div>
 
-              <div className="p-6 lg:p-7">
-                <p
-                  className={`text-[10px] font-black uppercase tracking-[0.18em] ${
-                    darkMode ? "text-emerald-400" : "text-emerald-700"
-                  }`}
-                >
-                  {t.image}
-                </p>
+              <figcaption className="flex items-center justify-between gap-3 px-1 pb-1 pt-3">
+                <span className="vh-binomial min-w-0 truncate text-[14px] text-ink-soft">
+                  {displayName}
+                </span>
 
-                <div className="mt-3 flex items-end justify-between gap-4">
-                  <div className="min-w-0">
-                    <h2
-                      className={`truncate text-[1.35rem] font-black lg:text-[1.5rem] ${
-                        darkMode ? "text-white" : "text-[#173321]"
-                      }`}
-                    >
-                      {displayValue(localizedCommonName)}
-                    </h2>
-
-                    {hasValue(plant.botanical_name) && (
-                      <p
-                        className={`mt-1.5 truncate text-[15px] italic ${
-                          darkMode ? "text-gray-400" : "text-slate-500"
-                        }`}
-                      >
-                        {plant.botanical_name}
-                      </p>
-                    )}
-                  </div>
-
-                  <span
-                    className={`shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] ${
-                      darkMode ? "text-gray-600" : "text-slate-400"
-                    }`}
-                  >
-                    {t.archived}
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            <RecordCard
-              plant={plant}
-              darkMode={darkMode}
-              t={t}
-              formatCreatedDate={formatCreatedDate}
-              commonName={localizedCommonName}
-              collectedBy={localizedCollectedBy}
-            />
-          </div>
-
-          {/* =================================================
-
-              MOBILE RECORD
-
-          ================================================= */}
-
-          <div className="md:hidden">
-            <RecordCard
-              plant={plant}
-              darkMode={darkMode}
-              t={t}
-              formatCreatedDate={formatCreatedDate}
-              commonName={localizedCommonName}
-              collectedBy={localizedCollectedBy}
-            />
-          </div>
-
-          {/* =================================================
-
-    FIELD INFORMATION
-
-================================================= */}
-
-          <section
-            className={`mt-5 rounded-[20px] border p-4 md:mt-6 md:rounded-[1.8rem] md:p-6 lg:p-7 ${
-              darkMode
-                ? "border-white/10 bg-[#0a1710]"
-                : "border-emerald-950/10 bg-white"
-            }`}
-          >
-            <SectionHeading
-              darkMode={darkMode}
-              label={t.fieldInfo}
-              title={t.fieldTitle}
-              icon={<PinIcon className="h-4 w-4 md:h-5 md:w-5" />}
-            />
-
-            <div className="mt-5 grid grid-cols-2 gap-2.5 md:mt-6 md:gap-3.5 lg:grid-cols-3 lg:gap-4">
-              {/* จังหวัด */}
-
-              <FieldCard
-                darkMode={darkMode}
-                icon={<PinIcon className="h-4 w-4" />}
-                label={t.province}
-                value={displayValue(localizedProvince)}
-              />
-
-              {/* อำเภอ */}
-
-              <FieldCard
-                darkMode={darkMode}
-                icon={<MapIcon className="h-4 w-4" />}
-                label={t.district}
-                value={displayValue(localizedDistrict)}
-              />
-
-              {/* ชื่อสถานที่ */}
-
-              <FieldCard
-                darkMode={darkMode}
-                icon={<LocationIcon className="h-4 w-4" />}
-                label={t.placeName}
-                value={displayValue(localizedPlaceName)}
-              />
-
-              {/* สถานที่เก็บตัวอย่าง */}
-
-              <FieldCard
-                darkMode={darkMode}
-                icon={<LocationIcon className="h-4 w-4" />}
-                label={t.location}
-                value={displayValue(localizedLocation)}
-                wide
-              />
-
-              {/* ระดับความสูง */}
-
-              <FieldCard
-                darkMode={darkMode}
-                icon={<MountainIcon className="h-4 w-4" />}
-                label={t.elevation}
-                value={displayValue(plant.elevation)}
-              />
-
-              {/* วันที่เก็บ */}
-
-              <FieldCard
-                darkMode={darkMode}
-                icon={<CalendarIcon className="h-4 w-4" />}
-                label={t.collectionDate}
-                value={formatDate(plant.collection_date)}
-              />
-
-              {/* ถิ่นอาศัย */}
-
-              <FieldCard
-                darkMode={darkMode}
-                icon={<ForestIcon className="h-4 w-4" />}
-                label={t.habitat}
-                value={displayValue(localizedHabitat)}
-                wide
-              />
+                <span className="shrink-0 text-[11px] text-faint">{t.archived}</span>
+              </figcaption>
             </div>
+          </figure>
 
-            <ReadOnlyLocationMap plant={plant} darkMode={darkMode} t={t} />
-          </section>
+          {/* LABEL */}
 
-          {/* =================================================
-
-              NOTES + COLLECTION
-
-          ================================================= */}
-
-          <div className="mt-5 grid gap-4 md:mt-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-5">
-            <section
-              className={`relative overflow-hidden rounded-[20px] border p-4 md:rounded-[1.8rem] md:p-6 lg:p-7 ${
-                darkMode
-                  ? "border-white/10 bg-[#0a1710]"
-                  : "border-emerald-950/10 bg-white"
-              }`}
-            >
-              <div
-                className={`pointer-events-none absolute right-[-100px] top-[-100px] h-72 w-72 rounded-full blur-3xl ${
-                  darkMode ? "bg-emerald-400/[0.045]" : "bg-emerald-800/[0.05]"
-                }`}
-              />
-
-              <div className="relative">
-                <SectionHeading
-                  darkMode={darkMode}
-                  label={t.notesLabel}
-                  title={t.notesTitle}
-                  icon={<NoteIcon className="h-4 w-4 md:h-5 md:w-5" />}
-                />
-
-                <div
-                  className={`mt-4 rounded-[14px] border p-3.5 md:mt-5 md:rounded-2xl md:p-5 ${
-                    darkMode
-                      ? "border-white/[0.07] bg-white/[0.025]"
-                      : "border-emerald-950/[0.07] bg-[#f7faf6]"
-                  }`}
-                >
-                  {hasValue(localizedNotes) ? (
-                    <p
-                      className={`whitespace-pre-wrap break-words text-[13px] font-medium leading-6 md:text-[15px] md:leading-7 lg:text-base lg:leading-8 ${
-                        darkMode ? "text-gray-200" : "text-slate-600"
-                      }`}
-                    >
-                      {localizedNotes}
-                    </p>
-                  ) : (
-                    <p
-                      className={`text-xs md:text-sm ${
-                        darkMode ? "text-gray-600" : "text-slate-400"
-                      }`}
-                    >
-                      {t.noData}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            <aside
-              className={`flex flex-col justify-between rounded-[20px] border p-4 md:rounded-[1.8rem] md:p-6 ${
-                darkMode
-                  ? "border-white/10 bg-white/[0.025]"
-                  : "border-emerald-950/10 bg-white/65"
-              }`}
-            >
-              <div>
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                      darkMode
-                        ? "bg-emerald-400/10 text-emerald-300"
-                        : "bg-emerald-800/10 text-emerald-800"
-                    }`}
-                  >
-                    <LeafIcon className="h-5 w-5" />
-                  </div>
-
-                  <div className="min-w-0">
-                    <p
-                      className={`truncate text-[15px] font-black md:text-base ${
-                        darkMode ? "text-white" : "text-[#173321]"
-                      }`}
-                    >
-                      {t.collection}
-                    </p>
-
-                    <p
-                      className={`mt-1 text-[11px] md:text-xs ${
-                        darkMode ? "text-gray-400" : "text-slate-500"
-                      }`}
-                    >
-                      Digital Plant Collection
-                    </p>
-                  </div>
-                </div>
-
-                <p
-                  className={`mt-4 text-[12px] leading-6 md:text-[13px] ${
-                    darkMode ? "text-gray-400" : "text-slate-500"
-                  }`}
-                >
-                  {t.archived}
-                </p>
-              </div>
-
-              <Link
-                href="/plants"
-                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] bg-emerald-700 px-5 text-xs font-black text-white shadow-[0_10px_26px_rgba(16,120,65,0.20)] transition active:scale-[0.98] md:min-h-11 md:rounded-xl md:text-sm md:hover:bg-emerald-600"
-              >
-                <LeafIcon className="h-4 w-4" />
-
-                {t.exploreMore}
-              </Link>
-            </aside>
-          </div>
+          <HerbariumLabel
+            plant={plant}
+            t={t}
+            isEnglish={isEnglish}
+            displayName={displayName}
+            plantNo={plantNo}
+            displayValue={displayValue}
+            actions={null}
+          />
         </div>
-      </section>
 
-      {/* =====================================================
+        {/* =================================================
+            FIELD INFORMATION + MAP
+        ================================================= */}
 
-          DESKTOP FOOTER
+        <section className="mt-16 md:mt-20">
+          <SectionHeading eyebrow={t.fieldInfo} title={t.fieldTitle} />
 
-      ===================================================== */}
+          <div className="vh-panel mt-7 overflow-hidden">
+            <dl className="grid gap-1 border-b border-rule p-5 sm:grid-cols-[200px_1fr] sm:gap-6 md:p-6">
+              <dt className="vh-eyebrow flex items-center gap-2 !text-[10px]">
+                <LocationIcon className="h-4 w-4 shrink-0 text-ochre" />
+                {t.locality}
+              </dt>
 
-      <footer
-        className={`border-t ${
-          darkMode ? "border-white/15" : "border-emerald-950/15"
-        }`}
-      >
-        <div className="container">
-          <div
-            className={`flex flex-col items-center gap-2 py-5 text-center text-[10px] md:flex-row md:justify-between md:text-left md:text-xs ${
-              darkMode ? "text-white/60" : "text-emerald-950/70"
-            }`}
-          >
-            <p>© 2026 Virtual Herbarium. All rights reserved.</p>
+              <dd className="break-words font-serif text-[1.15rem] leading-snug text-ink">
+                {displayValue(plant.locality)}
+              </dd>
+            </dl>
 
-            <div className="flex items-center gap-2">
-              <LeafIcon className="h-3.5 w-3.5 text-emerald-400" />
+            <ReadOnlyLocationMap plant={plant} t={t} />
+          </div>
+        </section>
 
-              <span>{t.footer}</span>
+        {/* =================================================
+            COLLECTION
+        ================================================= */}
+
+        <section className="mt-12 flex flex-col gap-5 border-t border-rule pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-rule-strong text-moss">
+              <LeafIcon className="h-[18px] w-[18px]" />
+            </span>
+
+            <div className="min-w-0">
+              <p className="font-serif text-[1.1rem] leading-tight text-ink">
+                {t.collection}
+              </p>
+
+              <p className="mt-1 text-[13px] text-muted">
+                {t.collectionSubtitle}
+              </p>
             </div>
           </div>
-        </div>
-      </footer>
+
+          <Link href={"/plants"} className="vh-btn vh-btn-outline group">
+            {t.exploreMore}
+            <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </section>
+      </div>
+
+      <SiteFooter />
 
       {/* =====================================================
-
           FULLSCREEN IMAGE VIEWER
-
       ===================================================== */}
 
       {imageViewerOpen && hasImage && (
@@ -1396,15 +562,15 @@ export default function PlantDetailPage() {
           aria-label={t.imageViewer}
           className="fixed inset-0 z-[220] flex flex-col bg-black"
         >
-          <div className="relative z-30 flex shrink-0 items-center justify-between border-b border-white/10 bg-black/70 px-3 pb-3 pt-[calc(12px+env(safe-area-inset-top))] backdrop-blur-xl md:px-5 md:py-4">
+          <div className="relative z-30 flex shrink-0 items-center justify-between border-b border-white/10 bg-black/80 px-4 pb-3 pt-[calc(12px+env(safe-area-inset-top))] md:px-6 md:py-4">
             <div className="min-w-0">
-              <p className="truncate text-sm font-black text-white">
-                {displayValue(localizedCommonName)}
+              <p className="vh-binomial truncate text-[1.05rem] text-white">
+                {displayName}
               </p>
 
-              {hasValue(plant.botanical_name) && (
-                <p className="mt-0.5 truncate text-[10px] italic text-white/50 md:text-xs">
-                  {plant.botanical_name}
+              {hasValue(plant.pnu_no) && (
+                <p className="mt-0.5 truncate font-mono text-[11px] tracking-[0.04em] text-white/55">
+                  PNU {plant.pnu_no}
                 </p>
               )}
             </div>
@@ -1413,7 +579,7 @@ export default function PlantDetailPage() {
               type="button"
               onClick={() => setImageViewerOpen(false)}
               aria-label={t.closeImage}
-              className="ml-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-white/15 bg-white/10 text-white backdrop-blur-xl transition active:scale-95 md:hover:bg-white/15"
+              className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 text-white transition hover:bg-white/10 active:scale-95"
             >
               <CloseIcon className="h-5 w-5" />
             </button>
@@ -1422,24 +588,13 @@ export default function PlantDetailPage() {
           <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
             <img
               src={plant.image_url}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-3xl"
-            />
-
-            <div className="absolute inset-0 bg-black/40" />
-
-            <img
-              src={plant.image_url}
-              alt={
-                localizedCommonName || plant.botanical_name || "Plant specimen"
-              }
-              className="relative z-10 max-h-full max-w-full object-contain p-2 md:p-6"
+              alt={displayName}
+              className="relative z-10 max-h-full max-w-full bg-transparent object-contain p-2 md:p-6"
             />
           </div>
 
-          <div className="relative z-30 shrink-0 border-t border-white/10 bg-black/70 px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3 text-center backdrop-blur-xl">
-            <p className="text-[9px] font-black tracking-[0.16em] text-emerald-300">
+          <div className="relative z-30 shrink-0 border-t border-white/10 bg-black/80 px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3 text-center">
+            <p className="font-mono text-[10px] uppercase text-white/60">
               {t.specimenLabel}
             </p>
           </div>
@@ -1450,18 +605,284 @@ export default function PlantDetailPage() {
 }
 
 /* =========================================================
-
-   READ ONLY LOCATION MAP
-
+   HERBARIUM LABEL
+   Family, binomial, common names and the collection data
 ========================================================= */
 
-function ReadOnlyLocationMap({ plant, darkMode, t }) {
-  const mapContainerRef = useRef(null);
+function HerbariumLabel({
+  plant,
+  t,
+  isEnglish,
+  displayName,
+  plantNo,
+  displayValue,
+  actions,
+}) {
+  const commonNames = [
+    plant.common_name_th,
+    plant.common_name_en,
+  ].filter((value) => isFilled(value));
 
+  const notes = localizedValue(isEnglish, plant.notes_th, plant.notes_en, plant.notes);
+
+  const collector = isFilled(plant.collected_by)
+    ? plant.collected_by
+    : localizedValue(isEnglish, plant.collected_by_th, plant.collected_by_en);
+
+  const latitude = toCoordinateNumber(plant.latitude);
+  const longitude = toCoordinateNumber(plant.longitude);
+  const hasCoordinates = latitude !== null && longitude !== null;
+
+  const elevationNumber = toApproxNumberOrNull(plant.elevation);
+
+  const recordedDate = formatRecordDate(plant.created_at, isEnglish);
+
+  const citation = [
+    isFilled(plant.botanical_name) ? plant.botanical_name.trim() : "",
+    plantNo,
+    "Virtual Herbarium",
+  ]
+    .map((part) => part.replace(/\.+$/, ""))
+    .filter(Boolean)
+    .join(". ")
+    .concat(".");
+
+  return (
+    <article className="page-enter min-w-0 [animation-delay:80ms]">
+      <p className="vh-eyebrow flex items-center gap-3">
+        <span className="h-px w-6 bg-ochre" />
+        {t.specimen}
+      </p>
+
+      {isFilled(plant.family) && (
+        <p className="vh-family mt-5 !text-[12px]">{plant.family}</p>
+      )}
+
+      <h1 className="vh-binomial mt-2 break-words text-[2.3rem] leading-[1.05] text-ink min-[390px]:text-[2.5rem] md:text-[3rem] xl:text-[3.4rem]">
+        {displayName}
+      </h1>
+
+      {commonNames.length > 0 && (
+        <p className="mt-3 font-serif text-[1.15rem] leading-snug text-ink-soft">
+          {commonNames.join(" · ")}
+        </p>
+      )}
+
+      {isFilled(plant.artificial_group) && (
+        <p className="mt-4">
+          <span className="vh-tag vh-tag-moss">{plant.artificial_group}</span>
+        </p>
+      )}
+
+      {/* LABEL CARD */}
+
+      <div className="vh-label-card mt-8 !px-5 !py-5 md:!px-6">
+        <div className="flex items-center justify-between gap-3 border-b border-rule-strong pb-3">
+          <span className="vh-eyebrow !text-[10px]">{t.record}</span>
+
+          <span className="truncate text-[11px] text-faint">{t.archived}</span>
+        </div>
+
+        <dl className="text-[14px]">
+          <LabelRow label={t.pnuNo}>
+            <span className="font-mono text-ink">
+              {displayValue(plant.pnu_no)}
+            </span>
+          </LabelRow>
+
+          <LabelRow label={t.scientific}>
+            {isFilled(plant.botanical_name) ? (
+              <span className="vh-binomial text-[16px] text-ink">
+                {plant.botanical_name}
+              </span>
+            ) : (
+              <EmptyValue text={t.noData} />
+            )}
+          </LabelRow>
+
+          <LabelRow label={t.family}>
+            {isFilled(plant.family) ? (
+              <span className="text-ink">{plant.family}</span>
+            ) : (
+              <EmptyValue text={t.noData} />
+            )}
+          </LabelRow>
+
+          <LabelRow label={t.artificialGroup}>
+            {isFilled(plant.artificial_group) ? (
+              plant.artificial_group
+            ) : (
+              <EmptyValue text={t.noData} />
+            )}
+          </LabelRow>
+
+          <LabelRow label={t.collectedBy}>
+            {isFilled(collector) ? collector : <EmptyValue text={t.noData} />}
+          </LabelRow>
+
+          <LabelRow label={t.collectorNo}>
+            {isFilled(plant.collector_no) ? (
+              <span className="font-mono">{plant.collector_no}</span>
+            ) : (
+              <EmptyValue text={t.noData} />
+            )}
+          </LabelRow>
+
+          <LabelRow label={t.locality}>
+            {isFilled(plant.locality) ? (
+              plant.locality
+            ) : (
+              <EmptyValue text={t.noData} />
+            )}
+          </LabelRow>
+
+          <LabelRow label={t.coordinates}>
+            {hasCoordinates ? (
+              <span className="font-mono text-[13px] tabular-nums">
+                {formatHemisphere(latitude, true)}
+                <span className="text-faint">, </span>
+                {formatHemisphere(longitude, false)}
+              </span>
+            ) : (
+              <EmptyValue text={t.noData} />
+            )}
+          </LabelRow>
+
+          <LabelRow label={t.elevation}>
+            {elevationNumber !== null ? (
+              <span className="font-mono text-[13px] tabular-nums">
+                {Math.round(elevationNumber).toLocaleString()} {t.meters}
+              </span>
+            ) : (
+              <EmptyValue text={t.noData} />
+            )}
+          </LabelRow>
+
+          {recordedDate && (
+            <LabelRow label={t.recorded} last>
+              <span className="font-mono text-[13px] tabular-nums">
+                {recordedDate}
+              </span>
+            </LabelRow>
+          )}
+        </dl>
+      </div>
+
+      {/* CITATION */}
+
+      <CiteLine citation={citation} t={t} />
+
+      {/* NOTES */}
+
+      {notes && (
+        <section className="mt-8">
+          <h2 className="vh-eyebrow">{t.notes}</h2>
+
+          <p className="vh-prose mt-3 whitespace-pre-line">{notes}</p>
+        </section>
+      )}
+
+      {actions}
+    </article>
+  );
+}
+
+/* =========================================================
+   LABEL ROW
+========================================================= */
+
+function LabelRow({ label, children, last = false }) {
+  return (
+    <div
+      className={`grid grid-cols-[minmax(96px,38%)_1fr] gap-4 py-2.5 ${
+        last ? "" : "border-b border-dashed border-rule-strong"
+      }`}
+    >
+      <dt className="pt-px text-[12.5px] leading-6 text-faint">{label}</dt>
+
+      <dd className="min-w-0 break-words leading-6 text-ink-soft">
+        {children}
+      </dd>
+    </div>
+  );
+}
+
+function EmptyValue({ text }) {
+  return <span className="font-serif italic text-faint">{text}</span>;
+}
+
+/* =========================================================
+   CITE THIS RECORD
+========================================================= */
+
+function CiteLine({ citation, t }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyCitation() {
+    try {
+      await navigator.clipboard.writeText(citation);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch (error) {
+      console.error("Copy citation failed:", error);
+    }
+  }
+
+  return (
+    <div className="mt-5 flex items-start gap-3 border-l-2 border-ochre pl-4">
+      <div className="min-w-0 flex-1">
+        <p className="vh-eyebrow !text-[10px]">{t.cite}</p>
+
+        <p className="mt-1.5 break-words font-mono text-[12px] leading-5 text-ink-soft">
+          {citation}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={copyCitation}
+        className="vh-btn vh-btn-ghost vh-btn-sm shrink-0"
+        aria-live="polite"
+      >
+        {copied ? (
+          <CheckIcon className="h-4 w-4 text-moss" />
+        ) : (
+          <CopyIcon className="h-4 w-4" />
+        )}
+        {copied ? t.copied : t.copy}
+      </button>
+    </div>
+  );
+}
+
+/* =========================================================
+   SECTION HEADING
+========================================================= */
+
+function SectionHeading({ eyebrow, title }) {
+  return (
+    <div>
+      <p className="vh-eyebrow flex items-center gap-3">
+        <span className="h-px w-6 bg-ochre" />
+        {eyebrow}
+      </p>
+
+      <h2 className="vh-display mt-3 text-[1.9rem] md:text-[2.4rem]">
+        {title}
+      </h2>
+    </div>
+  );
+}
+
+/* =========================================================
+   READ ONLY LOCATION MAP
+========================================================= */
+
+function ReadOnlyLocationMap({ plant, t }) {
+  const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
 
   const latitude = toCoordinateNumber(plant?.latitude);
-
   const longitude = toCoordinateNumber(plant?.longitude);
 
   const hasCoordinates = latitude !== null && longitude !== null;
@@ -1485,21 +906,13 @@ function ReadOnlyLocationMap({ plant, darkMode, t }) {
 
         const map = L.map(mapContainerRef.current, {
           zoomControl: true,
-
           attributionControl: true,
-
           scrollWheelZoom: false,
-
           doubleClickZoom: true,
-
           dragging: true,
-
           touchZoom: true,
-
           boxZoom: false,
-
           keyboard: false,
-
           preferCanvas: true,
         }).setView([latitude, longitude], 16);
 
@@ -1508,49 +921,47 @@ function ReadOnlyLocationMap({ plant, darkMode, t }) {
             "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
             maxZoom: 19,
-
             attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+              '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
           },
         ).addTo(map);
+
+        /* =============================================
+           MINIMAL MARKER (uses design tokens)
+        ============================================= */
 
         const markerIcon = L.divIcon({
           className: "",
 
           html: `
-              <div style="
-                width:38px;
-                height:38px;
-                border-radius:14px 14px 14px 4px;
-                transform:rotate(-45deg);
-                background:#047857;
-                border:4px solid rgba(255,255,255,.96);
-                box-shadow:0 8px 20px rgba(0,0,0,.28);
-                display:flex;
-                align-items:center;
-                justify-content:center;
-              ">
-                <div style="
-                  width:10px;
-                  height:10px;
-                  border-radius:999px;
-                  background:white;
-                "></div>
-              </div>
-            `,
+            <div style="
+              width:18px;
+              height:18px;
+              border-radius:999px;
+              background:var(--moss);
+              border:3px solid var(--sheet-raised);
+              box-shadow:
+                0 3px 10px rgba(0,0,0,.24),
+                0 0 0 4px var(--moss-soft);
+            "></div>
+          `,
 
-          iconSize: [38, 38],
-
-          iconAnchor: [19, 36],
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+          popupAnchor: [0, -12],
         });
 
-        L.marker([latitude, longitude], {
+        const marker = L.marker([latitude, longitude], {
           draggable: false,
-
           keyboard: false,
-
           icon: markerIcon,
         }).addTo(map);
+
+        marker.bindTooltip(t.mapPinLabel, {
+          direction: "top",
+          offset: [0, -10],
+          opacity: 0.95,
+        });
 
         mapRef.current = map;
 
@@ -1571,11 +982,10 @@ function ReadOnlyLocationMap({ plant, darkMode, t }) {
 
       if (mapRef.current) {
         mapRef.current.remove();
-
         mapRef.current = null;
       }
     };
-  }, [hasCoordinates, latitude, longitude]);
+  }, [hasCoordinates, latitude, longitude, t.mapPinLabel]);
 
   const latitudeDms = hasCoordinates ? decimalToDms(latitude, true) : "";
 
@@ -1583,211 +993,156 @@ function ReadOnlyLocationMap({ plant, darkMode, t }) {
 
   const elevationNumber = toApproxNumberOrNull(plant?.elevation);
 
+  if (!hasCoordinates) {
+    return (
+      <div className="p-5 md:p-6">
+        <div className="flex min-h-[140px] flex-col items-center justify-center rounded-[4px] border border-dashed border-rule-strong bg-paper-deep/50 px-5 text-center">
+          <LocationIcon className="h-5 w-5 text-faint" />
+
+          <p className="mt-3 font-serif text-[15px] italic text-muted">
+            {t.noCoordinates}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`mt-5 overflow-hidden rounded-[16px] border md:mt-6 md:rounded-[22px] ${
-        darkMode
-          ? "border-white/[0.08] bg-black/15"
-          : "border-emerald-950/[0.08] bg-[#f7faf6]"
-      }`}
-    >
-      <div className="p-4 md:p-5 lg:p-6">
-        <div className="flex items-start gap-3">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] md:h-11 md:w-11 ${
-              darkMode
-                ? "bg-emerald-400/10 text-emerald-300"
-                : "bg-emerald-800/[0.08] text-emerald-800"
-            }`}
-          >
-            <LocationIcon className="h-[18px] w-[18px] md:h-5 md:w-5" />
-          </div>
+    <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pb-3 pt-5 md:px-6">
+        <h3 className="font-serif text-[1.2rem] text-ink">{t.mapTitle}</h3>
 
-          <div className="min-w-0">
-            <p
-              className={`text-[9px] font-black uppercase tracking-[0.16em] md:text-[10px] ${
-                darkMode ? "text-emerald-400" : "text-emerald-700"
-              }`}
-            >
-              {t.coordinates}
-            </p>
+        <p className="text-[13px] text-muted">{t.mapDescription}</p>
+      </div>
 
-            <h3
-              className={`mt-1 text-[16px] font-black leading-6 md:text-[18px] ${
-                darkMode ? "text-white" : "text-[#173321]"
-              }`}
-            >
-              {t.mapTitle}
-            </h3>
+      <div className="border-y border-rule">
+        <div
+          ref={mapContainerRef}
+          className="relative z-0 h-[260px] w-full sm:h-[300px] md:h-[360px] lg:h-[400px] dark:brightness-[0.78] dark:contrast-[1.04] dark:saturate-[0.82]"
+          aria-label={t.mapTitle}
+        />
 
-            <p
-              className={`mt-1 text-[11px] leading-5 md:text-xs md:leading-6 ${
-                darkMode ? "text-gray-500" : "text-slate-500"
-              }`}
-            >
-              {t.mapDescription}
-            </p>
-          </div>
+        {/* MONO COORDINATE CAPTION */}
+
+        <div className="flex flex-col gap-1 border-t border-rule bg-paper-deep/60 px-5 py-2.5 md:flex-row md:items-center md:justify-between md:px-6">
+          <p className="font-mono text-[12px] tabular-nums text-ink-soft">
+            {formatHemisphere(latitude, true, 7)}
+            <span className="text-faint"> · </span>
+            {formatHemisphere(longitude, false, 7)}
+          </p>
+
+          <p className="flex items-center gap-1.5 text-[11.5px] text-faint">
+            <InfoIcon className="h-3.5 w-3.5 shrink-0" />
+            {t.mapHint}
+          </p>
         </div>
       </div>
 
-      {hasCoordinates ? (
-        <>
-          <div
-            className={`border-y ${
-              darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.08]"
-            }`}
-          >
-            <div
-              ref={mapContainerRef}
-              className={`h-[230px] w-full sm:h-[270px] md:h-[310px] lg:h-[350px] ${
-                darkMode
-                  ? "brightness-[0.78] contrast-[1.04] saturate-[0.82]"
-                  : ""
-              }`}
-              aria-label={t.mapTitle}
-            />
+      {/* COORDINATES BELOW MAP */}
 
-            <div
-              className={`flex items-start gap-2 px-4 py-2.5 text-[10px] leading-5 md:px-5 md:text-[11px] ${
-                darkMode
-                  ? "bg-black/20 text-gray-500"
-                  : "bg-white/70 text-slate-500"
-              }`}
-            >
-              <InfoIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <dl className="grid grid-cols-2 gap-px bg-rule md:grid-cols-4">
+        <CoordinateDisplay label={t.latitude} value={latitude.toFixed(7)} />
 
-              <span>{t.mapHint}</span>
-            </div>
-          </div>
+        <CoordinateDisplay label={t.longitude} value={longitude.toFixed(7)} />
 
-          <div className="p-4 md:p-5 lg:p-6">
-            <div className="grid grid-cols-2 gap-2.5 md:gap-3.5">
-              <CoordinateDisplay
-                darkMode={darkMode}
-                label={t.latitude}
-                value={latitude.toFixed(7)}
-              />
+        <CoordinateDisplay
+          label={`${t.latitude} · DMS`}
+          value={latitudeDms}
+          title={t.dmsCoordinates}
+        />
 
-              <CoordinateDisplay
-                darkMode={darkMode}
-                label={t.longitude}
-                value={longitude.toFixed(7)}
-              />
-            </div>
+        <CoordinateDisplay
+          label={`${t.longitude} · DMS`}
+          value={longitudeDms}
+          title={t.dmsCoordinates}
+        />
+      </dl>
 
-            <div className="mt-4">
-              <p
-                className={`text-[9px] font-black uppercase tracking-[0.15em] md:text-[10px] ${
-                  darkMode ? "text-emerald-400" : "text-emerald-700"
-                }`}
-              >
-                {t.dmsCoordinates}
-              </p>
+      {/* ELEVATION BELOW MAP */}
 
-              <div className="mt-2 grid grid-cols-2 gap-2.5 md:gap-3.5">
-                <CoordinateDisplay
-                  darkMode={darkMode}
-                  label={t.latitude}
-                  value={latitudeDms}
-                />
+      {elevationNumber !== null && (
+        <div className="flex items-center gap-3 border-t border-rule px-5 py-4 md:px-6">
+          <MountainIcon className="h-4 w-4 shrink-0 text-ochre" />
 
-                <CoordinateDisplay
-                  darkMode={darkMode}
-                  label={t.longitude}
-                  value={longitudeDms}
-                />
-              </div>
-            </div>
+          <span className="text-[13px] text-faint">{t.elevation}</span>
 
-            {elevationNumber !== null && (
-              <div
-                className={`mt-4 rounded-[14px] border px-3.5 py-3 md:px-4 ${
-                  darkMode
-                    ? "border-white/[0.08] bg-white/[0.025]"
-                    : "border-emerald-950/[0.07] bg-white"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <MountainIcon
-                    className={`h-4 w-4 shrink-0 ${
-                      darkMode ? "text-emerald-300" : "text-emerald-700"
-                    }`}
-                  />
-
-                  <div className="min-w-0">
-                    <p
-                      className={`text-[9px] font-bold md:text-[10px] ${
-                        darkMode ? "text-gray-500" : "text-slate-400"
-                      }`}
-                    >
-                      {t.elevation}
-                    </p>
-
-                    <p
-                      className={`mt-0.5 text-[13px] font-black md:text-sm ${
-                        darkMode ? "text-white" : "text-[#173321]"
-                      }`}
-                    >
-                      {Math.round(elevationNumber)} {t.meters}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        <div className="px-4 pb-4 md:px-5 md:pb-5 lg:px-6 lg:pb-6">
-          <div
-            className={`flex min-h-[120px] items-center justify-center rounded-[14px] border border-dashed px-5 text-center md:min-h-[140px] md:rounded-[18px] ${
-              darkMode
-                ? "border-white/10 bg-white/[0.02] text-gray-500"
-                : "border-emerald-950/10 bg-white/60 text-slate-400"
-            }`}
-          >
-            <div>
-              <LocationIcon className="mx-auto h-5 w-5" />
-
-              <p className="mt-2 text-[11px] font-semibold leading-5 md:text-xs">
-                {t.noCoordinates}
-              </p>
-            </div>
-          </div>
+          <span className="ml-auto font-mono text-[13px] tabular-nums text-ink">
+            {Math.round(elevationNumber)} {t.meters}
+          </span>
         </div>
       )}
     </div>
   );
 }
 
-function CoordinateDisplay({ darkMode, label, value }) {
-  return (
-    <div
-      className={`min-w-0 rounded-[14px] border px-3 py-3 md:px-4 md:py-3.5 ${
-        darkMode
-          ? "border-white/[0.08] bg-white/[0.025]"
-          : "border-emerald-950/[0.07] bg-white"
-      }`}
-    >
-      <p
-        className={`text-[9px] font-bold leading-4 md:text-[10px] ${
-          darkMode ? "text-gray-500" : "text-slate-400"
-        }`}
-      >
-        {label}
-      </p>
+/* =========================================================
+   COORDINATE DISPLAY
+========================================================= */
 
-      <p
-        className={`mt-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[11px] font-black leading-5 min-[390px]:text-[12px] md:text-[13px] ${
-          darkMode ? "text-gray-100" : "text-slate-700"
-        }`}
+function CoordinateDisplay({ label, value, title }) {
+  return (
+    <div className="min-w-0 bg-sheet px-5 py-3.5 md:px-6" title={title}>
+      <dt className="text-[12px] text-faint">{label}</dt>
+
+      <dd
+        className="mt-1 truncate font-mono text-[12.5px] tabular-nums text-ink md:text-[13px]"
         title={value}
       >
         {value}
-      </p>
+      </dd>
     </div>
   );
 }
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function isFilled(value) {
+  return !(
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  );
+}
+
+function localizedValue(isEnglish, th, en, legacy) {
+  const values = isEnglish ? [en, th, legacy] : [th, en, legacy];
+
+  const found = values.find((value) => isFilled(value));
+
+  return found ? String(found).trim() : "";
+}
+
+function formatHemisphere(value, isLatitude, digits = 5) {
+  const direction = isLatitude
+    ? value >= 0
+      ? "N"
+      : "S"
+    : value >= 0
+      ? "E"
+      : "W";
+
+  return `${Math.abs(value).toFixed(digits)}° ${direction}`;
+}
+
+function formatRecordDate(value, isEnglish) {
+  if (!isFilled(value)) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString(isEnglish ? "en-GB" : "th-TH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/* =========================================================
+   COORDINATE HELPERS
+========================================================= */
 
 function toCoordinateNumber(value) {
   if (value === null || value === undefined || String(value).trim() === "") {
@@ -1829,11 +1184,9 @@ function decimalToDms(value, isLatitude) {
   }
 
   const absolute = Math.abs(number);
-
   const degrees = Math.floor(absolute);
 
   const minutesFloat = (absolute - degrees) * 60;
-
   const minutes = Math.floor(minutesFloat);
 
   const seconds = ((minutesFloat - minutes) * 60).toFixed(1);
@@ -1849,6 +1202,26 @@ function decimalToDms(value, isLatitude) {
   return `${degrees}°${minutes}'${seconds}"${direction}`;
 }
 
+/* =========================================================
+   IMAGE FALLBACK
+========================================================= */
+
+function ImageFallback({ text }) {
+  return (
+    <div className="vh-grid-paper flex h-full w-full items-center justify-center">
+      <div className="text-center">
+        <LeafIcon className="mx-auto h-14 w-14 text-faint md:h-16 md:w-16" />
+
+        <p className="mt-3 font-serif text-[15px] italic text-muted">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   ICONS
+========================================================= */
+
 function InfoIcon({ className = "" }) {
   return (
     <svg
@@ -1862,357 +1235,11 @@ function InfoIcon({ className = "" }) {
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="9" />
-
       <path d="M12 11v5" />
-
       <path d="M12 8h.01" />
     </svg>
   );
 }
-
-/* =========================================================
-
-   RECORD CARD
-
-========================================================= */
-
-function RecordCard({
-  plant,
-  darkMode,
-  t,
-  formatCreatedDate,
-  commonName,
-  collectedBy,
-}) {
-  return (
-    <section
-      className={`rounded-[20px] border p-4 md:rounded-[1.8rem] md:p-6 lg:p-7 ${
-        darkMode
-          ? "border-white/10 bg-[#0a1710]"
-          : "border-emerald-950/10 bg-white"
-      }`}
-    >
-      <SectionHeading
-        darkMode={darkMode}
-        label={t.record}
-        title={t.recordTitle}
-        icon={<DocumentIcon className="h-4 w-4 md:h-5 md:w-5" />}
-      />
-
-      <dl className="mt-4 md:mt-6">
-        <InfoRow
-          label={t.common}
-          value={commonName}
-          darkMode={darkMode}
-          fallback={t.noData}
-        />
-
-        <InfoRow
-          label={t.scientific}
-          value={plant.botanical_name}
-          darkMode={darkMode}
-          fallback={t.noData}
-          italic
-        />
-
-        <InfoRow
-          label={t.family}
-          value={plant.family}
-          darkMode={darkMode}
-          fallback={t.noData}
-        />
-
-        <InfoRow
-          label={t.specimenNumber}
-          value={plant.specimen_number}
-          darkMode={darkMode}
-          fallback={t.noData}
-        />
-
-        <InfoRow
-          label={t.collectedBy}
-          value={collectedBy}
-          darkMode={darkMode}
-          fallback={t.noData}
-        />
-
-        <InfoRow
-          label={t.duplicates}
-          value={plant.duplicates}
-          darkMode={darkMode}
-          fallback={t.noData}
-        />
-
-        <InfoRow
-          label={t.databaseId}
-          value={plant.plant_id}
-          darkMode={darkMode}
-          fallback={t.noData}
-        />
-
-        <InfoRow
-          label={t.addedDate}
-          value={formatCreatedDate(plant.created_at)}
-          darkMode={darkMode}
-          fallback={t.noData}
-          last
-        />
-      </dl>
-    </section>
-  );
-}
-
-/* =========================================================
-
-   IMAGE FALLBACK
-
-========================================================= */
-
-function ImageFallback({ darkMode, text }) {
-  return (
-    <div
-      className={`flex h-full w-full items-center justify-center ${
-        darkMode
-          ? "bg-[radial-gradient(circle_at_center,rgba(52,140,78,0.18),transparent_65%),#102218]"
-          : "bg-[radial-gradient(circle_at_center,rgba(30,110,62,0.12),transparent_65%),#edf5ed]"
-      }`}
-    >
-      <div className="text-center">
-        <LeafIcon
-          className={`mx-auto h-16 w-16 md:h-20 md:w-20 ${
-            darkMode ? "text-emerald-400/35" : "text-emerald-800/25"
-          }`}
-        />
-
-        <p
-          className={`mt-3 text-xs md:text-sm ${
-            darkMode ? "text-gray-600" : "text-slate-400"
-          }`}
-        >
-          {text}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-
-   MOBILE QUICK META
-
-========================================================= */
-
-function MobileQuickMeta({ darkMode, icon, label, value }) {
-  return (
-    <div
-      className={`flex min-h-[72px] min-w-0 items-center gap-3 rounded-[16px] border p-3.5 ${
-        darkMode
-          ? "border-white/10 bg-[#0a1710]/85"
-          : "border-emerald-950/10 bg-white/80"
-      }`}
-    >
-      <div
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-800/10 text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <div className="min-w-0">
-        <p
-          className={`truncate text-[8.5px] font-black uppercase tracking-[0.08em] ${
-            darkMode ? "text-white/58" : "text-slate-500"
-          }`}
-        >
-          {label}
-        </p>
-
-        <p
-          className={`mt-1 line-clamp-2 text-[11.5px] font-bold leading-[1.45] min-[390px]:text-[12px] ${
-            darkMode ? "text-gray-100" : "text-slate-800"
-          }`}
-        >
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-
-   HERO META
-
-========================================================= */
-
-function HeroMeta({ darkMode, icon, value }) {
-  return (
-    <div
-      className={`flex min-w-0 items-center gap-2.5 rounded-full border px-3.5 py-2.5 text-[13px] font-semibold backdrop-blur-xl lg:text-sm ${
-        darkMode
-          ? "border-white/10 bg-black/25 text-gray-200"
-          : "border-emerald-950/10 bg-white/55 text-[#465f4d]"
-      }`}
-    >
-      <span
-        className={`shrink-0 ${
-          darkMode ? "text-emerald-300" : "text-emerald-800"
-        }`}
-      >
-        {icon}
-      </span>
-
-      <span className="min-w-0 truncate">{value}</span>
-    </div>
-  );
-}
-
-/* =========================================================
-
-   SECTION HEADING
-
-========================================================= */
-
-function SectionHeading({ darkMode, label, title, icon }) {
-  return (
-    <div className="flex items-start gap-3.5 md:gap-4">
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] md:h-11 md:w-11 md:rounded-xl ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-800/10 text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <div className="min-w-0">
-        <p
-          className={`text-[8px] font-black uppercase tracking-[0.14em] md:text-[10px] md:tracking-[0.18em] ${
-            darkMode ? "text-emerald-400" : "text-emerald-700"
-          }`}
-        >
-          {label}
-        </p>
-
-        <h2
-          className={`mt-1 text-[16px] font-black leading-5 md:text-[1.35rem] md:leading-7 ${
-            darkMode ? "text-white" : "text-[#173321]"
-          }`}
-        >
-          {title}
-        </h2>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-
-   INFO ROW
-
-========================================================= */
-
-function InfoRow({
-  label,
-  value,
-  darkMode,
-  fallback,
-  italic = false,
-  last = false,
-}) {
-  const empty =
-    value === null || value === undefined || String(value).trim() === "";
-
-  return (
-    <div
-      className={`grid gap-1 py-3 md:grid-cols-[155px_1fr] md:gap-5 md:py-4 ${
-        !last
-          ? darkMode
-            ? "border-b border-white/[0.07]"
-            : "border-b border-emerald-950/[0.07]"
-          : ""
-      }`}
-    >
-      <dt
-        className={`text-[10px] font-bold md:text-[13px] ${
-          darkMode ? "text-gray-400" : "text-slate-500"
-        }`}
-      >
-        {label}
-      </dt>
-
-      <dd
-        className={`break-words text-[13px] font-semibold leading-5 md:text-[15px] md:leading-6 ${
-          empty
-            ? darkMode
-              ? "text-gray-600"
-              : "text-slate-400"
-            : darkMode
-              ? "text-gray-200"
-              : "text-slate-800"
-        } ${italic && !empty ? "italic" : ""}`}
-      >
-        {empty ? fallback : value}
-      </dd>
-    </div>
-  );
-}
-
-/* =========================================================
-
-   FIELD CARD
-
-========================================================= */
-
-function FieldCard({ darkMode, icon, label, value, wide = false }) {
-  return (
-    <div
-      className={`min-h-[116px] min-w-0 rounded-[15px] border p-3.5 transition duration-300 md:min-h-[132px] md:rounded-2xl md:p-[18px] lg:min-h-[142px] lg:p-5 lg:hover:-translate-y-1 ${
-        wide ? "col-span-2 lg:col-span-1" : ""
-      } ${
-        darkMode
-          ? "border-white/[0.08] bg-white/[0.025] lg:hover:border-emerald-400/20"
-          : "border-emerald-950/[0.08] bg-[#f7faf6] lg:hover:border-emerald-700/20"
-      }`}
-    >
-      <div
-        className={`flex h-9 w-9 items-center justify-center rounded-[10px] md:h-10 md:w-10 md:rounded-xl ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-800/[0.08] text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <p
-        className={`mt-3 text-[8.5px] font-bold uppercase tracking-[0.08em] md:mt-3.5 md:text-[10px] md:tracking-[0.1em] ${
-          darkMode ? "text-gray-400" : "text-slate-500"
-        }`}
-      >
-        {label}
-      </p>
-
-      <p
-        className={`mt-1 break-words text-[11.5px] font-bold leading-[1.45] md:text-[14px] md:leading-6 lg:text-[15px] ${
-          darkMode ? "text-gray-200" : "text-slate-800"
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
-
-   ICONS
-
-========================================================= */
 
 function LeafIcon({ className = "" }) {
   return (
@@ -2221,125 +1248,13 @@ function LeafIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
       <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
-
       <path d="M4 20c4-5 7-7 13-10" />
-    </svg>
-  );
-}
-
-function BranchIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 20V6" />
-
-      <path d="M12 9 7 5" />
-
-      <path d="M12 13l5-4" />
-
-      <path d="M7 5 5 3" />
-
-      <path d="M17 9l2-2" />
-    </svg>
-  );
-}
-
-function PinIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  );
-}
-
-function CalendarIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-
-      <path d="M16 3v4" />
-
-      <path d="M8 3v4" />
-
-      <path d="M3 10h18" />
-    </svg>
-  );
-}
-
-function DocumentIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 3h8l4 4v14H6z" />
-
-      <path d="M14 3v5h5" />
-
-      <path d="M9 13h6" />
-
-      <path d="M9 17h6" />
-    </svg>
-  );
-}
-
-function MapIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m3 6 5-3 8 3 5-3v15l-5 3-8-3-5 3Z" />
-
-      <path d="M8 3v15" />
-
-      <path d="M16 6v15" />
     </svg>
   );
 }
@@ -2357,15 +1272,10 @@ function LocationIcon({ className = "" }) {
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="3" />
-
       <circle cx="12" cy="12" r="8" />
-
       <path d="M12 2v2" />
-
       <path d="M12 20v2" />
-
       <path d="M2 12h2" />
-
       <path d="M20 12h2" />
     </svg>
   );
@@ -2384,54 +1294,7 @@ function MountainIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="m3 20 7-12 4 7 2-3 5 8Z" />
-
       <path d="m8.5 10.5 1.5 1.5 1.5-1.5" />
-    </svg>
-  );
-}
-
-function ForestIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m7 3-4 7h3l-4 6h10l-4-6h3L7 3Z" />
-
-      <path d="M7 16v5" />
-
-      <path d="m17 6-3 5h2l-3 5h8l-3-5h2l-3-5Z" />
-
-      <path d="M17 16v5" />
-    </svg>
-  );
-}
-
-function NoteIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M5 3h14a2 2 0 0 1 2 2v11l-5 5H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-
-      <path d="M16 21v-5h5" />
-
-      <path d="M8 8h8" />
-
-      <path d="M8 12h6" />
     </svg>
   );
 }
@@ -2449,8 +1312,25 @@ function ArrowLeftIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M19 12H5" />
-
       <path d="m11 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function ArrowRightIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
     </svg>
   );
 }
@@ -2468,20 +1348,48 @@ function ExpandIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M8 3H3v5" />
-
       <path d="m3 3 6 6" />
-
       <path d="M16 3h5v5" />
-
       <path d="m21 3-6 6" />
-
       <path d="M8 21H3v-5" />
-
       <path d="m3 21 6-6" />
-
       <path d="M16 21h5v-5" />
-
       <path d="m21 21-6-6" />
+    </svg>
+  );
+}
+
+function CopyIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V6a2 2 0 0 1 2-2h8" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
     </svg>
   );
 }
@@ -2493,13 +1401,12 @@ function CloseIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
       <path d="m6 6 12 12" />
-
       <path d="m18 6-12 12" />
     </svg>
   );
@@ -2518,9 +1425,7 @@ function AlertIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M12 3 2.5 20h19Z" />
-
       <path d="M12 9v5" />
-
       <path d="M12 17.5h.01" />
     </svg>
   );

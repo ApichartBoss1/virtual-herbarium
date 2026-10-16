@@ -1,6 +1,7 @@
 "use client";
 
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 /* =========================================================
@@ -18,7 +19,7 @@ const STORY_IMAGE =
 ========================================================= */
 
 export default function AboutPage() {
-  const { language, darkMode } = useSiteSettings();
+  const { language } = useSiteSettings();
 
   const isEN = language === "EN";
 
@@ -111,15 +112,15 @@ export default function AboutPage() {
         workDesc:
           "A simple flow turns raw specimen data into useful digital knowledge.",
 
-        step1Title: "Create a record",
+        step1Title: "System Administrator",
 
-        step1Text: "Start a specimen record in the system.",
+        step1Text: "Manage plant specimen records.",
 
         step2Title: "Add information",
 
         step2Text: "Attach image, names, place, and key details.",
 
-        step3Title: "Store data",
+        step3Title: "Admin data storage",
 
         step3Text: "Save information in a clear structured format.",
 
@@ -132,7 +133,7 @@ export default function AboutPage() {
     : {
         heroEyebrow: "ABOUT VIRTUAL HERBARIUM",
 
-        heroMini: "เรื่องราวของคลังพรรณไม้ดิจิทัล",
+        heroMini: "เรื่องราวของคลังพรรณไม้ดิจิม่อน",
 
         heroTitle1: "จากตัวอย่างพรรณไม้",
 
@@ -211,15 +212,15 @@ export default function AboutPage() {
         workDesc:
           "ข้อมูลหนึ่งระเบียนผ่านขั้นตอนที่เรียบง่าย ก่อนกลายเป็นองค์ความรู้ที่สามารถค้นหาและเปิดดูได้ง่าย",
 
-        step1Title: "สร้างระเบียน",
+        step1Title: "แอดมินจัดการระบบ",
 
-        step1Text: "เริ่มต้นบันทึกตัวอย่างพรรณไม้เข้าสู่ระบบ",
+        step1Text: "จัดการบันทึกตัวอย่างพรรณไม้",
 
-        step2Title: "เพิ่มข้อมูล",
+        step2Title: "แอดมินเพิ่มข้อมูลพรรณไม้",
 
         step2Text: "ใส่ภาพ ชื่อ สถานที่ และรายละเอียดสำคัญ",
 
-        step3Title: "จัดเก็บข้อมูล",
+        step3Title: "แอดมินจัดเก็บข้อมูล",
 
         step3Text: "บันทึกข้อมูลให้อยู่ในโครงสร้างเดียวกัน",
 
@@ -231,573 +232,346 @@ export default function AboutPage() {
       };
 
   /* =====================================================
+     DATA
+  ===================================================== */
+
+  const records = [
+    { icon: LeafIcon, title: t.record1Title, text: t.record1Text },
+    { icon: PinIcon, title: t.record2Title, text: t.record2Text },
+    { icon: FieldIcon, title: t.record3Title, text: t.record3Text },
+    { icon: ArchiveIcon, title: t.record4Title, text: t.record4Text },
+  ];
+
+  const benefits = [
+    { icon: DatabaseIcon, title: t.benefit1Title, text: t.benefit1Text },
+    { icon: SearchIcon, title: t.benefit2Title, text: t.benefit2Text },
+    { icon: BookIcon, title: t.benefit3Title, text: t.benefit3Text },
+    { icon: EditIcon, title: t.benefit4Title, text: t.benefit4Text },
+  ];
+
+  const steps = [
+    { icon: LeafIcon, title: t.step1Title, text: t.step1Text },
+    { icon: ImageIcon, title: t.step2Title, text: t.step2Text },
+    { icon: DatabaseIcon, title: t.step3Title, text: t.step3Text },
+    { icon: SearchIcon, title: t.step4Title, text: t.step4Text },
+  ];
+
+  /* Thai script needs more line height than Latin display type */
+  const displayLeading = isEN ? "" : "!leading-[1.3]";
+
+  /* =====================================================
      PAGE
   ===================================================== */
 
   return (
-    <main className="relative min-h-[100dvh] overflow-x-hidden bg-[#eef4ec]">
-      {/* =====================================================
-          BACKGROUND
-      ===================================================== */}
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url("${FOREST_HERO}")`,
-        }}
-      />
-
-      <div
-        aria-hidden="true"
-        className={`pointer-events-none fixed inset-0 z-0 ${
-          darkMode
-            ? "bg-[linear-gradient(180deg,rgba(3,12,8,0.86)_0%,rgba(7,19,13,0.74)_35%,rgba(5,13,10,0.88)_100%)]"
-            : "bg-[linear-gradient(180deg,rgba(244,248,241,0.86)_0%,rgba(240,246,237,0.80)_38%,rgba(232,240,230,0.92)_100%)]"
-        }`}
-      />
-
-      <div
-        aria-hidden="true"
-        className={`pointer-events-none fixed inset-x-0 bottom-0 z-0 h-52 ${
-          darkMode
-            ? "bg-gradient-to-t from-[#031008] via-[#031008]/70 to-transparent"
-            : "bg-gradient-to-t from-[#edf4ec] via-[#edf4ec]/78 to-transparent"
-        }`}
-      />
+    <main className="flex min-h-[100dvh] flex-col overflow-x-hidden">
+      <Navbar />
 
       {/* =====================================================
-          CONTENT
+          HERO
       ===================================================== */}
 
-      <div className="relative z-10">
-        <Navbar />
+      <header className="relative overflow-hidden border-b border-rule">
+        <div
+          aria-hidden="true"
+          className="vh-grid-paper pointer-events-none absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_at_30%_30%,black,transparent_70%)]"
+        />
 
-        <div className="container mx-auto max-w-7xl px-4 pb-8 pt-5 md:px-6 md:pb-10 md:pt-8 lg:px-8">
-          {/* =================================================
-              HERO
-          ================================================= */}
+        <div className="vh-container relative py-14 md:py-20 lg:py-24">
+          <div className="page-enter max-w-[860px]">
+            <p className="vh-eyebrow flex items-center gap-3">
+              <span className="h-px w-8 bg-ochre" />
+              {t.heroEyebrow}
+            </p>
 
-          <section className="mb-5 md:mb-8 lg:mb-10">
-            <div
-              className={`relative overflow-hidden rounded-[24px] border px-5 py-6 shadow-[0_20px_55px_rgba(0,0,0,0.07)] backdrop-blur-xl md:rounded-[26px] md:px-7 md:py-8 lg:px-9 lg:py-9 ${
-                darkMode
-                  ? "border-white/10 bg-[#07130d]/70"
-                  : "border-white/70 bg-white/68"
-              }`}
+            <p className="mt-6 font-serif text-[1.15rem] italic text-muted md:text-[1.3rem]">
+              {t.heroMini}
+            </p>
+
+            <h1
+              className={`vh-display mt-4 text-[2.6rem] min-[390px]:text-[3rem] md:text-[4.2rem] xl:text-[5rem] ${displayLeading}`}
             >
-              {/* GLOW */}
+              <span className="block">{t.heroTitle1}</span>
 
-              <div
-                aria-hidden="true"
-                className={`pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full blur-3xl ${
-                  darkMode ? "bg-emerald-400/[0.07]" : "bg-emerald-600/[0.06]"
-                }`}
-              />
+              <span className="block italic text-moss">{t.heroTitle2}</span>
+            </h1>
+          </div>
 
-              <div className="relative">
-                <SectionEyebrow darkMode={darkMode} text={t.heroEyebrow} />
+          <div className="mt-10 grid gap-8 border-t border-rule pt-8 md:mt-14 md:grid-cols-[180px_1fr] md:gap-12">
+            <p className="vh-catalog pt-1">PL. I — VH</p>
 
-                <div className="mt-5 grid gap-5 md:mt-6 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-10">
-                  {/* LEFT */}
-
-                  <div className="min-w-0">
-                    <p
-                      className={`mb-2.5 text-[10px] font-bold tracking-[0.13em] md:mb-3 md:text-[11px] ${
-                        darkMode ? "text-emerald-300" : "text-emerald-800"
-                      }`}
-                    >
-                      {t.heroMini}
-                    </p>
-
-                    <h1
-                      className={`max-w-3xl text-[2.05rem] font-black leading-[1.04] tracking-[-0.05em] min-[390px]:text-[2.25rem] md:text-[3rem] lg:text-[3.8rem] ${
-                        darkMode ? "text-white" : "text-[#132818]"
-                      }`}
-                    >
-                      <span className="block">{t.heroTitle1}</span>
-
-                      <span
-                        className={`mt-1 block ${
-                          darkMode ? "text-emerald-300" : "text-emerald-800"
-                        }`}
-                      >
-                        {t.heroTitle2}
-                      </span>
-                    </h1>
-                  </div>
-
-                  {/* RIGHT */}
-
-                  <div
-                    className={`min-w-0 border-t pt-4 lg:border-l lg:border-t-0 lg:pl-9 lg:pt-0 ${
-                      darkMode ? "border-white/10" : "border-emerald-950/10"
-                    }`}
-                  >
-                    <p
-                      className={`max-w-xl text-[12px] leading-[1.9] min-[390px]:text-[13px] md:text-[14px] md:leading-7 lg:text-[15px] lg:leading-8 ${
-                        darkMode ? "text-white/70" : "text-[#516557]"
-                      }`}
-                    >
-                      {t.heroText}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-              STORY
-          ================================================= */}
-
-          <section className="mb-5 md:mb-8 lg:mb-10">
-            <div className="grid items-stretch gap-3.5 md:gap-4 lg:grid-cols-2 lg:gap-5">
-              {/* IMAGE */}
-
-              <GlassPanel darkMode={darkMode} className="overflow-hidden p-1.5">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-[18px] md:aspect-[16/11] md:rounded-[20px] lg:h-full lg:min-h-[430px] lg:aspect-auto">
-                  <img
-                    src={STORY_IMAGE}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,15,9,0.04)_12%,rgba(4,15,9,0.88)_100%)]" />
-
-                  <div className="absolute inset-x-0 bottom-0 p-4 md:p-6">
-                    <p className="text-[8px] font-extrabold tracking-[0.18em] text-emerald-300 md:text-[9px]">
-                      {t.storyImageLabel}
-                    </p>
-
-                    <h3 className="mt-2.5 max-w-md text-[17px] font-black leading-7 text-white md:mt-3 md:text-[1.45rem] md:leading-8">
-                      {t.storyImageTitle}
-                    </h3>
-                  </div>
-                </div>
-              </GlassPanel>
-
-              {/* CONTENT */}
-
-              <GlassPanel
-                darkMode={darkMode}
-                className="flex flex-col justify-center p-5 md:p-7 lg:min-h-[430px] lg:p-8"
-              >
-                <SectionEyebrow darkMode={darkMode} text={t.storyEyebrow} />
-
-                <h2
-                  className={`mt-4 text-[1.6rem] font-black leading-[1.18] tracking-[-0.04em] min-[390px]:text-[1.72rem] md:mt-5 md:text-[2.15rem] ${
-                    darkMode ? "text-white" : "text-[#132818]"
-                  }`}
-                >
-                  {t.storyTitle}
-                </h2>
-
-                <div
-                  className={`mt-4 space-y-3.5 text-[11px] leading-[1.9] min-[390px]:text-[12px] md:mt-5 md:space-y-4 md:text-[13px] md:leading-7 lg:text-[14px] ${
-                    darkMode ? "text-white/66" : "text-[#526658]"
-                  }`}
-                >
-                  <p>{t.storyText1}</p>
-
-                  <p>{t.storyText2}</p>
-
-                  <p>{t.storyText3}</p>
-                </div>
-              </GlassPanel>
-            </div>
-          </section>
-
-          {/* =================================================
-              WHAT WE RECORD
-          ================================================= */}
-
-          <section className="mb-5 md:mb-8 lg:mb-10">
-            <SectionBlock
-              darkMode={darkMode}
-              eyebrow={t.recordEyebrow}
-              title={t.recordTitle}
-              desc={t.recordDesc}
-            >
-              <div className="mt-5 grid grid-cols-2 items-stretch gap-2.5 md:mt-7 md:gap-3 lg:grid-cols-4 lg:gap-3.5">
-                <FeatureCard
-                  darkMode={darkMode}
-                  icon={
-                    <LeafIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.record1Title}
-                  text={t.record1Text}
-                />
-
-                <FeatureCard
-                  darkMode={darkMode}
-                  icon={<PinIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />}
-                  title={t.record2Title}
-                  text={t.record2Text}
-                />
-
-                <FeatureCard
-                  darkMode={darkMode}
-                  icon={
-                    <FieldIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.record3Title}
-                  text={t.record3Text}
-                />
-
-                <FeatureCard
-                  darkMode={darkMode}
-                  icon={
-                    <ArchiveIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.record4Title}
-                  text={t.record4Text}
-                />
-              </div>
-            </SectionBlock>
-          </section>
-
-          {/* =================================================
-              SYSTEM BENEFITS
-          ================================================= */}
-
-          <section className="mb-5 md:mb-8 lg:mb-10">
-            <SectionBlock
-              darkMode={darkMode}
-              eyebrow={t.benefitEyebrow}
-              title={t.benefitTitle}
-              desc={t.benefitDesc}
-            >
-              <div className="mt-5 grid grid-cols-2 items-stretch gap-2.5 md:mt-7 md:gap-3 lg:grid-cols-4 lg:gap-3.5">
-                <FeatureCard
-                  darkMode={darkMode}
-                  icon={
-                    <DatabaseIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.benefit1Title}
-                  text={t.benefit1Text}
-                />
-
-                <FeatureCard
-                  darkMode={darkMode}
-                  icon={
-                    <SearchIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.benefit2Title}
-                  text={t.benefit2Text}
-                />
-
-                <FeatureCard
-                  darkMode={darkMode}
-                  icon={
-                    <BookIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.benefit3Title}
-                  text={t.benefit3Text}
-                />
-
-                <FeatureCard
-                  darkMode={darkMode}
-                  icon={
-                    <EditIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.benefit4Title}
-                  text={t.benefit4Text}
-                />
-              </div>
-            </SectionBlock>
-          </section>
-
-          {/* =================================================
-              HOW IT WORKS
-          ================================================= */}
-
-          <section className="mb-6 md:mb-8 lg:mb-10">
-            <SectionBlock
-              darkMode={darkMode}
-              eyebrow={t.workEyebrow}
-              title={t.workTitle}
-              desc={t.workDesc}
-            >
-              <div className="mt-5 grid grid-cols-2 items-stretch gap-2.5 md:mt-7 md:gap-3 lg:grid-cols-4 lg:gap-3.5">
-                <WorkflowCard
-                  darkMode={darkMode}
-                  number="01"
-                  icon={
-                    <LeafIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.step1Title}
-                  text={t.step1Text}
-                />
-
-                <WorkflowCard
-                  darkMode={darkMode}
-                  number="02"
-                  icon={
-                    <ImageIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.step2Title}
-                  text={t.step2Text}
-                />
-
-                <WorkflowCard
-                  darkMode={darkMode}
-                  number="03"
-                  icon={
-                    <DatabaseIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.step3Title}
-                  text={t.step3Text}
-                />
-
-                <WorkflowCard
-                  darkMode={darkMode}
-                  number="04"
-                  icon={
-                    <SearchIcon className="h-[17px] w-[17px] lg:h-5 lg:w-5" />
-                  }
-                  title={t.step4Title}
-                  text={t.step4Text}
-                />
-              </div>
-            </SectionBlock>
-          </section>
+            <p className="max-w-[640px] font-serif text-[1.2rem] leading-[1.7] text-ink-soft md:text-[1.35rem]">
+              {t.heroText}
+            </p>
+          </div>
         </div>
+      </header>
 
-        {/* =====================================================
-            FOOTER
-        ===================================================== */}
+      {/* =====================================================
+          PLATE
+      ===================================================== */}
 
-        <footer
-          className={`border-t ${
-            darkMode ? "border-white/10" : "border-emerald-950/10"
-          }`}
-        >
-          <div className="container mx-auto max-w-7xl px-4 py-5 md:px-6 lg:px-8">
-            <div
-              className={`rounded-[18px] border px-4 py-3.5 md:px-5 ${
-                darkMode
-                  ? "border-white/10 bg-[#07130d]/70"
-                  : "border-white/70 bg-white/68"
-              }`}
-            >
-              <div className="flex flex-col items-center justify-between gap-2.5 text-center md:flex-row md:text-left">
-                <div>
-                  <p
-                    className={`text-[12px] font-bold md:text-sm ${
-                      darkMode ? "text-white" : "text-[#132818]"
-                    }`}
-                  >
-                    Virtual Herbarium
-                  </p>
+      <section className="vh-container pt-12 md:pt-16">
+        <figure>
+          <div className="relative aspect-[16/10] overflow-hidden rounded-[4px] border border-rule bg-paper-deep md:aspect-[21/8]">
+            <img
+              src={FOREST_HERO}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </figure>
+      </section>
 
-                  <p
-                    className={`mt-0.5 text-[9px] md:text-[10px] ${
-                      darkMode ? "text-white/50" : "text-[#5e7062]"
-                    }`}
-                  >
-                    © 2026 Virtual Herbarium. All rights reserved.
-                  </p>
-                </div>
+      {/* =====================================================
+          STORY
+      ===================================================== */}
 
-                <div
-                  className={`flex items-center gap-2 text-[9px] md:text-[11px] ${
-                    darkMode ? "text-white/60" : "text-[#5b6e5f]"
-                  }`}
-                >
-                  <LeafIcon className="h-3.5 w-3.5 text-emerald-600" />
+      <section className="vh-container py-16 md:py-24">
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+          {/* HEADING */}
 
-                  <span>{t.footerText}</span>
-                </div>
-              </div>
+          <div>
+            <div className="lg:sticky lg:top-28">
+              <p className="vh-eyebrow flex items-center gap-3">
+                <span className="h-px w-6 bg-ochre" />
+                {t.storyEyebrow}
+              </p>
+
+              <h2
+                className={`vh-display mt-4 text-[2rem] md:text-[2.6rem] ${displayLeading}`}
+              >
+                {t.storyTitle}
+              </h2>
             </div>
           </div>
-        </footer>
-      </div>
+
+          {/* PROSE */}
+
+          <div className="min-w-0">
+            <div className="vh-prose max-w-[620px] space-y-5 md:text-[16px]">
+              <p
+                className={
+                  isEN
+                    ? "first-letter:float-left first-letter:mr-2 first-letter:font-serif first-letter:text-[3.4rem] first-letter:leading-[0.9] first-letter:text-moss"
+                    : ""
+                }
+              >
+                {t.storyText1}
+              </p>
+
+              <p>{t.storyText2}</p>
+            </div>
+
+            {/* PULL QUOTE */}
+
+            <blockquote className="my-10 max-w-[620px] border-l-2 border-ochre py-1 pl-6 md:my-12 md:pl-8">
+              <p className="font-serif text-[1.6rem] italic leading-[1.35] text-ink md:text-[2rem]">
+                {t.storyImageTitle}
+              </p>
+
+              <footer className="vh-eyebrow mt-4 !text-[10px]">
+                {t.storyImageLabel}
+              </footer>
+            </blockquote>
+
+            <p className="vh-prose max-w-[620px] md:text-[16px]">
+              {t.storyText3}
+            </p>
+
+            {/* FIGURE */}
+
+            <figure className="mt-10 max-w-[620px]">
+              <div className="aspect-[4/3] overflow-hidden rounded-[4px] border border-rule bg-paper-deep">
+                <img
+                  src={STORY_IMAGE}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </div>
+
+              <figcaption className="mt-3 flex items-center gap-3 border-t border-dashed border-rule-strong pt-3">
+                <span className="vh-catalog">FIG. 1</span>
+
+                <span className="text-[13px] italic text-muted">
+                  {t.storyImageLabel}
+                </span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          WHAT WE RECORD
+      ===================================================== */}
+
+      <section className="border-y border-rule bg-sheet/60">
+        <div className="vh-container py-16 md:py-24">
+          <SectionHeading
+            eyebrow={t.recordEyebrow}
+            title={t.recordTitle}
+            desc={t.recordDesc}
+            leading={displayLeading}
+          />
+
+          <div className="vh-label-card mt-10 !p-0 md:mt-12">
+            <dl className="relative grid sm:grid-cols-2">
+              {records.map((item, index) => {
+                const Icon = item.icon;
+
+                return (
+                  <div
+                    key={item.title}
+                    className={`flex gap-4 border-dashed border-rule-strong p-5 md:p-7 ${
+                      index > 0 ? "border-t" : ""
+                    } ${index === 1 ? "sm:border-t-0" : ""} ${
+                      index % 2 === 1 ? "sm:border-l" : ""
+                    }`}
+                  >
+                    <span className="font-mono text-[12px] text-ochre tabular-nums">
+                      {String.fromCharCode(65 + index)}
+                    </span>
+
+                    <div className="min-w-0">
+                      <dt className="flex items-center gap-2 font-serif text-[1.15rem] text-ink">
+                        <Icon className="h-[18px] w-[18px] shrink-0 text-moss" />
+                        {item.title}
+                      </dt>
+
+                      <dd className="mt-1.5 text-[14px] leading-relaxed text-ink-soft">
+                        {item.text}
+                      </dd>
+                    </div>
+                  </div>
+                );
+              })}
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          SYSTEM BENEFITS
+      ===================================================== */}
+
+      <section className="vh-container py-16 md:py-24">
+        <SectionHeading
+          eyebrow={t.benefitEyebrow}
+          title={t.benefitTitle}
+          desc={t.benefitDesc}
+          leading={displayLeading}
+        />
+
+        <div className="mt-10 grid gap-x-10 sm:grid-cols-2 md:mt-12 lg:grid-cols-4">
+          {benefits.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <article
+                key={item.title}
+                className="border-t border-rule-strong py-6"
+              >
+                <Icon className="h-5 w-5 text-moss" />
+
+                <h3 className="mt-4 font-serif text-[1.25rem] leading-snug text-ink">
+                  {item.title}
+                </h3>
+
+                <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
+                  {item.text}
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* =====================================================
+          HOW IT WORKS
+      ===================================================== */}
+
+      <section className="border-t border-rule">
+        <div className="vh-container py-16 md:py-24">
+          <SectionHeading
+            eyebrow={t.workEyebrow}
+            title={t.workTitle}
+            desc={t.workDesc}
+            leading={displayLeading}
+          />
+
+          <ol className="mt-10 border-b border-rule md:mt-14">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+
+              return (
+                <li
+                  key={step.title}
+                  className="grid grid-cols-[3rem_1fr] items-baseline gap-x-4 border-t border-rule py-7 md:grid-cols-[6rem_1fr_1.3fr_auto] md:gap-x-10 md:py-9"
+                >
+                  <span className="font-mono text-[1.1rem] text-ochre tabular-nums md:text-[1.4rem]">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+
+                  <h3 className="font-serif text-[1.4rem] leading-snug text-ink md:text-[1.75rem]">
+                    {step.title}
+                  </h3>
+
+                  <p className="col-start-2 mt-2 text-[14px] leading-relaxed text-ink-soft md:col-start-auto md:mt-0 md:text-[15px]">
+                    {step.text}
+                  </p>
+
+                  <Icon className="hidden h-5 w-5 self-center text-faint md:block" />
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </section>
+
+      {/* =====================================================
+          CLOSING
+      ===================================================== */}
+
+      <section className="vh-container pb-20 pt-4 md:pb-28">
+        <div className="mx-auto max-w-[720px] text-center">
+          <div className="flex items-center justify-center gap-4 text-ochre">
+            <span className="h-px w-10 bg-ochre" />
+            <LeafIcon className="h-[18px] w-[18px]" />
+            <span className="h-px w-10 bg-ochre" />
+          </div>
+
+          <p className="mt-6 font-serif text-[1.8rem] italic leading-[1.35] text-ink md:text-[2.4rem]">
+            {t.footerText}
+          </p>
+        </div>
+      </section>
+
+      <SiteFooter />
     </main>
   );
 }
 
 /* =========================================================
-   GLASS PANEL
+   SECTION HEADING
 ========================================================= */
 
-function GlassPanel({ darkMode, className = "", children }) {
+function SectionHeading({ eyebrow, title, desc, leading = "" }) {
   return (
-    <div
-      className={`rounded-[22px] border shadow-[0_14px_40px_rgba(0,0,0,0.05)] backdrop-blur-xl md:rounded-[24px] ${
-        darkMode
-          ? "border-white/10 bg-[#07130d]/70"
-          : "border-white/70 bg-white/68"
-      } ${className}`}
-    >
-      {children}
-    </div>
-  );
-}
+    <div className="grid gap-5 md:grid-cols-[1fr_0.8fr] md:items-end md:gap-12">
+      <div>
+        <p className="vh-eyebrow flex items-center gap-3">
+          <span className="h-px w-6 bg-ochre" />
+          {eyebrow}
+        </p>
 
-/* =========================================================
-   SECTION BLOCK
-========================================================= */
-
-function SectionBlock({ darkMode, eyebrow, title, desc, children }) {
-  return (
-    <GlassPanel
-      darkMode={darkMode}
-      className="p-4 min-[390px]:p-[18px] md:p-5 lg:p-7"
-    >
-      <SectionEyebrow darkMode={darkMode} text={eyebrow} />
-
-      <div className="mt-3.5 max-w-4xl md:mt-4">
-        <h2
-          className={`text-[1.5rem] font-black leading-[1.16] tracking-[-0.04em] min-[390px]:text-[1.65rem] md:text-[1.95rem] lg:text-[2.15rem] ${
-            darkMode ? "text-white" : "text-[#132818]"
-          }`}
-        >
+        <h2 className={`vh-display mt-4 text-[2rem] md:text-[2.6rem] ${leading}`}>
           {title}
         </h2>
-
-        <p
-          className={`mt-2 max-w-3xl text-[11px] leading-5 min-[390px]:text-[12px] md:mt-2.5 md:text-[13px] md:leading-6 ${
-            darkMode ? "text-white/60" : "text-[#536759]"
-          }`}
-        >
-          {desc}
-        </p>
       </div>
 
-      {children}
-    </GlassPanel>
-  );
-}
-
-/* =========================================================
-   SECTION EYEBROW
-========================================================= */
-
-function SectionEyebrow({ darkMode, text }) {
-  return (
-    <div className="flex min-w-0 items-center gap-2.5 md:gap-3">
-      <span
-        className={`h-1 w-8 shrink-0 rounded-full md:h-[5px] md:w-10 ${
-          darkMode ? "bg-emerald-400" : "bg-emerald-700"
-        }`}
-      />
-
-      <span
-        className={`min-w-0 text-[8px] font-extrabold uppercase tracking-[0.19em] min-[390px]:text-[9px] md:text-[10px] md:tracking-[0.22em] ${
-          darkMode ? "text-emerald-300" : "text-emerald-800"
-        }`}
-      >
-        {text}
-      </span>
+      <p className="vh-prose max-w-[460px]">{desc}</p>
     </div>
-  );
-}
-
-/* =========================================================
-   FEATURE CARD
-========================================================= */
-
-function FeatureCard({ darkMode, icon, title, text }) {
-  return (
-    <article
-      className={`group flex h-full min-h-[142px] min-w-0 flex-col rounded-[16px] border p-3 transition duration-300 min-[390px]:min-h-[146px] min-[390px]:p-3.5 md:min-h-[150px] md:rounded-[18px] md:p-4 lg:min-h-[158px] lg:rounded-[20px] lg:p-5 lg:hover:-translate-y-1 ${
-        darkMode
-          ? "border-white/10 bg-white/[0.035] hover:border-emerald-300/20 hover:bg-white/[0.055]"
-          : "border-emerald-950/[0.07] bg-white/78 shadow-[0_8px_24px_rgba(25,55,34,0.04)] hover:border-emerald-800/20 hover:bg-white/90"
-      }`}
-    >
-      {/* ICON */}
-
-      <div
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] min-[390px]:h-9 min-[390px]:w-9 min-[390px]:rounded-[11px] lg:h-10 lg:w-10 lg:rounded-[12px] ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-800/[0.075] text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
-
-      {/* CONTENT */}
-
-      <div className="mt-3 min-w-0 min-[390px]:mt-3.5 lg:mt-4">
-        <h3
-          className={`break-words text-[10.5px] font-black leading-[1.45] min-[390px]:text-[11px] md:text-[12px] lg:text-[13px] ${
-            darkMode ? "text-white" : "text-[#192d20]"
-          }`}
-        >
-          {title}
-        </h3>
-
-        <p
-          className={`mt-1 break-words text-[8.5px] leading-[1.55] min-[390px]:text-[9px] md:text-[10px] lg:mt-1.5 lg:text-[11px] lg:leading-[1.65] ${
-            darkMode ? "text-white/52" : "text-[#718078]"
-          }`}
-        >
-          {text}
-        </p>
-      </div>
-    </article>
-  );
-}
-
-/* =========================================================
-   WORKFLOW CARD
-========================================================= */
-
-function WorkflowCard({ darkMode, icon, number, title, text }) {
-  return (
-    <article
-      className={`group flex h-full min-h-[142px] min-w-0 flex-col rounded-[16px] border p-3 transition duration-300 min-[390px]:min-h-[146px] min-[390px]:p-3.5 md:min-h-[150px] md:rounded-[18px] md:p-4 lg:min-h-[158px] lg:rounded-[20px] lg:p-5 lg:hover:-translate-y-1 ${
-        darkMode
-          ? "border-white/10 bg-white/[0.035] hover:border-emerald-300/20 hover:bg-white/[0.055]"
-          : "border-emerald-950/[0.07] bg-white/78 shadow-[0_8px_24px_rgba(25,55,34,0.04)] hover:border-emerald-800/20 hover:bg-white/90"
-      }`}
-    >
-      {/* TOP */}
-
-      <div className="flex items-start justify-between gap-2">
-        <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] min-[390px]:h-9 min-[390px]:w-9 min-[390px]:rounded-[11px] lg:h-10 lg:w-10 lg:rounded-[12px] ${
-            darkMode
-              ? "bg-emerald-400/10 text-emerald-300"
-              : "bg-emerald-800/[0.075] text-emerald-800"
-          }`}
-        >
-          {icon}
-        </div>
-
-        <span
-          className={`pt-0.5 text-[7px] font-black tracking-[0.15em] min-[390px]:text-[8px] lg:text-[9px] lg:tracking-[0.18em] ${
-            darkMode ? "text-emerald-300/65" : "text-emerald-700/65"
-          }`}
-        >
-          {number}
-        </span>
-      </div>
-
-      {/* CONTENT */}
-
-      <div className="mt-3 min-w-0 min-[390px]:mt-3.5 lg:mt-4">
-        <h3
-          className={`break-words text-[10.5px] font-black leading-[1.45] min-[390px]:text-[11px] md:text-[12px] lg:text-[13px] ${
-            darkMode ? "text-white" : "text-[#192d20]"
-          }`}
-        >
-          {title}
-        </h3>
-
-        <p
-          className={`mt-1 break-words text-[8.5px] leading-[1.55] min-[390px]:text-[9px] md:text-[10px] lg:mt-1.5 lg:text-[11px] lg:leading-[1.65] ${
-            darkMode ? "text-white/52" : "text-[#718078]"
-          }`}
-        >
-          {text}
-        </p>
-      </div>
-    </article>
   );
 }
 
@@ -812,7 +586,7 @@ function LeafIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -831,7 +605,7 @@ function PinIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -850,7 +624,7 @@ function FieldIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -873,7 +647,7 @@ function ArchiveIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -896,7 +670,7 @@ function DatabaseIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -917,7 +691,7 @@ function SearchIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -936,7 +710,7 @@ function BookIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -955,7 +729,7 @@ function EditIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -974,7 +748,7 @@ function ImageIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

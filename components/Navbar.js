@@ -41,10 +41,9 @@ export default function Navbar() {
       about: "เกี่ยวกับเรา",
 
       login: "เข้าสู่ระบบ",
-      register: "สมัครสมาชิก",
 
-      account: "บัญชีของฉัน",
-      accountShort: "บัญชี",
+      account: "จัดการระบบ",
+      accountShort: "จัดการระบบ",
 
       logout: "ออกจากระบบ",
 
@@ -62,11 +61,8 @@ export default function Navbar() {
       myPlants: "พรรณไม้ของฉัน",
 
       specimen: "รายละเอียดพรรณไม้",
-
-      forgotPassword: "ลืมรหัสผ่าน",
-      resetPassword: "ตั้งรหัสผ่านใหม่",
-
       back: "ย้อนกลับ",
+
     },
 
     EN: {
@@ -75,10 +71,9 @@ export default function Navbar() {
       about: "About",
 
       login: "Login",
-      register: "Register",
 
-      account: "My Account",
-      accountShort: "Account",
+      account: "System Management",
+      accountShort: "System",
 
       logout: "Logout",
 
@@ -96,11 +91,8 @@ export default function Navbar() {
       myPlants: "My Plants",
 
       specimen: "Plant Details",
-
-      forgotPassword: "Forgot Password",
-      resetPassword: "Reset Password",
-
       back: "Back",
+
     },
   };
 
@@ -182,10 +174,7 @@ export default function Navbar() {
   ========================================================= */
 
   const isAuthRoute =
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/forgot-password" ||
-    pathname === "/reset-password";
+    pathname === "/login";
 
   const isEditorRoute =
     pathname === "/account/edit" ||
@@ -340,68 +329,36 @@ export default function Navbar() {
     <>
       {/* =====================================================
           DESKTOP / TABLET HEADER
-          FIXED TOP
       ===================================================== */}
 
-      <header
-        className={`fixed inset-x-0 top-0 z-[100] hidden border-b backdrop-blur-2xl transition-all duration-300 md:block ${
-          darkMode
-            ? "border-white/10 bg-[#061009]/85 text-white shadow-[0_10px_40px_rgba(0,0,0,0.18)]"
-            : "border-emerald-950/10 bg-[#f4f8f2]/90 text-slate-900 shadow-[0_8px_30px_rgba(21,55,31,0.06)]"
-        }`}
-      >
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="flex h-[78px] items-center justify-between gap-4">
-            {/* =================================================
-                DESKTOP BRAND
-                LOGO + TEXT CLICK -> HOME
-            ================================================= */}
+      <header className="fixed inset-x-0 top-0 z-[100] hidden border-b border-rule bg-paper/85 text-ink backdrop-blur-xl md:block">
+        <div className="vh-container">
+          <div className="flex h-[72px] items-center justify-between gap-4 lg:gap-6">
+            {/* BRAND */}
 
             <Link
               href="/"
               aria-label="Virtual Herbarium Home"
               className="group flex shrink-0 items-center gap-3"
             >
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition duration-300 group-hover:-translate-y-0.5 ${
-                  darkMode
-                    ? "border-emerald-400/20 bg-emerald-400/10 shadow-[0_0_30px_rgba(69,185,111,0.08)]"
-                    : "border-emerald-700/10 bg-emerald-700/10 shadow-sm"
-                }`}
-              >
-                <LeafIcon
-                  className={`h-6 w-6 ${
-                    darkMode ? "text-emerald-300" : "text-emerald-700"
-                  }`}
-                />
-              </div>
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-rule-strong text-moss transition group-hover:border-moss group-hover:bg-moss-soft">
+                <LeafIcon className="h-[18px] w-[18px]" />
+              </span>
 
-              <div className="min-w-0">
-                <h1
-                  className={`text-lg font-extrabold tracking-tight transition lg:text-xl ${
-                    darkMode
-                      ? "text-white group-hover:text-emerald-200"
-                      : "text-[#183320] group-hover:text-emerald-800"
-                  }`}
-                >
+              <span className="min-w-0">
+                <span className="block font-serif text-[19px] leading-none tracking-[-0.01em] text-ink">
                   {brandTitle}
-                </h1>
+                </span>
 
-                <p
-                  className={`mt-0.5 text-xs font-medium transition ${
-                    darkMode
-                      ? "text-[#9eafa3] group-hover:text-white/70"
-                      : "text-slate-500 group-hover:text-emerald-700"
-                  }`}
-                >
+                <span className="vh-eyebrow mt-1.5 hidden !text-[9.5px] !tracking-[0.2em] lg:block">
                   {brandSubtitle}
-                </p>
-              </div>
+                </span>
+              </span>
             </Link>
 
-            {/* DESKTOP NAVIGATION */}
+            {/* NAVIGATION */}
 
-            <nav className="hidden items-center gap-1 lg:flex">
+            <nav className="flex items-center gap-5 lg:gap-8">
               {navItems.map((item) => {
                 const active = isActive(item.href);
 
@@ -409,31 +366,26 @@ export default function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`relative rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
+                    aria-current={active ? "page" : undefined}
+                    className={`relative py-2 text-[14px] transition-colors ${
                       active
-                        ? darkMode
-                          ? "bg-emerald-400/10 text-emerald-300"
-                          : "bg-emerald-700/10 text-emerald-800"
-                        : darkMode
-                          ? "text-gray-300 hover:bg-white/[0.05] hover:text-white"
-                          : "text-slate-600 hover:bg-emerald-900/[0.05] hover:text-emerald-800"
+                        ? "font-medium text-ink"
+                        : "text-muted hover:text-ink"
                     }`}
                   >
                     {item.label}
 
-                    {active && (
-                      <span
-                        className={`absolute bottom-0 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full ${
-                          darkMode ? "bg-emerald-400" : "bg-emerald-700"
-                        }`}
-                      />
-                    )}
+                    <span
+                      className={`absolute inset-x-0 -bottom-0.5 h-px origin-left bg-moss transition-transform duration-300 ${
+                        active ? "scale-x-100" : "scale-x-0"
+                      }`}
+                    />
                   </Link>
                 );
               })}
             </nav>
 
-            {/* DESKTOP ACTIONS */}
+            {/* ACTIONS */}
 
             <div className="flex items-center gap-2">
               {/* LANGUAGE */}
@@ -444,66 +396,42 @@ export default function Navbar() {
                   onClick={() => setLanguageOpen((current) => !current)}
                   aria-expanded={languageOpen}
                   aria-label={t.language}
-                  className={`flex h-11 items-center gap-2 rounded-xl border px-3.5 text-sm font-bold transition ${
-                    darkMode
-                      ? "border-white/10 bg-white/[0.04] text-gray-100 hover:border-white/20 hover:bg-white/[0.08]"
-                      : "border-emerald-950/10 bg-white/70 text-slate-700 hover:bg-white"
-                  }`}
+                  className="flex h-10 items-center gap-1.5 rounded-full border border-rule px-3 font-mono text-[12px] tracking-[0.08em] text-ink-soft transition hover:border-rule-strong hover:bg-moss-soft hover:text-ink"
                 >
-                  <GlobeIcon className="h-[18px] w-[18px]" />
+                  <GlobeIcon className="h-4 w-4" />
 
                   <span>{language}</span>
 
                   <ChevronDownIcon
-                    className={`h-4 w-4 transition-transform duration-200 ${
+                    className={`h-3.5 w-3.5 transition-transform duration-200 ${
                       languageOpen ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
                 {languageOpen && (
-                  <div
-                    className={`absolute right-0 mt-2 w-40 overflow-hidden rounded-2xl border p-1.5 shadow-2xl backdrop-blur-2xl ${
-                      darkMode
-                        ? "border-white/10 bg-[#0b1810]/95"
-                        : "border-emerald-950/10 bg-white/95"
-                    }`}
-                  >
-                    {/* TH */}
+                  <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-md border border-rule bg-sheet-raised p-1 shadow-lift">
+                    {[
+                      { code: "TH", label: t.thai },
+                      { code: "EN", label: t.english },
+                    ].map((option) => (
+                      <button
+                        key={option.code}
+                        type="button"
+                        onClick={() => handleLanguageChange(option.code)}
+                        className={`flex w-full items-center justify-between rounded px-3 py-2.5 text-left text-sm transition ${
+                          language === option.code
+                            ? "bg-moss-soft font-medium text-moss"
+                            : "text-ink-soft hover:bg-moss-soft hover:text-ink"
+                        }`}
+                      >
+                        <span>{option.label}</span>
 
-                    <button
-                      type="button"
-                      onClick={() => handleLanguageChange("TH")}
-                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${
-                        language === "TH"
-                          ? "bg-emerald-600 text-white"
-                          : darkMode
-                            ? "text-gray-200 hover:bg-white/[0.06]"
-                            : "text-slate-700 hover:bg-emerald-900/[0.05]"
-                      }`}
-                    >
-                      <span>{t.thai}</span>
-
-                      <span className="text-xs font-bold opacity-70">TH</span>
-                    </button>
-
-                    {/* EN */}
-
-                    <button
-                      type="button"
-                      onClick={() => handleLanguageChange("EN")}
-                      className={`mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition ${
-                        language === "EN"
-                          ? "bg-emerald-600 text-white"
-                          : darkMode
-                            ? "text-gray-200 hover:bg-white/[0.06]"
-                            : "text-slate-700 hover:bg-emerald-900/[0.05]"
-                      }`}
-                    >
-                      <span>{t.english}</span>
-
-                      <span className="text-xs font-bold opacity-70">EN</span>
-                    </button>
+                        <span className="font-mono text-[11px] tracking-[0.1em] opacity-70">
+                          {option.code}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -515,18 +443,16 @@ export default function Navbar() {
                 onClick={toggleDarkMode}
                 aria-label={darkMode ? t.lightMode : t.darkMode}
                 title={darkMode ? t.lightMode : t.darkMode}
-                className={`flex h-11 w-11 items-center justify-center rounded-xl border transition ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.04] text-amber-200 hover:border-white/20 hover:bg-white/[0.08]"
-                    : "border-emerald-950/10 bg-white/70 text-slate-700 hover:bg-white hover:text-emerald-800"
-                }`}
+                className="vh-icon-btn"
               >
                 {darkMode ? (
-                  <SunIcon className="h-5 w-5" />
+                  <SunIcon className="h-[18px] w-[18px]" />
                 ) : (
-                  <MoonIcon className="h-5 w-5" />
+                  <MoonIcon className="h-[18px] w-[18px]" />
                 )}
               </button>
+
+              <span aria-hidden="true" className="mx-1 h-6 w-px bg-rule" />
 
               {/* AUTH */}
 
@@ -535,186 +461,116 @@ export default function Navbar() {
                   <>
                     <Link
                       href="/account"
-                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-600"
+                      aria-label={t.account}
+                      className="vh-btn vh-btn-primary !px-1.5 lg:!pl-1.5 lg:!pr-5"
                     >
-                      {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={username || t.account}
-                          className="h-7 w-7 rounded-lg object-cover ring-1 ring-white/20"
-                        />
-                      ) : (
-                        <UserIcon className="h-4 w-4" />
-                      )}
+                      <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-on-moss/15">
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={username || t.account}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <UserIcon className="h-4 w-4" />
+                        )}
+                      </span>
 
-                      <span>{t.account}</span>
+                      <span className="hidden lg:inline">{t.account}</span>
                     </Link>
 
                     <button
                       type="button"
                       onClick={handleLogout}
                       disabled={loggingOut}
-                      className={`inline-flex h-11 items-center gap-2 rounded-xl border px-3.5 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                        darkMode
-                          ? "border-red-400/15 bg-red-400/[0.04] text-red-300 hover:bg-red-400/10"
-                          : "border-red-200 bg-white/70 text-red-700 hover:bg-red-50"
-                      }`}
+                      aria-label={t.logout}
+                      title={t.logout}
+                      className="vh-icon-btn hover:!border-clay/40 hover:!bg-clay-soft hover:!text-clay"
                     >
-                      <LogoutIcon className="h-4 w-4" />
-
-                      <span>{loggingOut ? "..." : t.logout}</span>
+                      {loggingOut ? (
+                        <span className="font-mono text-xs">…</span>
+                      ) : (
+                        <LogoutIcon className="h-4 w-4" />
+                      )}
                     </button>
                   </>
                 ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className="inline-flex h-11 items-center justify-center rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-600"
-                    >
-                      {t.login}
-                    </Link>
-
-                    <Link
-                      href="/register"
-                      className={`inline-flex h-11 items-center justify-center rounded-xl border px-4 text-sm font-bold transition ${
-                        darkMode
-                          ? "border-white/10 bg-white/[0.035] text-white hover:bg-white/[0.08]"
-                          : "border-emerald-950/10 bg-white/70 text-slate-700 hover:bg-white hover:text-emerald-800"
-                      }`}
-                    >
-                      {t.register}
-                    </Link>
-                  </>
+                  <Link href="/login" className="vh-btn vh-btn-outline">
+                    {t.login}
+                  </Link>
                 ))}
             </div>
           </div>
         </div>
       </header>
 
-      {/* =====================================================
-          DESKTOP / TABLET NAVBAR SPACER
-      ===================================================== */}
+      {/* DESKTOP / TABLET SPACER */}
 
-      <div aria-hidden="true" className="hidden h-[78px] md:block" />
+      <div aria-hidden="true" className="hidden h-[72px] md:block" />
 
       {/* =====================================================
           MOBILE APP BAR
       ===================================================== */}
 
-      <header
-        className={`mobile-app-header md:hidden ${
-          darkMode
-            ? "border-white/10 bg-[#061009]/88"
-            : "border-emerald-950/10 bg-[#f4f8f2]/92"
-        }`}
-      >
+      <header className="mobile-app-header text-ink md:hidden">
         <div className="mobile-app-header-inner">
-          {/* LEFT */}
-
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {showMobileBack ? (
               <button
                 type="button"
                 onClick={handleMobileBack}
                 aria-label={t.back}
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.045] text-white"
-                    : "border-emerald-950/10 bg-white/75 text-[#183320]"
-                }`}
+                className="vh-icon-btn !h-9 !w-9"
               >
-                <ArrowLeftIcon className="h-5 w-5" />
+                <ArrowLeftIcon className="h-[18px] w-[18px]" />
               </button>
             ) : (
-              /* =============================================
-                 MOBILE LOGO CLICK -> HOME
-              ============================================= */
-
               <Link
                 href="/"
                 aria-label="Virtual Herbarium Home"
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border transition active:scale-95 ${
-                  darkMode
-                    ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
-                    : "border-emerald-800/10 bg-emerald-800/10 text-emerald-700"
-                }`}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rule-strong text-moss transition active:scale-95"
               >
-                <LeafIcon className="h-5 w-5" />
+                <LeafIcon className="h-4 w-4" />
               </Link>
             )}
-
-            {/* ===============================================
-                MOBILE BRAND CLICK -> HOME
-            =============================================== */}
 
             <Link
               href="/"
               aria-label="Virtual Herbarium Home"
-              className="group min-w-0 flex-1"
+              className="min-w-0 flex-1"
             >
-              <p
-                className={`truncate text-[15px] font-black leading-tight tracking-[-0.02em] transition ${
-                  darkMode
-                    ? "text-white group-active:text-emerald-300"
-                    : "text-[#183320] group-active:text-emerald-700"
-                }`}
-              >
+              <span className="block truncate font-serif text-[17px] leading-tight text-ink">
                 {brandTitle}
-              </p>
+              </span>
 
-              <p
-                className={`mt-0.5 truncate text-[9px] font-semibold tracking-[0.01em] transition ${
-                  darkMode
-                    ? "text-white/52 group-active:text-white/75"
-                    : "text-slate-500 group-active:text-emerald-700"
-                }`}
-              >
+              <span className="vh-eyebrow mt-0.5 block truncate !text-[8.5px] !tracking-[0.18em]">
                 {brandSubtitle}
-              </p>
+              </span>
             </Link>
           </div>
 
-          {/* =================================================
-              MOBILE RIGHT
-              LANGUAGE + DARK MODE
-          ================================================= */}
-
           <div className="flex shrink-0 items-center gap-1.5">
-            {/* LANGUAGE */}
-
             <button
               type="button"
               onClick={toggleMobileLanguage}
               aria-label={t.language}
               title={t.language}
-              className={`flex h-10 min-w-[48px] items-center justify-center gap-1.5 rounded-[14px] border px-2.5 text-[12px] font-black transition active:scale-95 ${
-                darkMode
-                  ? "border-white/10 bg-white/[0.045] text-white"
-                  : "border-emerald-950/10 bg-white/75 text-[#183320]"
-              }`}
+              className="flex h-9 min-w-[44px] items-center justify-center rounded-full border border-rule px-2.5 font-mono text-[11px] tracking-[0.08em] text-ink-soft transition active:scale-95"
             >
-              <GlobeIcon className="h-[16px] w-[16px]" />
-
-              <span>{language}</span>
+              {language}
             </button>
-
-            {/* DARK MODE */}
 
             <button
               type="button"
               onClick={toggleDarkMode}
               aria-label={darkMode ? t.lightMode : t.darkMode}
               title={darkMode ? t.lightMode : t.darkMode}
-              className={`flex h-10 w-10 items-center justify-center rounded-[14px] border transition active:scale-95 ${
-                darkMode
-                  ? "border-white/10 bg-white/[0.045] text-amber-200"
-                  : "border-emerald-950/10 bg-white/75 text-slate-700"
-              }`}
+              className="vh-icon-btn !h-9 !w-9"
             >
               {darkMode ? (
-                <SunIcon className="h-[19px] w-[19px]" />
+                <SunIcon className="h-[17px] w-[17px]" />
               ) : (
-                <MoonIcon className="h-[19px] w-[19px]" />
+                <MoonIcon className="h-[17px] w-[17px]" />
               )}
             </button>
           </div>
@@ -726,35 +582,21 @@ export default function Navbar() {
       ===================================================== */}
 
       {!hideMobileBottomNav && (
-        <nav
-          className={`mobile-bottom-nav md:hidden ${
-            darkMode
-              ? "border-white/10 bg-[#07110b]/94"
-              : "border-emerald-950/10 bg-[#f7faf5]/95"
-          }`}
-        >
+        <nav className="mobile-bottom-nav md:hidden">
           <div className="mobile-bottom-nav-inner">
-            {/* HOME */}
-
             <MobileBottomItem
               href="/"
               label={t.home}
               active={isBottomActive("home")}
-              darkMode={darkMode}
-              icon={<HomeIcon className="h-[21px] w-[21px]" />}
+              icon={<HomeIcon className="h-5 w-5" />}
             />
-
-            {/* PLANTS */}
 
             <MobileBottomItem
               href="/plants"
               label={t.plants}
               active={isBottomActive("plants")}
-              darkMode={darkMode}
-              icon={<CollectionIcon className="h-[21px] w-[21px]" />}
+              icon={<CollectionIcon className="h-5 w-5" />}
             />
-
-            {/* ADD */}
 
             <Link
               href={addHref}
@@ -762,77 +604,41 @@ export default function Navbar() {
               className="relative flex min-w-0 flex-col items-center justify-end"
             >
               <span className="mobile-add-button">
-                <PlusIcon className="h-6 w-6" />
+                <PlusIcon className="h-5 w-5" />
               </span>
 
               <span
-                className={`mt-1 truncate text-[9px] font-black ${
-                  isBottomActive("add")
-                    ? darkMode
-                      ? "text-emerald-300"
-                      : "text-emerald-700"
-                    : darkMode
-                      ? "text-white/50"
-                      : "text-slate-500"
+                className={`mt-1 truncate text-[10px] ${
+                  isBottomActive("add") ? "font-medium text-moss" : "text-muted"
                 }`}
               >
                 {t.add}
               </span>
             </Link>
 
-            {/* ABOUT */}
-
             <MobileBottomItem
               href="/about"
               label={t.about}
               active={isBottomActive("about")}
-              darkMode={darkMode}
-              icon={<InfoIcon className="h-[21px] w-[21px]" />}
+              icon={<InfoIcon className="h-5 w-5" />}
             />
 
-            {/* ACCOUNT */}
-
-            <Link
+            <MobileBottomItem
               href={accountHref}
-              className="flex min-w-0 flex-col items-center justify-center gap-1 py-1"
-              aria-current={isBottomActive("account") ? "page" : undefined}
-            >
-              <span
-                className={`flex h-7 w-7 items-center justify-center overflow-hidden rounded-[10px] transition ${
-                  isBottomActive("account")
-                    ? darkMode
-                      ? "bg-emerald-400/12 text-emerald-300"
-                      : "bg-emerald-700/10 text-emerald-700"
-                    : darkMode
-                      ? "text-white/50"
-                      : "text-slate-500"
-                }`}
-              >
-                {user && avatarUrl ? (
+              label={user ? t.accountShort : t.login}
+              active={isBottomActive("account")}
+              icon={
+                user && avatarUrl ? (
                   <img
                     src={avatarUrl}
                     alt={username || t.account}
-                    className="h-full w-full object-cover"
+                    className="h-6 w-6 rounded-full object-cover"
                   />
                 ) : (
-                  <UserIcon className="h-[21px] w-[21px]" />
-                )}
-              </span>
-
-              <span
-                className={`max-w-full truncate text-[9px] font-bold ${
-                  isBottomActive("account")
-                    ? darkMode
-                      ? "text-emerald-300"
-                      : "text-emerald-700"
-                    : darkMode
-                      ? "text-white/45"
-                      : "text-slate-500"
-                }`}
-              >
-                {user ? t.accountShort : t.login}
-              </span>
-            </Link>
+                  <UserIcon className="h-5 w-5" />
+                )
+              }
+            />
           </div>
         </nav>
       )}
@@ -844,7 +650,7 @@ export default function Navbar() {
    MOBILE BOTTOM ITEM
 ========================================================= */
 
-function MobileBottomItem({ href, label, icon, active, darkMode }) {
+function MobileBottomItem({ href, label, icon, active }) {
   return (
     <Link
       href={href}
@@ -852,28 +658,16 @@ function MobileBottomItem({ href, label, icon, active, darkMode }) {
       className="flex min-w-0 flex-col items-center justify-center gap-1 py-1"
     >
       <span
-        className={`flex h-7 w-9 items-center justify-center rounded-[11px] transition ${
-          active
-            ? darkMode
-              ? "bg-emerald-400/12 text-emerald-300"
-              : "bg-emerald-700/10 text-emerald-700"
-            : darkMode
-              ? "text-white/50"
-              : "text-slate-500"
+        className={`flex h-7 w-10 items-center justify-center rounded-full transition ${
+          active ? "bg-moss-soft text-moss" : "text-muted"
         }`}
       >
         {icon}
       </span>
 
       <span
-        className={`max-w-full truncate text-[9px] font-bold ${
-          active
-            ? darkMode
-              ? "text-emerald-300"
-              : "text-emerald-700"
-            : darkMode
-              ? "text-white/45"
-              : "text-slate-500"
+        className={`max-w-full truncate text-[10px] ${
+          active ? "font-medium text-moss" : "text-muted"
         }`}
       >
         {label}

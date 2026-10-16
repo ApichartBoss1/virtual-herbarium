@@ -1,1238 +1,737 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* =========================================================
-   🌲 VIRTUAL HERBARIUM
-   DARK FOREST DESIGN SYSTEM
+   VIRTUAL HERBARIUM
+   HERBARIUM JOURNAL DESIGN SYSTEM
+
+   Light  = "Herbarium sheet"  (paper, ink, moss)
+   Dark   = "Night lab"        (charcoal, bone, sage)
+
+   All colours are tokens. Use the Tailwind names below
+   (bg-paper, text-ink, border-rule, text-moss ...) instead
+   of hard-coded colours or darkMode ternaries.
    ========================================================= */
 
 :root {
-  /* ---------- BACKGROUND ---------- */
+  /* ---------- PAPER ---------- */
 
-  --background: #07100b;
-  --background-deep: #030805;
+  --paper: #f5f1e6;
+  --paper-deep: #ece6d6;
+  --sheet: #fbf9f3;
+  --sheet-raised: #ffffff;
 
-  --foreground: #edf7ef;
-  --foreground-soft: #d7e7da;
+  /* ---------- INK ---------- */
 
-  /* ---------- SURFACE ---------- */
+  --ink: #1c2a20;
+  --ink-soft: #3c4a40;
+  --muted: #6a7366;
+  --faint: #969c8f;
 
-  --card: rgba(13, 27, 18, 0.88);
-  --card-hover: rgba(18, 38, 25, 0.94);
+  /* ---------- RULES ---------- */
 
-  --surface: #0d1b12;
-  --surface-light: #13261a;
-  --surface-soft: rgba(20, 48, 30, 0.55);
+  --rule: rgba(28, 42, 32, 0.13);
+  --rule-strong: rgba(28, 42, 32, 0.26);
 
-  /* ---------- TEXT ---------- */
+  /* ---------- MOSS (primary) ---------- */
 
-  --muted: #91a697;
-  --muted-light: #6f8575;
+  --moss: #2e5b3a;
+  --moss-hover: #23472d;
+  --moss-soft: rgba(46, 91, 58, 0.08);
+  --moss-tint: #dfe7d6;
+  --on-moss: #f8f6ee;
 
-  /* ---------- BORDER ---------- */
+  /* ---------- ACCENTS ---------- */
 
-  --border: rgba(117, 160, 127, 0.16);
-  --border-strong: rgba(117, 160, 127, 0.3);
-
-  /* ---------- GREEN ---------- */
-
-  --primary: #45b96f;
-  --primary-hover: #62cc88;
-
-  --primary-dark: #176b3b;
-
-  --primary-soft: rgba(69, 185, 111, 0.12);
-  --primary-glow: rgba(69, 185, 111, 0.2);
-
-  /* ---------- SECONDARY ---------- */
-
-  --secondary: #102117;
-  --secondary-hover: #172c1e;
-
-  /* ---------- DANGER ---------- */
-
-  --danger: #f07878;
-  --danger-soft: rgba(240, 120, 120, 0.1);
+  --ochre: #9a6b1f;
+  --ochre-soft: rgba(154, 107, 31, 0.1);
+  --clay: #a3402c;
+  --clay-soft: rgba(163, 64, 44, 0.08);
 
   /* ---------- SHADOW ---------- */
 
-  --shadow-sm:
-    0 2px 8px rgba(0, 0, 0, 0.2);
-
-  --shadow-md:
-    0 12px 35px rgba(0, 0, 0, 0.3);
-
-  --shadow-lg:
-    0 25px 70px rgba(0, 0, 0, 0.45);
-
-  --shadow-green:
-    0 10px 40px rgba(69, 185, 111, 0.12);
-
-  /* ---------- RADIUS ---------- */
-
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --shadow-sheet:
+    0 1px 0 rgba(28, 42, 32, 0.04),
+    0 10px 30px -18px rgba(28, 42, 32, 0.28);
+  --shadow-lift:
+    0 1px 0 rgba(28, 42, 32, 0.05),
+    0 22px 50px -24px rgba(28, 42, 32, 0.38);
 
   /* ---------- LAYOUT ---------- */
 
-  --max-width: 1180px;
+  --max-width: 1200px;
+  --gutter: 24px;
+
+  color-scheme: light;
 }
 
+.dark {
+  --paper: #111511;
+  --paper-deep: #0b0e0b;
+  --sheet: #171c17;
+  --sheet-raised: #1d231d;
+
+  --ink: #ebe7da;
+  --ink-soft: #cbc7b9;
+  --muted: #959b8f;
+  --faint: #6c7369;
+
+  --rule: rgba(235, 231, 218, 0.11);
+  --rule-strong: rgba(235, 231, 218, 0.22);
+
+  --moss: #9cc79a;
+  --moss-hover: #b5d9b2;
+  --moss-soft: rgba(156, 199, 154, 0.1);
+  --moss-tint: #22301f;
+  --on-moss: #0f1a10;
+
+  --ochre: #d6a85a;
+  --ochre-soft: rgba(214, 168, 90, 0.12);
+  --clay: #e58a72;
+  --clay-soft: rgba(229, 138, 114, 0.1);
+
+  --shadow-sheet:
+    0 1px 0 rgba(0, 0, 0, 0.3),
+    0 10px 30px -18px rgba(0, 0, 0, 0.7);
+  --shadow-lift:
+    0 1px 0 rgba(0, 0, 0, 0.3),
+    0 24px 60px -24px rgba(0, 0, 0, 0.85);
+
+  color-scheme: dark;
+}
 
 /* =========================================================
-   🌿 LIGHT MODE
+   TAILWIND THEME
    ========================================================= */
 
-.light {
-  --background: #f1f6f1;
-  --background-deep: #e6efe7;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-sheet: var(--sheet);
+  --color-sheet-raised: var(--sheet-raised);
 
-  --foreground: #142219;
-  --foreground-soft: #304437;
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
 
-  --card: rgba(255, 255, 255, 0.9);
-  --card-hover: #ffffff;
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
 
-  --surface: #edf4ee;
-  --surface-light: #e3eee5;
-  --surface-soft: rgba(223, 238, 226, 0.7);
+  --color-moss: var(--moss);
+  --color-moss-hover: var(--moss-hover);
+  --color-moss-soft: var(--moss-soft);
+  --color-moss-tint: var(--moss-tint);
+  --color-on-moss: var(--on-moss);
 
-  --muted: #607267;
-  --muted-light: #819187;
+  --color-ochre: var(--ochre);
+  --color-ochre-soft: var(--ochre-soft);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
 
-  --border: rgba(38, 82, 51, 0.13);
-  --border-strong: rgba(38, 82, 51, 0.22);
+  --font-serif: var(--font-display), var(--font-serif-thai), Georgia, serif;
+  --font-sans: var(--font-text), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-code), ui-monospace, "SFMono-Regular", monospace;
 
-  --primary: #187947;
-  --primary-hover: #116238;
-
-  --primary-dark: #0d5530;
-
-  --primary-soft: rgba(24, 121, 71, 0.09);
-  --primary-glow: rgba(24, 121, 71, 0.14);
-
-  --secondary: #e8f0e9;
-  --secondary-hover: #dce8de;
-
-  --danger: #c74747;
-  --danger-soft: rgba(199, 71, 71, 0.08);
-
-  --shadow-sm:
-    0 2px 8px rgba(25, 55, 34, 0.05);
-
-  --shadow-md:
-    0 12px 35px rgba(25, 55, 34, 0.09);
-
-  --shadow-lg:
-    0 25px 70px rgba(25, 55, 34, 0.13);
-
-  --shadow-green:
-    0 10px 40px rgba(24, 121, 71, 0.1);
+  --shadow-sheet: var(--shadow-sheet);
+  --shadow-lift: var(--shadow-lift);
 }
-
 
 /* =========================================================
-   🌲 BASE
+   BASE
    ========================================================= */
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
 
-html {
-  scroll-behavior: smooth;
-  background: var(--background-deep);
-}
-
-html,
-body {
-  min-height: 100%;
-}
-
-body {
-  margin: 0;
-
-  background:
-    radial-gradient(circle at 50% -10%,
-      rgba(55, 145, 82, 0.12),
-      transparent 38%),
-    radial-gradient(circle at 0% 40%,
-      rgba(27, 100, 55, 0.08),
-      transparent 30%),
-    radial-gradient(circle at 100% 70%,
-      rgba(38, 119, 68, 0.07),
-      transparent 30%),
-    var(--background);
-
-  color: var(--foreground);
-
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-
-/* =========================================================
-   🌿 ELEMENTS
-   ========================================================= */
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-button,
-a {
-  -webkit-tap-highlight-color: transparent;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-img {
-  max-width: 100%;
-}
-
-::selection {
-  background: rgba(69, 185, 111, 0.25);
-  color: var(--foreground);
-}
-
-
-/* =========================================================
-   🌲 PAGE
-   ========================================================= */
-
-.page {
-  position: relative;
-
-  min-height: 100vh;
-
-  overflow-x: hidden;
-
-  background:
-    radial-gradient(circle at 50% 0%,
-      rgba(53, 139, 78, 0.12),
-      transparent 35%),
-    radial-gradient(circle at 10% 20%,
-      rgba(42, 116, 65, 0.07),
-      transparent 25%),
-    var(--background);
-
-  color: var(--foreground);
-}
-
-
-/*
- * Ambient forest glow
- */
-
-.page::before {
-  content: "";
-
-  position: fixed;
-
-  top: -200px;
-  left: 50%;
-
-  width: 700px;
-  height: 500px;
-
-  transform: translateX(-50%);
-
-  pointer-events: none;
-
-  background:
-    radial-gradient(ellipse,
-      rgba(58, 166, 91, 0.09),
-      transparent 70%);
-
-  filter: blur(20px);
-
-  z-index: 0;
-}
-
-
-/* =========================================================
-   🌿 CONTAINER
-   ========================================================= */
-
-.container {
-  position: relative;
-  z-index: 1;
-
-  width: min(calc(100% - 40px),
-      var(--max-width));
-
-  margin-inline: auto;
-}
-
-@media (max-width: 640px) {
-  .container {
-    width: min(calc(100% - 28px),
-        var(--max-width));
+  * {
+    box-sizing: border-box;
   }
-}
 
-
-/* =========================================================
-   🌲 TYPOGRAPHY
-   ========================================================= */
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  margin: 0;
-
-  color: var(--foreground);
-
-  letter-spacing: -0.035em;
-}
-
-p {
-  margin: 0;
-}
-
-strong {
-  color: var(--foreground);
-}
-
-
-/* =========================================================
-   🌿 HERO
-   ========================================================= */
-
-.hero {
-  position: relative;
-
-  overflow: hidden;
-
-  isolation: isolate;
-
-  background:
-    radial-gradient(circle at 75% 5%,
-      rgba(62, 166, 91, 0.15),
-      transparent 28%),
-    radial-gradient(circle at 15% 45%,
-      rgba(38, 113, 62, 0.11),
-      transparent 32%),
-    linear-gradient(180deg,
-      rgba(6, 16, 10, 0.2),
-      transparent),
-    var(--background);
-}
-
-
-/*
- * Soft forest light
- */
-
-.hero::before {
-  content: "";
-
-  position: absolute;
-
-  width: 450px;
-  height: 450px;
-
-  top: -220px;
-  right: -120px;
-
-  border-radius: 50%;
-
-  background:
-    radial-gradient(circle,
-      rgba(75, 190, 105, 0.14),
-      transparent 70%);
-
-  filter: blur(30px);
-
-  pointer-events: none;
-}
-
-
-/*
- * Bottom forest atmosphere
- */
-
-.hero::after {
-  content: "";
-
-  position: absolute;
-
-  left: 0;
-  right: 0;
-  bottom: 0;
-
-  height: 160px;
-
-  pointer-events: none;
-
-  background:
-    linear-gradient(to top,
-      rgba(3, 9, 5, 0.3),
-      transparent);
-}
-
-
-/* =========================================================
-   🌿 CARD
-   ========================================================= */
-
-.card {
-  position: relative;
-
-  overflow: hidden;
-
-  border: 1px solid var(--border);
-
-  border-radius: var(--radius-lg);
-
-  background:
-    linear-gradient(145deg,
-      rgba(255, 255, 255, 0.025),
-      transparent 45%),
-    var(--card);
-
-  box-shadow: var(--shadow-sm);
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-
-  transition:
-    transform 220ms ease,
-    box-shadow 220ms ease,
-    border-color 220ms ease,
-    background 220ms ease;
-}
-
-
-/*
- * Green reflection
- */
-
-.card::before {
-  content: "";
-
-  position: absolute;
-
-  top: 0;
-  left: 0;
-
-  width: 100%;
-  height: 1px;
-
-  background:
-    linear-gradient(90deg,
-      transparent,
-      rgba(89, 190, 116, 0.35),
-      transparent);
-
-  opacity: 0.7;
-}
-
-.card-hover:hover {
-  transform: translateY(-4px);
-
-  border-color: var(--border-strong);
-
-  background:
-    linear-gradient(145deg,
-      rgba(72, 160, 91, 0.05),
-      transparent 50%),
-    var(--card-hover);
-
-  box-shadow:
-    var(--shadow-md),
-    var(--shadow-green);
-}
-
-
-/* =========================================================
-   🌲 BUTTON SYSTEM
-   ========================================================= */
-
-.btn {
-  display: inline-flex;
-
-  min-height: 44px;
-
-  align-items: center;
-  justify-content: center;
-
-  gap: 8px;
-
-  border: 1px solid transparent;
-
-  border-radius: 12px;
-
-  padding: 0 18px;
-
-  font-size: 14px;
-
-  font-weight: 700;
-
-  line-height: 1;
-
-  cursor: pointer;
-
-  white-space: nowrap;
-
-  transition:
-    transform 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease,
-    opacity 160ms ease;
-}
-
-.btn:hover {
-  transform: translateY(-2px);
-}
-
-.btn:active {
-  transform: translateY(0);
-}
-
-.btn:disabled {
-  cursor: not-allowed;
-
-  opacity: 0.5;
-
-  transform: none;
-}
-
-
-/* =========================================================
-   🌿 PRIMARY BUTTON
-   ========================================================= */
-
-.btn-primary {
-  border-color: rgba(91, 208, 126, 0.35);
-
-  background:
-    linear-gradient(135deg,
-      #23844d,
-      #176d3e);
-
-  color: #ffffff;
-
-  box-shadow:
-    0 8px 24px rgba(23, 109, 62, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.btn-primary:hover {
-  border-color: rgba(105, 222, 138, 0.5);
-
-  background:
-    linear-gradient(135deg,
-      #2b9658,
-      #1b7a45);
-
-  box-shadow:
-    0 12px 30px rgba(39, 151, 83, 0.32),
-    0 0 25px rgba(69, 185, 111, 0.1);
-}
-
-
-/* =========================================================
-   🌲 SECONDARY BUTTON
-   ========================================================= */
-
-.btn-secondary {
-  border-color: var(--border);
-
-  background: var(--card);
-
-  color: var(--foreground);
-
-  box-shadow: var(--shadow-sm);
-
-  backdrop-filter: blur(10px);
-}
-
-.btn-secondary:hover {
-  border-color: var(--border-strong);
-
-  background: var(--secondary);
-
-  box-shadow: var(--shadow-md);
-}
-
-
-/* =========================================================
-   🌿 GHOST BUTTON
-   ========================================================= */
-
-.btn-ghost {
-  border-color: transparent;
-
-  background: transparent;
-
-  color: var(--muted);
-}
-
-.btn-ghost:hover {
-  background: var(--secondary);
-
-  color: var(--foreground);
-}
-
-
-/* =========================================================
-   🚨 DANGER BUTTON
-   ========================================================= */
-
-.btn-danger {
-  border-color: transparent;
-
-  background: var(--danger-soft);
-
-  color: var(--danger);
-}
-
-.btn-danger:hover {
-  border-color: rgba(240, 120, 120, 0.2);
-
-  background: rgba(240, 120, 120, 0.15);
-}
-
-
-/* =========================================================
-   🌿 INPUT
-   ========================================================= */
-
-.input {
-  width: 100%;
-
-  min-height: 46px;
-
-  border: 1px solid var(--border);
-
-  border-radius: 12px;
-
-  background:
-    linear-gradient(145deg,
-      rgba(255, 255, 255, 0.025),
-      transparent),
-    var(--surface);
-
-  color: var(--foreground);
-
-  outline: none;
-
-  padding: 0 14px;
-
-  font-size: 14px;
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.02);
-
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    background 160ms ease,
-    transform 160ms ease;
-}
-
-.input::placeholder {
-  color: var(--muted-light);
-}
-
-.input:hover {
-  border-color: var(--border-strong);
-}
-
-.input:focus {
-  border-color: rgba(69, 185, 111, 0.65);
-
-  background:
-    linear-gradient(145deg,
-      rgba(69, 185, 111, 0.045),
-      transparent),
-    var(--surface);
-
-  box-shadow:
-    0 0 0 3px rgba(69, 185, 111, 0.1),
-    0 0 25px rgba(69, 185, 111, 0.05);
-}
-
-textarea.input {
-  min-height: 120px;
-
-  padding: 12px 14px;
-
-  line-height: 1.6;
-
-  resize: vertical;
-}
-
-select.input {
-  cursor: pointer;
-}
-
-
-/* =========================================================
-   🌱 BADGE
-   ========================================================= */
-
-.badge {
-  display: inline-flex;
-
-  min-height: 30px;
-
-  align-items: center;
-  justify-content: center;
-
-  gap: 6px;
-
-  border-radius: 999px;
-
-  padding: 0 12px;
-
-  font-size: 11px;
-
-  font-weight: 800;
-
-  letter-spacing: 0.08em;
-
-  text-transform: uppercase;
-
-  backdrop-filter: blur(10px);
-}
-
-.badge-green {
-  border: 1px solid rgba(69, 185, 111, 0.2);
-
-  background:
-    rgba(69, 185, 111, 0.1);
-
-  color: #64d38b;
-
-  box-shadow:
-    0 0 20px rgba(69, 185, 111, 0.05);
-}
-
-
-/* =========================================================
-   🌲 SECTION
-   ========================================================= */
-
-.section {
-  position: relative;
-
-  padding: 88px 0;
-}
-
-@media (max-width: 640px) {
-  .section {
-    padding: 64px 0;
+  html {
+    scroll-behavior: smooth;
+    background: var(--paper);
   }
-}
 
-
-/* =========================================================
-   🌿 DIVIDER
-   ========================================================= */
-
-.divider {
-  width: 100%;
-
-  height: 1px;
-
-  background:
-    linear-gradient(90deg,
-      transparent,
-      var(--border-strong),
-      transparent);
-}
-
-
-/* =========================================================
-   🍃 LINK
-   ========================================================= */
-
-.text-link {
-  color: var(--primary);
-
-  font-weight: 700;
-
-  transition:
-    color 160ms ease,
-    opacity 160ms ease;
-}
-
-.text-link:hover {
-  color: var(--primary-hover);
-
-  opacity: 0.9;
-}
-
-
-/* =========================================================
-   🌿 ICON BUTTON
-   ========================================================= */
-
-.icon-btn {
-  display: inline-flex;
-
-  height: 40px;
-  width: 40px;
-
-  align-items: center;
-  justify-content: center;
-
-  border: 1px solid var(--border);
-
-  border-radius: 11px;
-
-  background:
-    rgba(15, 31, 20, 0.7);
-
-  color: var(--muted);
-
-  cursor: pointer;
-
-  backdrop-filter: blur(10px);
-
-  transition:
-    background 160ms ease,
-    color 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.icon-btn:hover {
-  border-color: var(--border-strong);
-
-  background: var(--secondary);
-
-  color: var(--foreground);
-
-  transform: translateY(-2px);
-
-  box-shadow:
-    0 5px 18px rgba(0, 0, 0, 0.2);
-}
-
-
-/* =========================================================
-   🌱 PLANT CARD
-   ========================================================= */
-
-.plant-card {
-  position: relative;
-
-  overflow: hidden;
-
-  border: 1px solid var(--border);
-
-  border-radius: var(--radius-lg);
-
-  background:
-    linear-gradient(145deg,
-      rgba(69, 185, 111, 0.025),
-      transparent 50%),
-    var(--card);
-
-  box-shadow: var(--shadow-sm);
-
-  backdrop-filter: blur(12px);
-
-  transition:
-    transform 250ms ease,
-    box-shadow 250ms ease,
-    border-color 250ms ease;
-}
-
-.plant-card:hover {
-  transform: translateY(-6px);
-
-  border-color:
-    rgba(78, 177, 105, 0.3);
-
-  box-shadow:
-    var(--shadow-lg),
-    0 0 40px rgba(69, 185, 111, 0.06);
-}
-
-
-/* =========================================================
-   🌿 PLANT IMAGE
-   ========================================================= */
-
-.plant-card-image {
-  position: relative;
-
-  aspect-ratio: 4 / 3;
-
-  overflow: hidden;
-
-  background:
-    radial-gradient(circle at center,
-      rgba(64, 141, 82, 0.2),
-      transparent 65%),
-    var(--surface);
-}
-
-
-/*
- * Image dark overlay
- */
-
-.plant-card-image::after {
-  content: "";
-
-  position: absolute;
-
-  inset: 0;
-
-  pointer-events: none;
-
-  background:
-    linear-gradient(to top,
-      rgba(2, 8, 4, 0.3),
-      transparent 50%);
-}
-
-.plant-card-image img {
-  height: 100%;
-  width: 100%;
-
-  object-fit: cover;
-
-  transition:
-    transform 600ms cubic-bezier(0.2,
-      0.8,
-      0.2,
-      1),
-    filter 400ms ease;
-}
-
-.plant-card:hover .plant-card-image img {
-  transform: scale(1.06);
-
-  filter: saturate(1.08);
-}
-
-
-/* =========================================================
-   🌿 SOFT PANEL
-   ========================================================= */
-
-.soft-panel {
-  border: 1px solid var(--border);
-
-  border-radius: var(--radius-lg);
-
-  background:
-    linear-gradient(145deg,
-      rgba(69, 185, 111, 0.04),
-      transparent 60%),
-    var(--secondary);
-
-  padding: 24px;
-
-  box-shadow: var(--shadow-sm);
-}
-
-
-/* =========================================================
-   🌲 TABLE
-   ========================================================= */
-
-.table-wrap {
-  width: 100%;
-
-  overflow-x: auto;
-
-  border: 1px solid var(--border);
-
-  border-radius: var(--radius-lg);
-
-  background: var(--card);
-
-  box-shadow: var(--shadow-sm);
-}
-
-table {
-  width: 100%;
-
-  border-collapse: collapse;
-}
-
-th {
-  background:
-    rgba(69, 185, 111, 0.045);
-
-  color: var(--muted);
-
-  font-size: 12px;
-
-  font-weight: 800;
-
-  text-align: left;
-
-  white-space: nowrap;
-}
-
-th,
-td {
-  border-bottom: 1px solid var(--border);
-
-  padding: 14px 16px;
-}
-
-td {
-  font-size: 14px;
-
-  color: var(--foreground-soft);
-}
-
-tbody tr {
-  transition:
-    background 160ms ease;
-}
-
-tbody tr:hover {
-  background:
-    rgba(69, 185, 111, 0.035);
-}
-
-tr:last-child td {
-  border-bottom: 0;
-}
-
-
-/* =========================================================
-   🌿 FOREST GLOW UTILITY
-   ========================================================= */
-
-.forest-glow {
-  position: relative;
-}
-
-.forest-glow::before {
-  content: "";
-
-  position: absolute;
-
-  inset: -30px;
-
-  z-index: -1;
-
-  border-radius: 50%;
-
-  background:
-    radial-gradient(circle,
-      rgba(69, 185, 111, 0.12),
-      transparent 70%);
-
-  filter: blur(25px);
-
-  pointer-events: none;
-}
-
-
-/* =========================================================
-   🌱 FLOATING LEAF / DECORATION
-   ========================================================= */
-
-.forest-particle {
-  position: absolute;
-
-  width: 7px;
-  height: 7px;
-
-  border-radius: 50%;
-
-  background: rgba(90, 190, 112, 0.35);
-
-  box-shadow:
-    0 0 15px rgba(69, 185, 111, 0.35);
-
-  pointer-events: none;
-
-  animation:
-    forestFloat 7s ease-in-out infinite;
-}
-
-@keyframes forestFloat {
-
-  0%,
-  100% {
-    transform:
-      translate3d(0, 0, 0) scale(1);
-
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Fine paper grain – sits behind every page */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     opacity: 0.35;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   }
 
-  50% {
-    transform:
-      translate3d(0, -15px, 0) scale(1.2);
+  .dark body::before {
+    opacity: 0.5;
+    mix-blend-mode: screen;
+  }
 
-    opacity: 0.7;
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  ::selection {
+    background: var(--moss-tint);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--moss);
+    outline-offset: 3px;
+  }
+
+  img {
+    background: var(--paper-deep);
+  }
+
+  button:disabled,
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--paper);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid var(--paper);
+    border-radius: 999px;
+    background: var(--rule-strong);
+  }
+
+  /* =========================================================
+     LAYOUT
+     ========================================================= */
+
+  .container,
+  .vh-container {
+    width: min(var(--max-width), calc(100% - var(--gutter) * 2));
+    margin-inline: auto;
+  }
+
+  .page {
+    position: relative;
+    min-height: 100dvh;
+  }
+
+  @media (max-width: 767px) {
+    .container,
+    .vh-container {
+      width: calc(100% - 32px);
+    }
+  }
+
+}
+
+/* =========================================================
+   COMPONENTS
+   ========================================================= */
+
+@layer components {
+  /* ---------- TYPOGRAPHY ---------- */
+
+  /* Small catalogue-style caption: "PLATE 04 · MORACEAE" */
+  .vh-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Thai script breaks apart with wide tracking – keep it tight */
+  html[lang="th"] .vh-eyebrow,
+  html[lang="th"] .vh-field-label {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  .vh-display {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    color: var(--ink);
+  }
+
+  /* Latin binomial – always italic serif */
+  .vh-binomial {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+  }
+
+  /* Plant family in small caps, e.g. MORACEAE */
+  .vh-family {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ochre);
+  }
+
+  .vh-catalog {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .vh-prose {
+    font-size: 15px;
+    line-height: 1.85;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- RULES ---------- */
+
+  .vh-rule {
+    height: 1px;
+    border: 0;
+    background: var(--rule);
+  }
+
+  .vh-rule-double {
+    height: 4px;
+    border-top: 1px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* ---------- SURFACES ---------- */
+
+  .vh-sheet {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: var(--sheet);
+    box-shadow: var(--shadow-sheet);
+  }
+
+  .vh-panel {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: var(--sheet);
+  }
+
+  /* Herbarium label – the boxed data card in the corner of a sheet */
+  .vh-label-card {
+    position: relative;
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    background: var(--sheet-raised);
+    padding: 14px 16px;
+  }
+
+  .vh-label-card::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* Specimen card used in grids */
+  .vh-specimen {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: var(--sheet);
+    box-shadow: var(--shadow-sheet);
+    transition:
+      transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      box-shadow 260ms ease,
+      border-color 260ms ease;
+  }
+
+  .vh-specimen:hover {
+    transform: translateY(-3px);
+    border-color: var(--rule-strong);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .vh-specimen-media {
+    position: relative;
+    overflow: hidden;
+    background: var(--paper-deep);
+  }
+
+  .vh-specimen-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .vh-specimen:hover .vh-specimen-media img {
+    transform: scale(1.04);
+  }
+
+  /* ---------- BUTTONS ---------- */
+
+  .vh-btn {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .vh-btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .vh-btn-primary {
+    background: var(--moss);
+    color: var(--on-moss);
+  }
+
+  .vh-btn-primary:hover:not(:disabled) {
+    background: var(--moss-hover);
+  }
+
+  .vh-btn-outline {
+    border-color: var(--rule-strong);
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .vh-btn-outline:hover:not(:disabled) {
+    border-color: var(--ink);
+    background: var(--moss-soft);
+  }
+
+  .vh-btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+  }
+
+  .vh-btn-ghost:hover:not(:disabled) {
+    background: var(--moss-soft);
+    color: var(--ink);
+  }
+
+  .vh-btn-danger {
+    border-color: color-mix(in srgb, var(--clay) 35%, transparent);
+    background: var(--clay-soft);
+    color: var(--clay);
+  }
+
+  .vh-btn-danger:hover:not(:disabled) {
+    background: var(--clay);
+    color: var(--sheet);
+  }
+
+  .vh-btn-sm {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  .vh-icon-btn {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .vh-icon-btn:hover {
+    border-color: var(--rule-strong);
+    background: var(--moss-soft);
+    color: var(--ink);
+  }
+
+  /* ---------- FORMS ---------- */
+
+  .vh-field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .vh-input {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 6px;
+    background: var(--sheet-raised);
+    padding: 11px 14px;
+    color: var(--ink);
+    font-size: 15px;
+    outline: none;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .vh-input::placeholder {
+    color: var(--faint);
+  }
+
+  .vh-input:hover {
+    border-color: var(--muted);
+  }
+
+  .vh-input:focus {
+    border-color: var(--moss);
+    box-shadow: 0 0 0 3px var(--moss-soft);
+  }
+
+  textarea.vh-input {
+    min-height: 120px;
+    line-height: 1.7;
+    resize: vertical;
+  }
+
+  /* ---------- TAGS ---------- */
+
+  .vh-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: var(--sheet);
+    padding: 4px 10px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .vh-tag-moss {
+    border-color: transparent;
+    background: var(--moss-soft);
+    color: var(--moss);
+  }
+
+  /* ---------- TABLE ---------- */
+
+  .vh-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .vh-table th {
+    border-bottom: 1px solid var(--rule-strong);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  html[lang="th"] .vh-table th {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  .vh-table td {
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 16px;
+    color: var(--ink-soft);
+  }
+
+  .vh-table tbody tr {
+    transition: background-color 160ms ease;
+  }
+
+  .vh-table tbody tr:hover {
+    background: var(--moss-soft);
+  }
+
+  /* ---------- DECORATION ---------- */
+
+  /* Faint graph-paper grid, like a field notebook */
+  .vh-grid-paper {
+    background-image:
+      linear-gradient(var(--rule) 1px, transparent 1px),
+      linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .vh-skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--paper-deep) 0%,
+      var(--sheet) 50%,
+      var(--paper-deep) 100%
+    );
+    background-size: 200% 100%;
+    animation: vhShimmer 1.4s ease-in-out infinite;
   }
 }
 
+/* =========================================================
+   DESKTOP SCALE
+   Content column and base type grow with the screen so
+   large monitors (1536px → 2560px+) don't leave a thin
+   strip of content in a sea of empty paper.
+   ========================================================= */
+
+@media (min-width: 1280px) {
+  :root {
+    --gutter: 40px;
+  }
+}
+
+@media (min-width: 1536px) {
+  :root {
+    --max-width: 1320px;
+  }
+}
+
+@media (min-width: 1800px) {
+  :root {
+    --max-width: 1480px;
+    --gutter: 56px;
+  }
+
+  html {
+    font-size: 106.25%;
+  }
+}
+
+@media (min-width: 2200px) {
+  :root {
+    --max-width: 1680px;
+  }
+
+  html {
+    font-size: 112.5%;
+  }
+}
+
+@media (min-width: 2800px) {
+  :root {
+    --max-width: 1920px;
+  }
+
+  html {
+    font-size: 125%;
+  }
+}
 
 /* =========================================================
-   🌲 PAGE ENTER ANIMATION
+   MOTION
    ========================================================= */
 
 .page-enter {
-  animation:
-    pageEnter 500ms ease both;
+  animation: pageEnter 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.fade-up {
+  animation: pageEnter 640ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 @keyframes pageEnter {
   from {
     opacity: 0;
-
-    transform:
-      translateY(10px);
+    transform: translateY(10px);
   }
 
   to {
     opacity: 1;
-
-    transform:
-      translateY(0);
+    transform: translateY(0);
   }
 }
 
-
-/* =========================================================
-   🌿 FADE UP
-   ========================================================= */
-
-.fade-up {
-  animation:
-    fadeUp 600ms ease both;
-}
-
-@keyframes fadeUp {
+@keyframes vhShimmer {
   from {
-    opacity: 0;
-
-    transform:
-      translateY(18px);
+    background-position: 200% 0;
   }
 
   to {
-    opacity: 1;
-
-    transform:
-      translateY(0);
+    background-position: -200% 0;
   }
 }
 
-
 /* =========================================================
-   🌲 SCROLLBAR
-   ========================================================= */
-
-::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
-}
-
-::-webkit-scrollbar-track {
-  background:
-    var(--background-deep);
-}
-
-::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-
-  background:
-    rgba(105, 137, 112, 0.35);
-
-  border:
-    2px solid var(--background-deep);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background:
-    rgba(105, 137, 112, 0.55);
-}
-
-
-/* =========================================================
-   🌿 FOCUS
-   ========================================================= */
-
-:focus-visible {
-  outline: 2px solid var(--primary);
-
-  outline-offset: 3px;
-}
-
-
-/* =========================================================
-   🌲 IMAGE FALLBACK
-   ========================================================= */
-
-img {
-  background:
-    linear-gradient(135deg,
-      var(--surface),
-      var(--secondary));
-}
-
-
-/* =========================================================
-   🌿 DISABLED
-   ========================================================= */
-
-button:disabled,
-input:disabled,
-textarea:disabled,
-select:disabled {
-  cursor: not-allowed;
-
-  opacity: 0.55;
-}
-
-
-/* =========================================================
-   📱 MOBILE APP SYSTEM
+   MOBILE APP SHELL
    ========================================================= */
 
 @media (max-width: 767px) {
-  /* ---------------------------------------------------------
-     APP SHELL
-  --------------------------------------------------------- */
-
   html,
   body {
     width: 100%;
-    min-height: 100%;
-    height: auto;
-
     overflow-x: hidden !important;
-    overflow-y: auto !important;
-
-    -webkit-overflow-scrolling: touch;
   }
 
   html {
@@ -1240,517 +739,105 @@ select:disabled {
   }
 
   body {
-    position: relative;
-
     touch-action: pan-y;
-
     overscroll-behavior-x: none;
-    overscroll-behavior-y: auto;
   }
 
   body.has-mobile-app-shell {
     min-height: 100dvh;
-
-    /* เว้นพื้นที่ให้ Navbar ด้านบน */
     padding-top: calc(58px + env(safe-area-inset-top));
-
-    /* เว้นพื้นที่ให้ Bottom Navigation */
-    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
   }
 
   body.has-mobile-app-shell.mobile-app-no-bottom-nav {
-    padding-bottom:
-      env(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom);
   }
-
-
-  /* ---------------------------------------------------------
-     MOBILE SCROLL FIX
-  --------------------------------------------------------- */
-
-  body.has-mobile-app-shell main {
-    width: 100%;
-
-    height: auto !important;
-    min-height: 100dvh;
-    max-height: none !important;
-
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
-
-    touch-action: pan-y;
-  }
-
-  body.has-mobile-app-shell main>div {
-    height: auto;
-    max-height: none !important;
-
-    overflow-y: visible;
-  }
-
-  body.has-mobile-app-shell section {
-    height: auto;
-    max-height: none !important;
-  }
-
-
-  /* ---------------------------------------------------------
-     CONTAINER
-  --------------------------------------------------------- */
-
-  .container {
-    width: calc(100% - 24px);
-    max-width: none;
-
-    margin-inline: auto;
-  }
-
-
-  /* ---------------------------------------------------------
-     MOBILE APP HEADER
-     Fixed = ไม่เลื่อนตามเนื้อหา
-  --------------------------------------------------------- */
 
   .mobile-app-header {
     position: fixed;
-
-    top: 0;
-    left: 0;
-    right: 0;
-
+    inset: 0 0 auto;
     z-index: 100;
-
-    width: 100%;
-
-    border-bottom-width: 1px;
-
-    padding-top:
-      env(safe-area-inset-top);
-
-    backdrop-filter:
-      blur(22px) saturate(1.2);
-
-    -webkit-backdrop-filter:
-      blur(22px) saturate(1.2);
-
-    box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid var(--rule);
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    padding-top: env(safe-area-inset-top);
+    backdrop-filter: blur(18px) saturate(1.1);
+    -webkit-backdrop-filter: blur(18px) saturate(1.1);
   }
 
   .mobile-app-header-inner {
     display: flex;
-
-    min-width: 0;
-
     height: 58px;
-
+    min-width: 0;
     align-items: center;
     justify-content: space-between;
-
     gap: 10px;
-
-    padding-inline: 12px;
+    padding-inline: 16px;
   }
-
-
-  /* ---------------------------------------------------------
-     MOBILE BOTTOM NAVIGATION
-  --------------------------------------------------------- */
 
   .mobile-bottom-nav {
     position: fixed;
-
-    left: 0;
-    right: 0;
-    bottom: 0;
-
+    inset: auto 0 0;
     z-index: 75;
-
-    border-top-width: 1px;
-
-    padding-bottom:
-      env(safe-area-inset-bottom);
-
-    backdrop-filter:
-      blur(24px) saturate(1.25);
-
-    -webkit-backdrop-filter:
-      blur(24px) saturate(1.25);
-
-    box-shadow:
-      0 -12px 35px rgba(0, 0, 0, 0.11);
+    border-top: 1px solid var(--rule);
+    background: color-mix(in srgb, var(--sheet) 92%, transparent);
+    padding-bottom: env(safe-area-inset-bottom);
+    backdrop-filter: blur(20px) saturate(1.1);
+    -webkit-backdrop-filter: blur(20px) saturate(1.1);
   }
 
   .mobile-bottom-nav-inner {
     display: grid;
-
-    grid-template-columns:
-      repeat(5, minmax(0, 1fr));
-
-    width: 100%;
-    height: 66px;
-
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    height: 64px;
     align-items: center;
-
-    padding:
-      5px 8px 4px;
+    padding: 4px 8px;
   }
 
   .mobile-add-button {
     display: flex;
-
-    width: 50px;
-    height: 50px;
-
+    width: 46px;
+    height: 46px;
     align-items: center;
     justify-content: center;
-
-    margin-top: -18px;
-
-    border:
-      4px solid var(--background);
-
-    border-radius: 17px;
-
-    background:
-      linear-gradient(145deg,
-        #23844d,
-        #14683a);
-
-    color: #ffffff;
-
-    box-shadow:
-      0 10px 24px rgba(15, 94, 51, 0.32),
-      0 3px 8px rgba(0, 0, 0, 0.16);
-
-    transition:
-      transform 160ms ease,
-      box-shadow 160ms ease;
+    margin-top: -14px;
+    border: 4px solid var(--paper);
+    border-radius: 999px;
+    background: var(--moss);
+    color: var(--on-moss);
+    box-shadow: var(--shadow-lift);
+    transition: transform 160ms ease;
   }
 
   .mobile-add-button:active {
     transform: scale(0.94);
   }
 
-
-  /* ---------------------------------------------------------
-     MOBILE BOTTOM SHEET
-  --------------------------------------------------------- */
-
   .mobile-app-sheet {
-    border-radius:
-      26px 26px 0 0;
-
-    padding-bottom:
-      env(safe-area-inset-bottom);
-
-    animation:
-      mobileSheetEnter 220ms cubic-bezier(0.2,
-        0.8,
-        0.2,
-        1) both;
+    border-radius: 18px 18px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: mobileSheetEnter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
   @keyframes mobileSheetEnter {
     from {
       opacity: 0;
-
-      transform:
-        translateY(28px);
+      transform: translateY(28px);
     }
 
     to {
       opacity: 1;
-
-      transform:
-        translateY(0);
+      transform: translateY(0);
     }
   }
 
-
-  /* ---------------------------------------------------------
-     PAGE
-  --------------------------------------------------------- */
-
-  .page {
-    width: 100%;
-
-    height: auto;
-    min-height: 100dvh;
-    max-height: none;
-
-    overflow-x: hidden;
-    overflow-y: visible;
-  }
-
-  .page::before {
-    width: 430px;
-    height: 360px;
-
-    top: -150px;
-  }
-
-
-  /* ---------------------------------------------------------
-     SECTIONS
-  --------------------------------------------------------- */
-
-  .section {
-    height: auto;
-
-    padding-top: 34px;
-    padding-bottom: 34px;
-  }
-
-
-  /* ---------------------------------------------------------
-     CARDS
-  --------------------------------------------------------- */
-
-  .card {
-    border-radius: 18px;
-
-    backdrop-filter:
-      blur(12px);
-
-    -webkit-backdrop-filter:
-      blur(12px);
-  }
-
-  .plant-card {
-    border-radius: 17px;
-  }
-
-  .soft-panel {
-    border-radius: 18px;
-
-    padding: 16px;
-  }
-
-  .table-wrap {
-    border-radius: 18px;
-  }
-
-
-  /* ---------------------------------------------------------
-     REMOVE DESKTOP HOVER MOTION
-  --------------------------------------------------------- */
-
-  .card-hover:hover,
-  .plant-card:hover,
-  .btn:hover,
-  .icon-btn:hover {
+  .vh-specimen:hover {
     transform: none;
   }
 
-  .plant-card:hover .plant-card-image img {
+  .vh-specimen:hover .vh-specimen-media img {
     transform: none;
-
-    filter: none;
-  }
-
-
-  /* ---------------------------------------------------------
-     BUTTONS
-  --------------------------------------------------------- */
-
-  .btn {
-    min-height: 48px;
-
-    border-radius: 14px;
-
-    padding-inline: 16px;
-
-    font-size: 14px;
-  }
-
-  .btn:active {
-    transform: scale(0.98);
-  }
-
-  .icon-btn {
-    width: 44px;
-    height: 44px;
-
-    border-radius: 14px;
-  }
-
-
-  /* ---------------------------------------------------------
-     INPUTS
-  --------------------------------------------------------- */
-
-  .input {
-    min-height: 50px;
-
-    border-radius: 14px;
-
-    padding-inline: 14px;
-
-    font-size: 16px;
-  }
-
-  textarea.input {
-    min-height: 128px;
-
-    padding: 13px 14px;
-
-    line-height: 1.65;
-  }
-
-  select.input {
-    min-height: 50px;
-  }
-
-
-  /* ---------------------------------------------------------
-     BADGES
-  --------------------------------------------------------- */
-
-  .badge {
-    min-height: 28px;
-
-    padding-inline: 10px;
-
-    font-size: 9px;
-  }
-
-
-  /* ---------------------------------------------------------
-     PLANT IMAGE
-  --------------------------------------------------------- */
-
-  .plant-card-image {
-    aspect-ratio: 1.3 / 1;
-  }
-
-
-  /* ---------------------------------------------------------
-     TABLE MOBILE
-  --------------------------------------------------------- */
-
-  .table-wrap {
-    -webkit-overflow-scrolling: touch;
-  }
-
-  th,
-  td {
-    padding: 12px 13px;
-  }
-
-
-  /* ---------------------------------------------------------
-     FOOTER
-     Bottom navigation replaces desktop footer on phone.
-  --------------------------------------------------------- */
-
-  footer {
-    display: none !important;
-  }
-
-
-  /* ---------------------------------------------------------
-     TOUCH
-  --------------------------------------------------------- */
-
-  button,
-  a,
-  input,
-  textarea,
-  select {
-    touch-action: manipulation;
-  }
-
-
-  /* ---------------------------------------------------------
-     FORM MOBILE
-  --------------------------------------------------------- */
-
-  input,
-  textarea,
-  select {
-    scroll-margin-top:
-      calc(76px + env(safe-area-inset-top));
-  }
-
-
-  /* ---------------------------------------------------------
-     MOBILE STICKY ACTION
-  --------------------------------------------------------- */
-
-  .mobile-sticky-action {
-    position: sticky;
-
-    left: 0;
-    right: 0;
-    bottom: 0;
-
-    z-index: 40;
-
-    margin-inline:
-      -12px;
-
-    border-top:
-      1px solid var(--border);
-
-    padding:
-      10px 12px calc(10px + env(safe-area-inset-bottom));
-
-    background:
-      color-mix(in srgb,
-        var(--background) 88%,
-        transparent);
-
-    backdrop-filter:
-      blur(20px);
-
-    -webkit-backdrop-filter:
-      blur(20px);
-  }
-
-
-  /* ---------------------------------------------------------
-     MOBILE APP CARD UTILITY
-  --------------------------------------------------------- */
-
-  .mobile-app-card {
-    border:
-      1px solid var(--border);
-
-    border-radius: 18px;
-
-    background:
-      var(--card);
-
-    box-shadow:
-      0 8px 28px rgba(0, 0, 0, 0.08);
-
-    backdrop-filter:
-      blur(14px);
-
-    -webkit-backdrop-filter:
-      blur(14px);
-  }
-
-
-  /* ---------------------------------------------------------
-     MOBILE PAGE SPACING
-  --------------------------------------------------------- */
-
-  .mobile-page-space {
-    padding-top: 14px;
-    padding-bottom: 20px;
-  }
-
-  .mobile-section-space {
-    margin-top: 18px;
   }
 }
-
-
-/* =========================================================
-   TABLET / DESKTOP RESET
-   ========================================================= */
 
 @media (min-width: 768px) {
   body.has-mobile-app-shell {
@@ -1758,11 +845,6 @@ select:disabled {
     padding-bottom: 0;
   }
 }
-
-
-/* =========================================================
-   🌿 REDUCED MOTION
-   ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -1773,9 +855,7 @@ select:disabled {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-
     animation-iteration-count: 1 !important;
-
     transition-duration: 0.01ms !important;
   }
 }

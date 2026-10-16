@@ -1,26 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
 import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 /* =========================================================
-   BACKGROUND
+   SORT OPTIONS
 ========================================================= */
 
-const FOREST_HERO =
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=88";
+const SORT_OPTIONS = ["newest", "oldest", "nameAZ", "nameZA"];
 
 /* =========================================================
    PAGE
+   useSearchParams needs a Suspense boundary (Next 16).
+   ?family=<name> (linked from the home page family index)
+   becomes the initial family filter.
 ========================================================= */
 
 export default function PlantsPage() {
-  const { language, darkMode } = useSiteSettings();
+  return (
+    <main className="page overflow-x-hidden">
+      <Navbar />
+
+      <Suspense fallback={<CatalogueFallback />}>
+        <PlantsCatalogue />
+      </Suspense>
+
+      <SiteFooter />
+    </main>
+  );
+}
+
+function PlantsCatalogue() {
+  const searchParams = useSearchParams();
+
+  const initialFamily = searchParams.get("family")?.trim() || "";
+
+  return <PlantsBrowser key={initialFamily} initialFamily={initialFamily} />;
+}
+
+/* =========================================================
+   BROWSER
+========================================================= */
+
+function PlantsBrowser({ initialFamily = "" }) {
+  const { language } = useSiteSettings();
 
   const isEnglish = language === "EN";
 
@@ -36,11 +66,11 @@ export default function PlantsPage() {
 
   const [search, setSearch] = useState("");
 
-  const [familyFilter, setFamilyFilter] = useState("");
+  const [familyFilter, setFamilyFilter] = useState(initialFamily);
 
-  const [provinceFilter, setProvinceFilter] = useState("");
+  const [artificialGroupFilter, setArtificialGroupFilter] = useState("");
 
-  const [districtFilter, setDistrictFilter] = useState("");
+  const [collectorFilter, setCollectorFilter] = useState("");
 
   const [sort, setSort] = useState("newest");
 
@@ -58,6 +88,10 @@ export default function PlantsPage() {
 
   const [isDesktop, setIsDesktop] = useState(false);
 
+  /* GRID / LIST VIEW (list view is desktop only) */
+
+  const [view, setView] = useState("grid");
+
   /* =====================================================
      TEXT
   ===================================================== */
@@ -73,17 +107,17 @@ export default function PlantsPage() {
       mobileTitle: "คลังพรรณไม้",
 
       subtitle:
-        "ค้นหาตัวอย่างพรรณไม้พร้อมข้อมูลชื่อวิทยาศาสตร์ วงศ์ พื้นที่พบ และรายละเอียดการเก็บตัวอย่าง",
+        "ค้นหาตัวอย่างพรรณไม้ด้วย PNU No. ชื่อวิทยาศาสตร์ วงศ์ กลุ่มพืช ผู้เก็บตัวอย่าง และสถานที่เก็บตัวอย่าง",
 
       specimens: "ตัวอย่างทั้งหมด",
 
-      provinces: "จังหวัด",
+      groups: "กลุ่มพืช",
 
       families: "วงศ์พืช",
 
       records: "รายการ",
 
-      provinceUnit: "จังหวัด",
+      groupUnit: "กลุ่ม",
 
       familyUnit: "วงศ์",
 
@@ -91,9 +125,9 @@ export default function PlantsPage() {
 
       searchDescription: "ค้นหาและกรองข้อมูลตัวอย่างพรรณไม้",
 
-      search: "ค้นหาชื่อพืช ชื่อวิทยาศาสตร์ วงศ์ หรือสถานที่...",
+      search: "ค้นหา PNU ชื่อวิทยาศาสตร์ วงศ์ ผู้เก็บ หรือสถานที่...",
 
-      mobileSearch: "ค้นหาพรรณไม้...",
+      mobileSearch: "ค้นหา PNU หรือพรรณไม้...",
 
       refresh: "โหลดข้อมูลใหม่",
 
@@ -107,17 +141,17 @@ export default function PlantsPage() {
 
       familyFilter: "วงศ์พืช",
 
-      provinceFilter: "จังหวัด",
+      artificialGroupFilter: "กลุ่มพืช",
 
-      districtFilter: "อำเภอ",
+      collectorFilter: "ผู้เก็บตัวอย่าง",
 
       sortFilter: "เรียงลำดับ",
 
       allFamilies: "ทุกวงศ์",
 
-      allProvinces: "ทุกจังหวัด",
+      allGroups: "ทุกกลุ่มพืช",
 
-      allDistricts: "ทุกอำเภอ",
+      allCollectors: "ผู้เก็บทั้งหมด",
 
       collectionLabel: "HERBARIUM RECORDS",
 
@@ -139,18 +173,15 @@ export default function PlantsPage() {
 
       family: "วงศ์",
 
-      location: "สถานที่",
+      location: "Locality / NP / Province",
 
       collector: "ผู้เก็บตัวอย่าง",
 
-      specimenNumber: "หมายเลขตัวอย่าง",
+      collectorNo: "Collector No.",
 
       viewDetails: "ดูข้อมูล",
 
       noData: "ยังไม่มีข้อมูลพรรณไม้",
-
-      noDataDescription:
-        "เมื่อมีการเพิ่มตัวอย่างพรรณไม้ ข้อมูลจะปรากฏในคลังนี้",
 
       noSearch: "ไม่พบพรรณไม้ที่ตรงกับการค้นหา",
 
@@ -179,6 +210,18 @@ export default function PlantsPage() {
       previousPage: "หน้าก่อนหน้า",
 
       nextPage: "หน้าถัดไป",
+
+      /* CATALOGUE */
+
+      noDataDescription: "เมื่อมีการเพิ่มตัวอย่างพรรณไม้ รายการจะปรากฏที่นี่",
+
+      viewMode: "รูปแบบการแสดงผล",
+
+      gridView: "มุมมองแบบการ์ด",
+
+      listView: "มุมมองแบบรายการ",
+
+      specimenColumn: "ตัวอย่าง",
     },
 
     EN: {
@@ -191,17 +234,17 @@ export default function PlantsPage() {
       mobileTitle: "Plant Collection",
 
       subtitle:
-        "Discover specimens together with scientific names, families, locations and collection information.",
+        "Discover specimens by PNU number, botanical name, family, artificial group, collector and locality.",
 
       specimens: "Total Specimens",
 
-      provinces: "Provinces",
+      groups: "Plant Groups",
 
       families: "Plant Families",
 
       records: "records",
 
-      provinceUnit: "provinces",
+      groupUnit: "groups",
 
       familyUnit: "families",
 
@@ -209,9 +252,9 @@ export default function PlantsPage() {
 
       searchDescription: "Search and refine specimen records",
 
-      search: "Search name, scientific name, family or location...",
+      search: "Search PNU, botanical name, family, collector or locality...",
 
-      mobileSearch: "Search plants...",
+      mobileSearch: "Search PNU or plants...",
 
       refresh: "Refresh Collection",
 
@@ -225,17 +268,17 @@ export default function PlantsPage() {
 
       familyFilter: "Plant Family",
 
-      provinceFilter: "Province",
+      artificialGroupFilter: "Artificial Group",
 
-      districtFilter: "District",
+      collectorFilter: "Collector",
 
       sortFilter: "Sort",
 
       allFamilies: "All Families",
 
-      allProvinces: "All Provinces",
+      allGroups: "All Plant Groups",
 
-      allDistricts: "All Districts",
+      allCollectors: "All Collectors",
 
       collectionLabel: "HERBARIUM RECORDS",
 
@@ -257,18 +300,15 @@ export default function PlantsPage() {
 
       family: "Family",
 
-      location: "Location",
+      location: "Locality / NP / Province",
 
       collector: "Collector",
 
-      specimenNumber: "Specimen No.",
+      collectorNo: "Collector No.",
 
       viewDetails: "View",
 
       noData: "No plant records yet",
-
-      noDataDescription:
-        "Plant specimens will appear here once they have been added to the herbarium.",
 
       noSearch: "No plants match your search",
 
@@ -297,6 +337,19 @@ export default function PlantsPage() {
       previousPage: "Previous page",
 
       nextPage: "Next page",
+
+      /* CATALOGUE */
+
+      noDataDescription:
+        "Specimens will appear here once they are added to the collection.",
+
+      viewMode: "View mode",
+
+      gridView: "Grid view",
+
+      listView: "List view",
+
+      specimenColumn: "Specimen",
     },
   };
 
@@ -431,31 +484,22 @@ export default function PlantsPage() {
     ].sort((a, b) => a.localeCompare(b, "th"));
   }, [plants]);
 
-  const provinces = useMemo(() => {
+  const artificialGroups = useMemo(() => {
     return [
-      ...new Set(plants.map((plant) => plant.province).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, "th"));
+      ...new Set(plants.map((plant) => plant.artificial_group).filter(Boolean)),
+    ].sort((a, b) => a.localeCompare(b, "en"));
   }, [plants]);
 
-  const districts = useMemo(() => {
-    const source = provinceFilter
-      ? plants.filter((plant) => plant.province === provinceFilter)
-      : plants;
-
+  const collectors = useMemo(() => {
     return [
-      ...new Set(source.map((plant) => plant.district).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, "th"));
-  }, [plants, provinceFilter]);
+      ...new Set(plants.map((plant) => getCollector(plant)).filter(Boolean)),
+    ].sort((a, b) => a.localeCompare(b, "en"));
+  }, [plants, isEnglish]);
 
   useEffect(() => {
-    if (!districtFilter) {
-      return;
-    }
-
-    if (!districts.includes(districtFilter)) {
-      setDistrictFilter("");
-    }
-  }, [provinceFilter, districtFilter, districts]);
+    setArtificialGroupFilter("");
+    setCollectorFilter("");
+  }, [language]);
 
   /* =====================================================
      FILTER + SORT
@@ -466,16 +510,18 @@ export default function PlantsPage() {
 
     const result = plants.filter((plant) => {
       const searchableText = [
-        plant.common_name,
+        plant.pnu_no,
+        plant.artificial_group,
         plant.family,
         plant.botanical_name,
-        plant.province,
-        plant.district,
-        plant.location,
-        plant.habitat,
-        plant.notes,
-        plant.collected_by,
+        getCollector(plant),
+        plant.collector_no,
         plant.specimen_number,
+        plant.locality,
+        getPlantName(plant),
+        getLocation(plant),
+        getHabitat(plant),
+        getNotes(plant),
       ]
         .filter(Boolean)
         .join(" ")
@@ -485,29 +531,33 @@ export default function PlantsPage() {
 
       const matchesFamily = !familyFilter || plant.family === familyFilter;
 
-      const matchesProvince =
-        !provinceFilter || plant.province === provinceFilter;
+      const matchesArtificialGroup =
+        !artificialGroupFilter ||
+        plant.artificial_group === artificialGroupFilter;
 
-      const matchesDistrict =
-        !districtFilter || plant.district === districtFilter;
+      const matchesCollector =
+        !collectorFilter || getCollector(plant) === collectorFilter;
 
       return (
-        matchesSearch && matchesFamily && matchesProvince && matchesDistrict
+        matchesSearch &&
+        matchesFamily &&
+        matchesArtificialGroup &&
+        matchesCollector
       );
     });
 
     result.sort((a, b) => {
       if (sort === "nameAZ") {
-        return (a.common_name || a.botanical_name || "").localeCompare(
-          b.common_name || b.botanical_name || "",
-          "th",
+        return getPlantName(a).localeCompare(
+          getPlantName(b),
+          isEnglish ? "en" : "th",
         );
       }
 
       if (sort === "nameZA") {
-        return (b.common_name || b.botanical_name || "").localeCompare(
-          a.common_name || a.botanical_name || "",
-          "th",
+        return getPlantName(b).localeCompare(
+          getPlantName(a),
+          isEnglish ? "en" : "th",
         );
       }
 
@@ -519,7 +569,15 @@ export default function PlantsPage() {
     });
 
     return result;
-  }, [plants, search, familyFilter, provinceFilter, districtFilter, sort]);
+  }, [
+    plants,
+    search,
+    familyFilter,
+    artificialGroupFilter,
+    collectorFilter,
+    sort,
+    isEnglish,
+  ]);
 
   /* =====================================================
      PAGINATION
@@ -543,7 +601,14 @@ export default function PlantsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, familyFilter, provinceFilter, districtFilter, sort, pageSize]);
+  }, [
+    search,
+    familyFilter,
+    artificialGroupFilter,
+    collectorFilter,
+    sort,
+    pageSize,
+  ]);
 
   /* =====================================================
      KEEP CURRENT PAGE VALID
@@ -581,8 +646,8 @@ export default function PlantsPage() {
   ===================================================== */
 
   const stats = useMemo(() => {
-    const provinceCount = new Set(
-      plants.map((plant) => plant.province).filter(Boolean),
+    const groupCount = new Set(
+      plants.map((plant) => plant.artificial_group).filter(Boolean),
     ).size;
 
     const familyCount = new Set(
@@ -592,1021 +657,736 @@ export default function PlantsPage() {
     return {
       specimens: plants.length,
 
-      provinces: provinceCount,
+      groups: groupCount,
 
       families: familyCount,
     };
   }, [plants]);
 
   /* =====================================================
+     FAMILY INDEX (name + record count)
+  ===================================================== */
+
+  const familyIndex = useMemo(() => {
+    const counts = new Map();
+
+    plants.forEach((plant) => {
+      if (plant.family) {
+        counts.set(plant.family, (counts.get(plant.family) || 0) + 1);
+      }
+    });
+
+    return families.map((name) => ({
+      name,
+      count: counts.get(name) || 0,
+    }));
+  }, [plants, families]);
+
+  /* =====================================================
      HELPERS
   ===================================================== */
 
+  function hasText(value) {
+    return !(
+      value === null ||
+      value === undefined ||
+      String(value).trim() === ""
+    );
+  }
+
+  function localizedValue(thValue, enValue, legacyValue = "") {
+    const values = isEnglish
+      ? [enValue, thValue, legacyValue]
+      : [thValue, enValue, legacyValue];
+
+    return values.find((value) => hasText(value)) || "";
+  }
+
   function getPlantName(plant) {
-    return plant.common_name || plant.botanical_name || t.unknown;
+    return (
+      localizedValue(
+        plant.common_name_th,
+        plant.common_name_en,
+        plant.common_name,
+      ) ||
+      plant.botanical_name ||
+      (hasText(plant.pnu_no) ? `PNU ${plant.pnu_no}` : "") ||
+      t.unknown
+    );
+  }
+
+  function getCommonName(plant) {
+    return localizedValue(
+      plant.common_name_th,
+      plant.common_name_en,
+      plant.common_name,
+    );
+  }
+
+  function getProvince(plant) {
+    return localizedValue(plant.province_th, plant.province_en, plant.province);
+  }
+
+  function getDistrict(plant) {
+    return localizedValue(plant.district_th, plant.district_en, plant.district);
+  }
+
+  function getPlaceName(plant) {
+    return localizedValue(plant.place_name_th, plant.place_name_en);
+  }
+
+  function getAddress(plant) {
+    return localizedValue(plant.address_th, plant.address_en, plant.location);
+  }
+
+  function getHabitat(plant) {
+    return localizedValue(plant.habitat_th, plant.habitat_en, plant.habitat);
+  }
+
+  function getNotes(plant) {
+    return localizedValue(plant.notes_th, plant.notes_en, plant.notes);
+  }
+
+  function getCollector(plant) {
+    return localizedValue(
+      plant.collected_by_th,
+      plant.collected_by_en,
+      plant.collected_by,
+    );
   }
 
   function getLocation(plant) {
-    return [plant.location, plant.district, plant.province]
-      .filter(Boolean)
-      .join(", ");
+    if (hasText(plant.locality)) {
+      return plant.locality;
+    }
+
+    const values = [
+      getPlaceName(plant),
+      getAddress(plant),
+      getDistrict(plant),
+      getProvince(plant),
+    ].filter(Boolean);
+
+    return [...new Set(values)].join(", ");
   }
 
   function clearFilters() {
     setSearch("");
     setFamilyFilter("");
-    setProvinceFilter("");
-    setDistrictFilter("");
+    setArtificialGroupFilter("");
+    setCollectorFilter("");
     setSort("newest");
   }
 
   const hasActiveFilters = Boolean(
     search.trim() ||
     familyFilter ||
-    provinceFilter ||
-    districtFilter ||
+    artificialGroupFilter ||
+    collectorFilter ||
     sort !== "newest",
   );
 
   const mobileFilterCount = [
     familyFilter,
-    provinceFilter,
-    districtFilter,
+    artificialGroupFilter,
+    collectorFilter,
     sort !== "newest" ? sort : "",
   ].filter(Boolean).length;
+
+  const sortLabels = {
+    newest: t.newest,
+    oldest: t.oldest,
+    nameAZ: t.nameAZ,
+    nameZA: t.nameZA,
+  };
+
+  const activeView = isDesktop ? view : "grid";
+
+  const activeChips = [
+    familyFilter && {
+      key: "family",
+      label: t.familyFilter,
+      value: familyFilter,
+      clear: () => setFamilyFilter(""),
+    },
+    artificialGroupFilter && {
+      key: "group",
+      label: t.artificialGroupFilter,
+      value: artificialGroupFilter,
+      clear: () => setArtificialGroupFilter(""),
+    },
+    collectorFilter && {
+      key: "collector",
+      label: t.collectorFilter,
+      value: collectorFilter,
+      clear: () => setCollectorFilter(""),
+    },
+    search.trim() && {
+      key: "search",
+      label: t.searchLabel,
+      value: `“${search.trim()}”`,
+      clear: () => setSearch(""),
+    },
+  ].filter(Boolean);
 
   /* =====================================================
      PAGE
   ===================================================== */
 
   return (
-    <main className="page overflow-x-hidden">
-      <Navbar />
-
+    <>
       {/* =====================================================
-          MOBILE HERO
+          CATALOGUE HEADER
       ===================================================== */}
 
-      <section className="relative isolate overflow-hidden border-b border-white/10 md:hidden">
+      <header className="relative isolate overflow-hidden border-b border-rule">
         <div
-          className="absolute inset-0 -z-30 bg-cover bg-center"
-          style={{
-            backgroundImage: `url("${FOREST_HERO}")`,
-          }}
+          aria-hidden="true"
+          className="vh-grid-paper pointer-events-none absolute inset-0 -z-10 opacity-35 [mask-image:radial-gradient(ellipse_at_85%_20%,black,transparent_65%)]"
         />
 
-        <div
-          className={`absolute inset-0 -z-20 ${
-            darkMode
-              ? "bg-[linear-gradient(180deg,rgba(2,10,5,0.89)_0%,rgba(3,16,8,0.87)_58%,#07100b_100%)]"
-              : "bg-[linear-gradient(180deg,rgba(240,247,238,0.90)_0%,rgba(238,246,236,0.90)_58%,#f1f6f1_100%)]"
-          }`}
-        />
+        <div className="vh-container page-enter py-9 md:py-14">
+          <p className="vh-eyebrow flex items-center gap-3">
+            <span className="h-px w-6 bg-ochre" />
+            {t.eyebrow}
+          </p>
 
-        <div className="container pb-5 pt-5">
-          {/* TITLE */}
+          <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="min-w-0">
+              <h1 className="vh-display text-[2.4rem] min-[390px]:text-[2.7rem] md:text-[3.6rem] lg:text-[3.4rem] xl:text-[4.1rem]">
+                <span className="md:hidden">{t.mobileTitle}</span>
 
-          <div className="min-w-0">
-            <p
-              className={`text-[9px] font-black uppercase tracking-[0.2em] ${
-                darkMode ? "text-emerald-400" : "text-emerald-700"
-              }`}
-            >
-              {t.eyebrow}
-            </p>
+                <span className="hidden md:block">{t.titleTop}</span>
 
-            <h1
-              className={`mt-1.5 text-[1.9rem] font-black leading-[1.08] tracking-[-0.045em] ${
-                darkMode ? "text-white" : "text-[#102218]"
-              }`}
-            >
-              {t.mobileTitle}
-            </h1>
-
-            <p
-              className={`mt-2 max-w-[350px] text-[11px] leading-5 ${
-                darkMode ? "text-white/60" : "text-[#506257]"
-              }`}
-            >
-              {t.subtitle}
-            </p>
-          </div>
-
-          {/* =================================================
-              MOBILE STAT CARDS
-          ================================================= */}
-
-          <div className="mt-5 grid grid-cols-3 gap-2.5">
-            <MobileStat
-              darkMode={darkMode}
-              icon={<LeafIcon className="h-[17px] w-[17px]" />}
-              value={stats.specimens}
-              label={t.specimens}
-            />
-
-            <MobileStat
-              darkMode={darkMode}
-              icon={<PinIcon className="h-[17px] w-[17px]" />}
-              value={stats.provinces}
-              label={t.provinces}
-            />
-
-            <MobileStat
-              darkMode={darkMode}
-              icon={<BranchIcon className="h-[17px] w-[17px]" />}
-              value={stats.families}
-              label={t.families}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          DESKTOP HERO
-      ===================================================== */}
-
-      <section className="relative isolate hidden overflow-hidden border-b border-white/10 md:block">
-        <div
-          className="absolute inset-0 -z-30 bg-cover bg-center"
-          style={{
-            backgroundImage: `url("${FOREST_HERO}")`,
-          }}
-        />
-
-        <div
-          className={`absolute inset-0 -z-20 ${
-            darkMode
-              ? "bg-[linear-gradient(90deg,rgba(2,10,5,0.94)_0%,rgba(3,16,8,0.82)_52%,rgba(3,14,7,0.56)_100%)]"
-              : "bg-[linear-gradient(90deg,rgba(240,247,238,0.96)_0%,rgba(238,246,236,0.88)_52%,rgba(235,244,233,0.64)_100%)]"
-          }`}
-        />
-
-        <div
-          className={`absolute inset-0 -z-10 ${
-            darkMode
-              ? "bg-[linear-gradient(180deg,transparent_45%,#07100b_100%)]"
-              : "bg-[linear-gradient(180deg,transparent_45%,#f1f6f1_100%)]"
-          }`}
-        />
-
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div
-            className={`absolute -top-48 right-[10%] h-[600px] w-24 rotate-[22deg] blur-3xl ${
-              darkMode
-                ? "bg-gradient-to-b from-emerald-50/10 to-transparent"
-                : "bg-gradient-to-b from-white/60 to-transparent"
-            }`}
-          />
-
-          <div className="forest-particle left-[18%] top-[35%]" />
-
-          <div className="forest-particle right-[20%] top-[30%] [animation-delay:-3s]" />
-
-          <div className="forest-particle right-[8%] top-[65%] [animation-delay:-5s]" />
-        </div>
-
-        <div className="container">
-          <div className="py-16 lg:py-20">
-            <div className="max-w-4xl page-enter">
-              <div
-                className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-xl ${
-                  darkMode
-                    ? "border-emerald-300/20 bg-black/20 text-emerald-200"
-                    : "border-emerald-950/15 bg-white/55 text-emerald-900"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    darkMode
-                      ? "bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.9)]"
-                      : "bg-emerald-700"
-                  }`}
-                />
-
-                <span className="text-[11px] font-extrabold uppercase tracking-[0.22em]">
-                  {t.eyebrow}
-                </span>
-              </div>
-
-              <h1
-                className={`mt-7 max-w-4xl text-6xl font-black leading-[1.04] tracking-[-0.045em] lg:text-7xl ${
-                  darkMode ? "text-white" : "text-[#102218]"
-                }`}
-              >
-                {t.titleTop}
-
-                <span
-                  className={`mt-1 block ${
-                    darkMode
-                      ? "bg-gradient-to-r from-emerald-200 via-emerald-400 to-lime-200 bg-clip-text text-transparent"
-                      : "bg-gradient-to-r from-emerald-950 via-emerald-700 to-lime-800 bg-clip-text text-transparent"
-                  }`}
-                >
+                <span className="hidden italic text-moss md:block">
                   {t.titleHighlight}
                 </span>
               </h1>
 
-              <p
-                className={`mt-6 max-w-3xl text-lg leading-8 ${
-                  darkMode ? "text-[#cad7cd]" : "text-[#425b49]"
-                }`}
-              >
+              <p className="vh-prose mt-4 max-w-2xl !text-[14px] md:!text-[15px]">
                 {t.subtitle}
               </p>
             </div>
 
-            {/* =================================================
-                DESKTOP STAT CARDS
-            ================================================= */}
+            <dl className="grid grid-cols-3 border-t border-rule lg:min-w-[420px]">
+              {[
+                { label: t.specimens, value: stats.specimens },
+                { label: t.families, value: stats.families },
+                { label: t.groups, value: stats.groups },
+              ].map((stat, index) => (
+                <div
+                  key={stat.label}
+                  className={`pt-4 ${index > 0 ? "border-l border-rule pl-4 md:pl-5" : ""}`}
+                >
+                  <dt className="vh-eyebrow truncate !text-[10px]">
+                    {stat.label}
+                  </dt>
 
-            <div className="mt-9 grid max-w-[880px] grid-cols-3 gap-3.5">
-              <StatCard
-                darkMode={darkMode}
-                icon={<LeafIcon className="h-5 w-5" />}
-                label={t.specimens}
-                value={stats.specimens}
-                suffix={t.records}
-              />
-
-              <StatCard
-                darkMode={darkMode}
-                icon={<PinIcon className="h-5 w-5" />}
-                label={t.provinces}
-                value={stats.provinces}
-                suffix={t.provinceUnit}
-              />
-
-              <StatCard
-                darkMode={darkMode}
-                icon={<BranchIcon className="h-5 w-5" />}
-                label={t.families}
-                value={stats.families}
-                suffix={t.familyUnit}
-              />
-            </div>
+                  <dd className="mt-2 font-mono text-[1.5rem] leading-none text-ink tabular-nums md:text-[1.9rem]">
+                    {loading ? (
+                      <span className="vh-skeleton inline-block h-7 w-12 rounded" />
+                    ) : (
+                      String(stat.value).padStart(2, "0")
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </div>
+      </header>
+
+      {/* =====================================================
+          SEARCH BAR
+      ===================================================== */}
+
+      <section className="vh-container pt-6 md:pt-9">
+        <label
+          htmlFor="plant-search"
+          className="vh-field-label sr-only md:not-sr-only md:!mb-2.5 md:block"
+        >
+          {t.searchLabel}
+        </label>
+
+        <div className="grid grid-cols-[minmax(0,1fr)_44px_44px] gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:gap-3">
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-faint" />
+
+            <input
+              id="plant-search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={isDesktop ? t.search : t.mobileSearch}
+              className="vh-input !min-h-[48px] !rounded-full !pl-11 !pr-4 !text-[14px] md:!min-h-[52px] md:!text-[15px]"
+            />
+          </div>
+
+          {/* MOBILE: FILTER + REFRESH */}
+
+          <button
+            type="button"
+            onClick={() => setMobileFilterOpen(true)}
+            aria-label={t.filters}
+            className="vh-icon-btn relative !h-12 !w-11 md:!hidden"
+          >
+            <FilterIcon className="h-[18px] w-[18px]" />
+
+            {mobileFilterCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-moss px-1 font-mono text-[9px] text-on-moss">
+                {mobileFilterCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={fetchPlants}
+            disabled={loading}
+            aria-label={t.refresh}
+            className="vh-icon-btn !h-12 !w-11 md:!hidden"
+          >
+            <RefreshIcon
+              className={`h-[18px] w-[18px] ${loading ? "animate-spin" : ""}`}
+            />
+          </button>
+
+          {/* DESKTOP: REFRESH */}
+
+          <button
+            type="button"
+            onClick={fetchPlants}
+            disabled={loading}
+            className="vh-btn vh-btn-outline hidden !min-h-[52px] md:inline-flex"
+          >
+            <RefreshIcon
+              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
+
+            {t.refresh}
+          </button>
+        </div>
+
+        <p className="mt-2 hidden text-[12px] text-faint md:block">
+          {t.searchDescription}
+        </p>
       </section>
 
       {/* =====================================================
           COLLECTION
       ===================================================== */}
 
-      <section className="relative">
-        <div className="container pb-7 pt-4 md:py-12">
-          {/* =================================================
-              MOBILE SEARCH
-          ================================================= */}
+      <section className="vh-container pb-16 pt-6 md:pb-24 md:pt-10">
+        <div className="md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-8 lg:grid-cols-[256px_minmax(0,1fr)] lg:gap-12">
+          {/* ---------------- SIDEBAR (DESKTOP) ---------------- */}
 
-          <div className="md:hidden">
-            <div className="grid grid-cols-[minmax(0,1fr)_46px_46px] gap-2">
-              {/* SEARCH */}
+          <aside className="hidden md:block">
+            <div className="sticky top-24 space-y-8">
+              <div className="flex items-center justify-between gap-3 border-b border-rule-strong pb-3">
+                <p className="vh-eyebrow flex items-center gap-2">
+                  <FilterIcon className="h-3.5 w-3.5" />
+                  {t.filters}
+                </p>
 
-              <div className="relative">
-                <SearchIcon
-                  className={`absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 ${
-                    darkMode ? "text-gray-500" : "text-slate-400"
-                  }`}
-                />
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="inline-flex items-center gap-1.5 text-[12px] text-moss transition hover:text-moss-hover"
+                  >
+                    <CloseCircleIcon className="h-3.5 w-3.5" />
+                    {t.clearFilters}
+                  </button>
+                )}
+              </div>
 
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={t.mobileSearch}
-                  className={`h-12 w-full rounded-[15px] border pl-10 pr-3 text-[13px] outline-none transition ${
-                    darkMode
-                      ? "border-white/10 bg-[#0a1710]/92 text-white placeholder:text-gray-600 focus:border-emerald-400/40"
-                      : "border-emerald-950/10 bg-white/90 text-slate-900 placeholder:text-slate-400 focus:border-emerald-700/35"
-                  }`}
+              <div>
+                <p className="vh-field-label">{t.familyFilter}</p>
+
+                <FamilyIndex
+                  families={familyIndex}
+                  total={plants.length}
+                  value={familyFilter}
+                  onChange={setFamilyFilter}
+                  allLabel={t.allFamilies}
+                  loading={loading}
                 />
               </div>
 
-              {/* FILTER */}
+              <div>
+                <p className="vh-field-label">{t.artificialGroupFilter}</p>
 
-              <button
-                type="button"
-                onClick={() => setMobileFilterOpen(true)}
-                aria-label={t.filters}
-                className={`relative flex h-12 w-[46px] items-center justify-center rounded-[15px] border transition active:scale-95 ${
-                  darkMode
-                    ? "border-white/10 bg-[#0a1710]/92 text-gray-200"
-                    : "border-emerald-950/10 bg-white/90 text-slate-700"
-                }`}
-              >
-                <FilterIcon className="h-[19px] w-[19px]" />
-
-                {mobileFilterCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-600 px-1 text-[8px] font-black text-white shadow-md">
-                    {mobileFilterCount}
-                  </span>
-                )}
-              </button>
-
-              {/* REFRESH */}
-
-              <button
-                type="button"
-                onClick={fetchPlants}
-                disabled={loading}
-                aria-label={t.refresh}
-                className={`flex h-12 w-[46px] items-center justify-center rounded-[15px] border transition active:scale-95 disabled:opacity-50 ${
-                  darkMode
-                    ? "border-white/10 bg-[#0a1710]/92 text-gray-200"
-                    : "border-emerald-950/10 bg-white/90 text-slate-700"
-                }`}
-              >
-                <RefreshIcon
-                  className={`h-[18px] w-[18px] ${
-                    loading ? "animate-spin" : ""
-                  }`}
+                <FilterDropdown
+                  value={artificialGroupFilter}
+                  onChange={setArtificialGroupFilter}
+                  options={artificialGroups}
+                  placeholder={t.allGroups}
                 />
-              </button>
-            </div>
+              </div>
 
-            {hasActiveFilters && (
-              <div className="mt-2.5 flex items-center justify-between gap-3 px-0.5">
-                <p
-                  className={`min-w-0 truncate text-[10px] ${
-                    darkMode ? "text-white/45" : "text-slate-500"
-                  }`}
-                >
+              <div>
+                <p className="vh-field-label">{t.collectorFilter}</p>
+
+                <FilterDropdown
+                  value={collectorFilter}
+                  onChange={setCollectorFilter}
+                  options={collectors}
+                  placeholder={t.allCollectors}
+                />
+              </div>
+            </div>
+          </aside>
+
+          {/* ---------------- RESULTS ---------------- */}
+
+          <div className="min-w-0">
+            <div
+              id="plant-collection"
+              className="flex scroll-mt-[90px] flex-wrap items-end justify-between gap-4 border-b border-rule pb-4 md:scroll-mt-[100px]"
+            >
+              <div className="min-w-0">
+                <p className="vh-eyebrow">{t.collectionLabel}</p>
+
+                <h2 className="mt-1.5 font-serif text-[1.45rem] leading-tight text-ink md:text-[1.75rem]">
+                  {t.collection}
+                </h2>
+
+                <p className="mt-1.5 text-[13px] text-muted">
                   {t.found}{" "}
-                  <span
-                    className={`font-black ${
-                      darkMode ? "text-emerald-300" : "text-emerald-700"
-                    }`}
-                  >
+                  <span className="font-mono text-ochre tabular-nums">
                     {filteredPlants.length}
-                  </span>{" "}
+                  </span>
+                  {filteredPlants.length !== plants.length && (
+                    <span className="font-mono text-faint tabular-nums">
+                      {" "}
+                      / {plants.length}
+                    </span>
+                  )}{" "}
                   {t.result}
                 </p>
+              </div>
+
+              <div className="hidden items-center gap-2 md:flex">
+                <div className="w-[190px]">
+                  <span className="sr-only">{t.sortFilter}</span>
+
+                  <FilterDropdown
+                    value={sort === "newest" ? "" : sort}
+                    onChange={(value) => setSort(value || "newest")}
+                    options={SORT_OPTIONS.slice(1)}
+                    labels={sortLabels}
+                    placeholder={t.newest}
+                    compact
+                  />
+                </div>
+
+                <div
+                  role="group"
+                  aria-label={t.viewMode}
+                  className="flex items-center rounded-full border border-rule p-0.5"
+                >
+                  <ViewToggleButton
+                    active={view === "grid"}
+                    label={t.gridView}
+                    onClick={() => setView("grid")}
+                  >
+                    <GridIcon className="h-4 w-4" />
+                  </ViewToggleButton>
+
+                  <ViewToggleButton
+                    active={view === "list"}
+                    label={t.listView}
+                    onClick={() => setView("list")}
+                  >
+                    <ListIcon className="h-4 w-4" />
+                  </ViewToggleButton>
+                </div>
+              </div>
+            </div>
+
+            {/* ACTIVE FILTER CHIPS */}
+
+            {hasActiveFilters && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="vh-eyebrow mr-1 !text-[10px]">
+                  {t.activeFilters}
+                </span>
+
+                {activeChips.map((chip) => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    onClick={chip.clear}
+                    title={chip.label}
+                    className="vh-tag vh-tag-moss max-w-full transition hover:bg-moss-tint"
+                  >
+                    <span className="truncate">{chip.value}</span>
+                    <CloseIcon className="h-3 w-3 shrink-0" />
+                  </button>
+                ))}
+
+                {sort !== "newest" && (
+                  <span className="vh-tag">
+                    {t.sortFilter}: {sortLabels[sort]}
+                  </span>
+                )}
 
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className={`shrink-0 text-[10px] font-black ${
-                    darkMode ? "text-emerald-300" : "text-emerald-700"
-                  }`}
+                  className="ml-1 text-[12px] text-muted underline decoration-rule-strong underline-offset-4 transition hover:text-ink md:hidden"
                 >
                   {t.clearFilters}
                 </button>
               </div>
             )}
-          </div>
 
-          {/* =================================================
-              DESKTOP SEARCH + FILTER
-          ================================================= */}
+            {/* ERROR */}
 
-          <div
-            className={`relative hidden rounded-[28px] border p-5 shadow-[0_20px_55px_rgba(0,0,0,0.08)] backdrop-blur-2xl md:block lg:p-6 ${
-              darkMode
-                ? "border-white/10 bg-[#0a1710]/90 shadow-black/20"
-                : "border-emerald-950/[0.09] bg-white/88 shadow-emerald-950/[0.08]"
-            }`}
-          >
-            <div
-              className={`absolute inset-x-10 top-0 h-px ${
-                darkMode
-                  ? "bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent"
-                  : "bg-gradient-to-r from-transparent via-emerald-700/25 to-transparent"
-              }`}
-            />
+            {error && (
+              <div className="vh-panel mt-6 !border-clay/40 !bg-clay-soft p-6 text-center md:mt-8 md:p-8">
+                <AlertIcon className="mx-auto h-6 w-6 text-clay" />
 
-            {/* HEADER */}
+                <h3 className="mt-3 font-serif text-[1.2rem] text-clay">
+                  {t.loadError}
+                </h3>
 
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] ${
-                    darkMode
-                      ? "bg-emerald-400/10 text-emerald-300"
-                      : "bg-emerald-800/[0.08] text-emerald-700"
-                  }`}
-                >
-                  <SearchIcon className="h-[18px] w-[18px]" />
-                </div>
-
-                <div>
-                  <p
-                    className={`text-[10px] font-black uppercase tracking-[0.18em] ${
-                      darkMode ? "text-emerald-400" : "text-emerald-700"
-                    }`}
-                  >
-                    {t.searchLabel}
-                  </p>
-
-                  <p
-                    className={`mt-1 text-xs ${
-                      darkMode ? "text-gray-500" : "text-slate-500"
-                    }`}
-                  >
-                    {t.searchDescription}
-                  </p>
-                </div>
-              </div>
-
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className={`inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-[11px] font-bold transition ${
-                    darkMode
-                      ? "border-white/[0.08] bg-white/[0.035] text-gray-300 hover:bg-white/[0.07]"
-                      : "border-emerald-950/[0.08] bg-white text-slate-600 hover:bg-emerald-50"
-                  }`}
-                >
-                  <CloseCircleIcon className="h-4 w-4" />
-
-                  {t.clearFilters}
-                </button>
-              )}
-            </div>
-
-            {/* SEARCH ROW */}
-
-            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-              <div className="relative">
-                <SearchIcon
-                  className={`absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${
-                    darkMode ? "text-gray-500" : "text-slate-400"
-                  }`}
-                />
-
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={t.search}
-                  className={`h-[52px] w-full rounded-[16px] border pl-12 pr-4 text-sm outline-none transition ${
-                    darkMode
-                      ? "border-white/[0.09] bg-black/20 text-white placeholder:text-gray-600 focus:border-emerald-400/40 focus:bg-black/30"
-                      : "border-emerald-950/[0.09] bg-[#f8fbf7] text-slate-900 placeholder:text-slate-400 focus:border-emerald-700/35 focus:bg-white"
-                  }`}
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={fetchPlants}
-                disabled={loading}
-                className={`inline-flex h-[52px] min-w-[170px] items-center justify-center gap-2 rounded-[16px] border px-5 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                  darkMode
-                    ? "border-white/[0.09] bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]"
-                    : "border-emerald-950/[0.09] bg-white text-slate-700 hover:bg-emerald-50"
-                }`}
-              >
-                <RefreshIcon
-                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-                />
-
-                {t.refresh}
-              </button>
-            </div>
-
-            {/* FILTERS */}
-
-            <div
-              className={`mt-4 rounded-[20px] border p-4 ${
-                darkMode
-                  ? "border-white/[0.065] bg-black/10"
-                  : "border-emerald-950/[0.06] bg-[#f8fbf7]/85"
-              }`}
-            >
-              <div className="mb-3 flex items-center gap-2">
-                <FilterIcon
-                  className={`h-4 w-4 ${
-                    darkMode ? "text-emerald-300" : "text-emerald-700"
-                  }`}
-                />
-
-                <p
-                  className={`text-[10px] font-black uppercase tracking-[0.12em] ${
-                    darkMode ? "text-white/55" : "text-slate-600"
-                  }`}
-                >
-                  {t.filters}
+                <p className="mx-auto mt-2 max-w-xl font-mono text-[12px] text-ink-soft">
+                  {error}
                 </p>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <DesktopFilterField label={t.familyFilter} darkMode={darkMode}>
-                  <FilterDropdown
-                    darkMode={darkMode}
-                    value={familyFilter}
-                    onChange={setFamilyFilter}
-                    options={families}
-                    placeholder={t.allFamilies}
-                  />
-                </DesktopFilterField>
-
-                <DesktopFilterField
-                  label={t.provinceFilter}
-                  darkMode={darkMode}
-                >
-                  <FilterDropdown
-                    darkMode={darkMode}
-                    value={provinceFilter}
-                    onChange={(value) => {
-                      setProvinceFilter(value);
-
-                      setDistrictFilter("");
-                    }}
-                    options={provinces}
-                    placeholder={t.allProvinces}
-                  />
-                </DesktopFilterField>
-
-                <DesktopFilterField
-                  label={t.districtFilter}
-                  darkMode={darkMode}
-                >
-                  <FilterDropdown
-                    darkMode={darkMode}
-                    value={districtFilter}
-                    onChange={setDistrictFilter}
-                    options={districts}
-                    placeholder={t.allDistricts}
-                  />
-                </DesktopFilterField>
-
-                <DesktopFilterField label={t.sortFilter} darkMode={darkMode}>
-                  <FilterDropdown
-                    darkMode={darkMode}
-                    value={sort}
-                    onChange={setSort}
-                    options={["newest", "oldest", "nameAZ", "nameZA"]}
-                    labels={{
-                      newest: t.newest,
-
-                      oldest: t.oldest,
-
-                      nameAZ: t.nameAZ,
-
-                      nameZA: t.nameZA,
-                    }}
-                    placeholder={t.newest}
-                  />
-                </DesktopFilterField>
-              </div>
-            </div>
-          </div>
-
-          {/* =================================================
-              COLLECTION HEADER
-          ================================================= */}
-
-          <div
-            id="plant-collection"
-            className="mt-5 flex scroll-mt-[100px] items-end justify-between gap-3 md:mt-12"
-          >
-            <div>
-              <p
-                className={`text-[8px] font-black uppercase tracking-[0.18em] md:text-[10px] md:tracking-[0.2em] ${
-                  darkMode ? "text-emerald-400" : "text-emerald-700"
-                }`}
-              >
-                {t.collectionLabel}
-              </p>
-
-              <h2
-                className={`mt-1 text-lg font-black tracking-tight md:mt-2 md:text-3xl ${
-                  darkMode ? "text-white" : "text-[#13251a]"
-                }`}
-              >
-                {t.collection}
-              </h2>
-
-              <p
-                className={`mt-1 text-[10px] md:mt-2 md:text-sm ${
-                  darkMode ? "text-gray-400" : "text-slate-500"
-                }`}
-              >
-                {t.found}{" "}
-                <span
-                  className={`font-black ${
-                    darkMode ? "text-emerald-300" : "text-emerald-700"
-                  }`}
-                >
-                  {filteredPlants.length}
-                </span>{" "}
-                {t.result}
-              </p>
-            </div>
-
-            <div
-              className={`hidden items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold md:flex ${
-                darkMode
-                  ? "border-white/10 bg-white/[0.025] text-gray-400"
-                  : "border-emerald-950/10 bg-white/70 text-slate-500"
-              }`}
-            >
-              <LeafIcon className="h-4 w-4" />
-              Virtual Herbarium
-            </div>
-          </div>
-
-          {/* =================================================
-              ERROR
-          ================================================= */}
-
-          {error && (
-            <div
-              className={`mt-6 rounded-[1.4rem] border p-5 text-center md:mt-8 md:p-7 ${
-                darkMode
-                  ? "border-red-400/15 bg-red-500/[0.05]"
-                  : "border-red-200 bg-red-50"
-              }`}
-            >
-              <div
-                className={`mx-auto flex h-11 w-11 items-center justify-center rounded-xl ${
-                  darkMode
-                    ? "bg-red-400/10 text-red-300"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                <AlertIcon className="h-5 w-5" />
-              </div>
-
-              <h3
-                className={`mt-4 font-black ${
-                  darkMode ? "text-red-200" : "text-red-800"
-                }`}
-              >
-                {t.loadError}
-              </h3>
-
-              <p
-                className={`mx-auto mt-2 max-w-xl text-xs md:text-sm ${
-                  darkMode ? "text-red-300/70" : "text-red-600"
-                }`}
-              >
-                {error}
-              </p>
-
-              <button
-                type="button"
-                onClick={fetchPlants}
-                className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white"
-              >
-                <RefreshIcon className="h-4 w-4" />
-
-                {t.retry}
-              </button>
-            </div>
-          )}
-
-          {/* =================================================
-              LOADING
-          ================================================= */}
-
-          {loading && !error && (
-            <div className="mt-4 grid grid-cols-2 gap-2.5 md:mt-8 md:gap-5 lg:grid-cols-3">
-              {Array.from({
-                length: 6,
-              }).map((_, index) => (
-                <SkeletonCard key={index} darkMode={darkMode} />
-              ))}
-            </div>
-          )}
-
-          {/* =================================================
-              EMPTY
-          ================================================= */}
-
-          {!loading && !error && filteredPlants.length === 0 && (
-            <div
-              className={`mt-5 rounded-[1.5rem] border px-5 py-12 text-center md:mt-8 md:rounded-[2rem] md:px-6 md:py-20 ${
-                darkMode
-                  ? "border-white/10 bg-[#0a1710]"
-                  : "border-emerald-950/10 bg-white/80"
-              }`}
-            >
-              <div
-                className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${
-                  darkMode
-                    ? "bg-emerald-400/10 text-emerald-300"
-                    : "bg-emerald-800/10 text-emerald-800"
-                }`}
-              >
-                <LeafIcon className="h-7 w-7" />
-              </div>
-
-              <h3
-                className={`mt-4 text-lg font-black md:text-xl ${
-                  darkMode ? "text-white" : "text-[#173321]"
-                }`}
-              >
-                {plants.length === 0 ? t.noData : t.noSearch}
-              </h3>
-
-              <p
-                className={`mx-auto mt-2 max-w-lg text-xs leading-6 md:mt-3 md:text-sm md:leading-7 ${
-                  darkMode ? "text-gray-400" : "text-slate-500"
-                }`}
-              >
-                {plants.length === 0
-                  ? t.noDataDescription
-                  : t.noSearchDescription}
-              </p>
-
-              {hasActiveFilters && (
                 <button
                   type="button"
-                  onClick={clearFilters}
-                  className={`mt-5 inline-flex min-h-10 items-center justify-center rounded-xl border px-4 text-xs font-bold ${
-                    darkMode
-                      ? "border-white/10 bg-white/[0.04] text-white"
-                      : "border-emerald-950/10 bg-white text-slate-700"
-                  }`}
+                  onClick={fetchPlants}
+                  className="vh-btn vh-btn-primary vh-btn-sm mt-5"
                 >
-                  {t.clearFilters}
+                  <RefreshIcon className="h-4 w-4" />
+                  {t.retry}
                 </button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* =================================================
-              PLANT GRID
-          ================================================= */}
+            {/* LOADING */}
 
-          {!loading && !error && filteredPlants.length > 0 && (
-            <>
-              <div className="mt-4 grid grid-cols-2 gap-2.5 md:mt-8 md:gap-5 lg:grid-cols-3">
-                {paginatedPlants.map((plant) => (
-                  <PlantCard
-                    key={plant.id}
-                    plant={plant}
-                    darkMode={darkMode}
-                    t={t}
-                    getPlantName={getPlantName}
-                    getLocation={getLocation}
-                  />
+            {loading && !error && (
+              <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:gap-5 lg:grid-cols-3 min-[1680px]:grid-cols-4">
+                {Array.from({
+                  length: 6,
+                }).map((_, index) => (
+                  <SkeletonCard key={index} />
                 ))}
               </div>
+            )}
 
-              {/* =============================================
-                  PAGINATION
-              ============================================= */}
+            {/* EMPTY */}
 
-              {totalPages > 1 && (
-                <Pagination
-                  darkMode={darkMode}
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                  t={t}
-                />
-              )}
-            </>
-          )}
+            {!loading && !error && filteredPlants.length === 0 && (
+              <div className="vh-panel mt-6 px-6 py-12 text-center md:mt-8 md:py-16">
+                <LeafIcon className="mx-auto h-6 w-6 text-moss" />
+
+                <p className="mt-4 font-serif text-[1.25rem] italic text-ink-soft md:text-[1.4rem]">
+                  {plants.length === 0 ? t.noData : t.noSearch}
+                </p>
+
+                <p className="mx-auto mt-2 max-w-md text-[13px] leading-6 text-muted">
+                  {plants.length === 0
+                    ? t.noDataDescription
+                    : t.noSearchDescription}
+                </p>
+
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="vh-btn vh-btn-outline vh-btn-sm mt-6"
+                  >
+                    {t.clearFilters}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* RESULTS */}
+
+            {!loading && !error && filteredPlants.length > 0 && (
+              <>
+                {activeView === "list" ? (
+                  <SpecimenTable
+                    plants={paginatedPlants}
+                    t={t}
+                    isEnglish={isEnglish}
+                    getPlantName={getPlantName}
+                    getCommonName={getCommonName}
+                    getLocation={getLocation}
+                    getCollector={getCollector}
+                  />
+                ) : (
+                  <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:gap-5 lg:grid-cols-3 min-[1680px]:grid-cols-4">
+                    {paginatedPlants.map((plant) => (
+                      <PlantCard
+                        key={plant.id}
+                        plant={plant}
+                        t={t}
+                        getPlantName={getPlantName}
+                        getCommonName={getCommonName}
+                        getLocation={getLocation}
+                        getCollector={getCollector}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {totalPages > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    t={t}
+                  />
+                )}
+              </>
+            )}
+          </div>
         </div>
       </section>
 
       {/* =====================================================
-          DESKTOP FOOTER
-      ===================================================== */}
-
-      <footer
-        className={`mt-8 border-t ${
-          darkMode ? "border-white/15" : "border-emerald-950/15"
-        }`}
-      >
-        <div
-          className={`container flex flex-col items-center gap-2 py-5 text-center text-[10px] md:flex-row md:justify-between md:text-left md:text-xs ${
-            darkMode ? "text-white/60" : "text-emerald-950/70"
-          }`}
-        >
-          <p>© 2026 Virtual Herbarium. All rights reserved.</p>
-
-          <div className="flex items-center gap-2">
-            <LeafIcon className="h-3.5 w-3.5 text-emerald-400" />
-
-            <span>{t.footer}</span>
-          </div>
-        </div>
-      </footer>
-
-      {/* =====================================================
-          MOBILE FILTER BOTTOM SHEET
+          MOBILE FILTER SHEET
       ===================================================== */}
 
       {portalReady &&
         mobileFilterOpen &&
         createPortal(
           <div className="fixed inset-0 z-[160] md:hidden">
-            {/* BACKDROP */}
-
             <button
               type="button"
               aria-label={t.closeFilters}
               onClick={() => setMobileFilterOpen(false)}
-              className="absolute inset-0 h-full w-full bg-black/50 backdrop-blur-[3px]"
+              className="absolute inset-0 h-full w-full bg-paper-deep/80"
             />
 
-            {/* SHEET */}
-
             <div
-              className={`absolute inset-x-0 bottom-0 flex max-h-[82dvh] flex-col overflow-hidden rounded-t-[30px] border-t shadow-[0_-24px_70px_rgba(0,0,0,0.28)] ${
-                darkMode
-                  ? "border-white/10 bg-[#08140d] text-white"
-                  : "border-emerald-950/10 bg-[#f4f8f2] text-[#173321]"
-              }`}
+              role="dialog"
+              aria-modal="true"
+              aria-label={t.filterTitle}
+              className="mobile-app-sheet absolute inset-x-0 bottom-0 flex max-h-[86dvh] flex-col overflow-hidden border-t border-rule-strong bg-sheet text-ink shadow-lift"
             >
-              {/* HANDLE */}
-
               <div className="shrink-0 pt-2.5">
-                <div
-                  className={`mx-auto h-1 w-10 rounded-full ${
-                    darkMode ? "bg-white/20" : "bg-emerald-950/15"
-                  }`}
-                />
+                <div className="mx-auto h-1 w-10 rounded-full bg-rule-strong" />
               </div>
 
-              {/* HEADER */}
+              <div className="flex shrink-0 items-start justify-between gap-4 border-b border-rule px-5 pb-4 pt-3">
+                <div className="min-w-0">
+                  <p className="vh-eyebrow flex items-center gap-2 !text-[10px]">
+                    <span className="h-px w-5 bg-ochre" />
+                    {t.filters}
+                  </p>
 
-              <div
-                className={`flex shrink-0 items-start justify-between gap-4 border-b px-5 pb-4 pt-3 ${
-                  darkMode ? "border-white/[0.07]" : "border-emerald-950/[0.07]"
-                }`}
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] ${
-                      darkMode
-                        ? "bg-emerald-400/10 text-emerald-300"
-                        : "bg-emerald-800/[0.08] text-emerald-700"
-                    }`}
-                  >
-                    <FilterIcon className="h-[18px] w-[18px]" />
-                  </div>
+                  <h2 className="mt-1.5 font-serif text-[1.35rem] leading-tight text-ink">
+                    {t.filterTitle}
+                  </h2>
 
-                  <div className="min-w-0">
-                    <h2
-                      className={`text-[17px] font-black leading-tight ${
-                        darkMode ? "text-white" : "text-[#173321]"
-                      }`}
-                    >
-                      {t.filterTitle}
-                    </h2>
-
-                    <p
-                      className={`mt-1 text-[10px] leading-4 ${
-                        darkMode ? "text-white/45" : "text-slate-500"
-                      }`}
-                    >
-                      {t.filterDescription}
-                    </p>
-                  </div>
+                  <p className="mt-1 text-[12px] leading-5 text-muted">
+                    {t.filterDescription}
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setMobileFilterOpen(false)}
                   aria-label={t.closeFilters}
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border transition active:scale-95 ${
-                    darkMode
-                      ? "border-white/10 bg-white/[0.04] text-white"
-                      : "border-emerald-950/10 bg-white/80 text-slate-700"
-                  }`}
+                  className="vh-icon-btn"
                 >
                   <CloseIcon className="h-[18px] w-[18px]" />
                 </button>
               </div>
 
-              {/* ACTIVE FILTER */}
-
-              {mobileFilterCount > 0 && (
-                <div className="shrink-0 px-5 pt-3">
-                  <div
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[9px] font-black ${
-                      darkMode
-                        ? "bg-emerald-400/10 text-emerald-300"
-                        : "bg-emerald-800/[0.08] text-emerald-700"
-                    }`}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5">
+                {mobileFilterCount > 0 && (
+                  <span className="vh-tag vh-tag-moss">
+                    <span className="h-1.5 w-1.5 rounded-full bg-moss" />
                     {mobileFilterCount} {t.activeFilters}
+                  </span>
+                )}
+
+                <div>
+                  <p className="vh-field-label">{t.sortFilter}</p>
+
+                  <FilterDropdown
+                    value={sort === "newest" ? "" : sort}
+                    onChange={(value) => setSort(value || "newest")}
+                    options={SORT_OPTIONS.slice(1)}
+                    labels={sortLabels}
+                    placeholder={t.newest}
+                    mobile
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="min-w-0">
+                    <p className="vh-field-label truncate">
+                      {t.artificialGroupFilter}
+                    </p>
+
+                    <FilterDropdown
+                      value={artificialGroupFilter}
+                      onChange={setArtificialGroupFilter}
+                      options={artificialGroups}
+                      placeholder={t.allGroups}
+                      mobile
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="vh-field-label truncate">
+                      {t.collectorFilter}
+                    </p>
+
+                    <FilterDropdown
+                      value={collectorFilter}
+                      onChange={setCollectorFilter}
+                      options={collectors}
+                      placeholder={t.allCollectors}
+                      mobile
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* FILTER CONTENT */}
+                <div>
+                  <p className="vh-field-label">{t.familyFilter}</p>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
-                <div
-                  className={`rounded-[20px] border p-3 ${
-                    darkMode
-                      ? "border-white/[0.07] bg-white/[0.025]"
-                      : "border-emerald-950/[0.07] bg-white/70"
-                  }`}
-                >
-                  <div className="grid grid-cols-2 gap-3">
-                    <MobileFilterField
-                      label={t.familyFilter}
-                      darkMode={darkMode}
-                    >
-                      <FilterDropdown
-                        darkMode={darkMode}
-                        value={familyFilter}
-                        onChange={setFamilyFilter}
-                        options={families}
-                        placeholder={t.allFamilies}
-                        mobile
-                      />
-                    </MobileFilterField>
-
-                    <MobileFilterField
-                      label={t.provinceFilter}
-                      darkMode={darkMode}
-                    >
-                      <FilterDropdown
-                        darkMode={darkMode}
-                        value={provinceFilter}
-                        onChange={(value) => {
-                          setProvinceFilter(value);
-
-                          setDistrictFilter("");
-                        }}
-                        options={provinces}
-                        placeholder={t.allProvinces}
-                        mobile
-                      />
-                    </MobileFilterField>
-
-                    <MobileFilterField
-                      label={t.districtFilter}
-                      darkMode={darkMode}
-                    >
-                      <FilterDropdown
-                        darkMode={darkMode}
-                        value={districtFilter}
-                        onChange={setDistrictFilter}
-                        options={districts}
-                        placeholder={t.allDistricts}
-                        mobile
-                      />
-                    </MobileFilterField>
-
-                    <MobileFilterField label={t.sortFilter} darkMode={darkMode}>
-                      <FilterDropdown
-                        darkMode={darkMode}
-                        value={sort}
-                        onChange={setSort}
-                        options={["newest", "oldest", "nameAZ", "nameZA"]}
-                        labels={{
-                          newest: t.newest,
-
-                          oldest: t.oldest,
-
-                          nameAZ: t.nameAZ,
-
-                          nameZA: t.nameZA,
-                        }}
-                        placeholder={t.newest}
-                        mobile
-                      />
-                    </MobileFilterField>
-                  </div>
+                  <FamilyIndex
+                    families={familyIndex}
+                    total={plants.length}
+                    value={familyFilter}
+                    onChange={setFamilyFilter}
+                    allLabel={t.allFamilies}
+                    loading={loading}
+                    mobile
+                  />
                 </div>
               </div>
 
-              {/* ACTIONS */}
-
-              <div
-                className={`shrink-0 border-t px-6 pb-[calc(20px+env(safe-area-inset-bottom))] pt-4 backdrop-blur-xl ${
-                  darkMode
-                    ? "border-white/[0.07] bg-[#08140d]/96"
-                    : "border-emerald-950/[0.07] bg-[#f4f8f2]/96"
-                }`}
-              >
+              <div className="shrink-0 border-t border-rule bg-sheet px-5 pb-[calc(18px+env(safe-area-inset-bottom))] pt-4">
                 <div className="grid grid-cols-[0.9fr_1.1fr] gap-3">
                   <button
                     type="button"
                     onClick={clearFilters}
                     disabled={!hasActiveFilters}
-                    className={`flex min-h-[52px] items-center justify-center gap-2 rounded-[16px] border px-3 text-[11px] font-black transition active:scale-[0.98] disabled:opacity-40 ${
-                      darkMode
-                        ? "border-white/10 bg-white/[0.04] text-gray-200"
-                        : "border-emerald-950/[0.09] bg-white text-slate-700 shadow-[0_4px_18px_rgba(25,55,34,0.05)]"
-                    }`}
+                    className="vh-btn vh-btn-outline !px-3"
                   >
                     <CloseCircleIcon className="h-4 w-4 shrink-0" />
-
                     <span className="truncate">{t.clearFilters}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setMobileFilterOpen(false)}
-                    className="flex min-h-[52px] items-center justify-center gap-2 rounded-[16px] bg-emerald-700 px-3 text-[11px] font-black text-white shadow-[0_10px_28px_rgba(16,120,65,0.24)] transition active:scale-[0.98]"
+                    className="vh-btn vh-btn-primary !px-3"
                   >
-                    <SearchIcon className="h-4 w-4 shrink-0" />
-
                     <span className="truncate">{t.applyFilters}</span>
 
-                    <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-white/15 px-1.5 text-[9px]">
+                    <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-on-moss/20 px-1.5 font-mono text-[10px]">
                       {filteredPlants.length}
                     </span>
                   </button>
@@ -1616,7 +1396,139 @@ export default function PlantsPage() {
           </div>,
           document.body,
         )}
-    </main>
+    </>
+  );
+}
+
+/* =========================================================
+   SUSPENSE FALLBACK
+========================================================= */
+
+function CatalogueFallback() {
+  return (
+    <div className="vh-container py-10 md:py-14" aria-hidden="true">
+      <div className="vh-skeleton h-3 w-40 rounded" />
+      <div className="vh-skeleton mt-6 h-12 w-3/4 max-w-[560px] rounded" />
+      <div className="vh-skeleton mt-4 h-4 w-2/3 max-w-[480px] rounded" />
+      <div className="vh-skeleton mt-10 h-[52px] w-full rounded-full" />
+
+      <div className="mt-10 grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-3 min-[1680px]:grid-cols-4">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <SkeletonCard key={index} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   FAMILY INDEX
+   Catalogue-style list: name ····· count
+========================================================= */
+
+function FamilyIndex({
+  families,
+  total,
+  value,
+  onChange,
+  allLabel,
+  loading,
+  mobile = false,
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-3 py-1">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="vh-skeleton h-4 rounded" />
+        ))}
+      </div>
+    );
+  }
+
+  const items = [{ name: "", label: allLabel, count: total }].concat(
+    families.map((family) => ({
+      name: family.name,
+      label: family.name,
+      count: family.count,
+    })),
+  );
+
+  return (
+    <ul
+      className={`overflow-y-auto overscroll-contain border-t border-rule pr-1 ${
+        mobile
+          ? "max-h-[300px]"
+          : "max-h-[min(440px,calc(100dvh-380px))] min-h-[160px]"
+      }`}
+    >
+      {items.map((item) => {
+        const active = value === item.name;
+
+        return (
+          <li key={item.name || "__all"}>
+            <button
+              type="button"
+              onClick={() => onChange(item.name)}
+              aria-pressed={active}
+              className={`group relative flex w-full items-baseline gap-2 border-b border-rule py-2.5 pl-3 pr-1 text-left transition ${
+                active ? "bg-moss-soft" : "hover:bg-moss-soft"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`absolute inset-y-1.5 left-0 w-[2px] rounded-full transition ${
+                  active ? "bg-moss" : "bg-transparent"
+                }`}
+              />
+
+              <span
+                className={`min-w-0 truncate ${
+                  item.name
+                    ? "font-serif text-[15px]"
+                    : "text-[13px] font-medium"
+                } ${active ? "text-moss" : "text-ink-soft group-hover:text-ink"}`}
+              >
+                {item.label}
+              </span>
+
+              <span
+                aria-hidden="true"
+                className="min-w-3 flex-1 translate-y-[-3px] border-b border-dotted border-rule-strong"
+              />
+
+              <span
+                className={`vh-catalog shrink-0 ${active ? "!text-ochre" : ""}`}
+              >
+                {String(item.count).padStart(2, "0")}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/* =========================================================
+   VIEW TOGGLE
+========================================================= */
+
+function ViewToggleButton({ active, label, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={label}
+      title={label}
+      className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+        active
+          ? "bg-moss text-on-moss"
+          : "text-muted hover:bg-moss-soft hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -1624,38 +1536,24 @@ export default function PlantsPage() {
    PAGINATION
 ========================================================= */
 
-function Pagination({ darkMode, currentPage, totalPages, onPageChange, t }) {
+function Pagination({ currentPage, totalPages, onPageChange, t }) {
   const visiblePages = getVisiblePages(currentPage, totalPages);
 
   return (
     <nav
       aria-label="Pagination"
-      className="mt-7 flex flex-col items-center gap-2.5 md:mt-10"
+      className="mt-10 flex flex-col items-center gap-3 border-t border-rule pt-8 md:mt-14"
     >
-      <div
-        className={`inline-flex max-w-full items-center gap-1.5 rounded-[18px] border p-1.5 backdrop-blur-xl md:gap-2 md:rounded-[20px] md:p-2 ${
-          darkMode
-            ? "border-white/10 bg-[#0a1710]/88 shadow-[0_14px_38px_rgba(0,0,0,0.18)]"
-            : "border-emerald-950/[0.09] bg-white/88 shadow-[0_12px_32px_rgba(25,55,34,0.07)]"
-        }`}
-      >
-        {/* PREVIOUS */}
-
+      <div className="flex max-w-full items-center gap-1.5 md:gap-2">
         <button
           type="button"
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
           aria-label={t.previousPage}
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 md:h-11 md:w-11 ${
-            darkMode
-              ? "border-white/[0.09] bg-white/[0.035] text-white hover:bg-white/[0.08]"
-              : "border-emerald-950/[0.09] bg-white text-emerald-900 hover:bg-emerald-50"
-          }`}
+          className="vh-icon-btn disabled:!opacity-30"
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
-
-        {/* PAGE NUMBERS */}
 
         <div className="flex min-w-0 items-center gap-1">
           {visiblePages.map((page, index) => {
@@ -1663,11 +1561,9 @@ function Pagination({ darkMode, currentPage, totalPages, onPageChange, t }) {
               return (
                 <span
                   key={`ellipsis-${index}`}
-                  className={`flex h-10 min-w-[22px] items-center justify-center text-[11px] font-bold md:h-11 md:min-w-7 md:text-xs ${
-                    darkMode ? "text-white/35" : "text-slate-400"
-                  }`}
+                  className="flex h-10 min-w-[22px] items-center justify-center font-mono text-[12px] text-faint md:min-w-7"
                 >
-                  •••
+                  …
                 </span>
               );
             }
@@ -1680,60 +1576,32 @@ function Pagination({ darkMode, currentPage, totalPages, onPageChange, t }) {
                 type="button"
                 onClick={() => onPageChange(page)}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-10 min-w-10 items-center justify-center rounded-[12px] px-2 text-[11px] font-black transition active:scale-95 md:h-11 md:min-w-11 md:text-sm ${
+                className={`flex h-10 min-w-10 items-center justify-center rounded-full px-2 font-mono text-[13px] tabular-nums transition ${
                   active
-                    ? "bg-emerald-700 text-white shadow-[0_8px_20px_rgba(4,120,87,0.28)]"
-                    : darkMode
-                      ? "text-white/65 hover:bg-white/[0.06] hover:text-white"
-                      : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-800"
+                    ? "bg-moss text-on-moss"
+                    : "text-ink-soft hover:bg-moss-soft hover:text-ink"
                 }`}
               >
-                {page}
+                {String(page).padStart(2, "0")}
               </button>
             );
           })}
         </div>
-
-        {/* NEXT */}
 
         <button
           type="button"
           disabled={currentPage === totalPages}
           onClick={() => onPageChange(currentPage + 1)}
           aria-label={t.nextPage}
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 md:h-11 md:w-11 ${
-            darkMode
-              ? "border-white/[0.09] bg-white/[0.035] text-white hover:bg-white/[0.08]"
-              : "border-emerald-950/[0.09] bg-white text-emerald-900 hover:bg-emerald-50"
-          }`}
+          className="vh-icon-btn disabled:!opacity-30"
         >
           <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
 
-      {/* PAGE INFO */}
-
-      <p
-        className={`text-[10px] font-semibold md:text-xs ${
-          darkMode ? "text-white/45" : "text-slate-500"
-        }`}
-      >
-        {t.page}{" "}
-        <span
-          className={`font-black ${
-            darkMode ? "text-white/75" : "text-emerald-800"
-          }`}
-        >
-          {currentPage}
-        </span>{" "}
-        {t.pageOf}{" "}
-        <span
-          className={`font-black ${
-            darkMode ? "text-white/75" : "text-emerald-800"
-          }`}
-        >
-          {totalPages}
-        </span>
+      <p className="vh-catalog">
+        {t.page} <span className="text-ink-soft">{currentPage}</span> {t.pageOf}{" "}
+        <span className="text-ink-soft">{totalPages}</span>
       </p>
     </nav>
   );
@@ -1765,185 +1633,17 @@ function getVisiblePages(currentPage, totalPages) {
 }
 
 /* =========================================================
-   MOBILE STAT
-========================================================= */
-
-function MobileStat({ darkMode, icon, value, label }) {
-  return (
-    <div
-      className={`relative flex min-h-[96px] min-w-0 flex-col items-center justify-center overflow-hidden rounded-[18px] border px-2.5 py-3 text-center backdrop-blur-xl ${
-        darkMode
-          ? "border-white/[0.08] bg-[#0a1710]/72 shadow-[0_10px_28px_rgba(0,0,0,0.14)]"
-          : "border-emerald-950/[0.08] bg-white/76 shadow-[0_10px_26px_rgba(25,55,34,0.055)]"
-      }`}
-    >
-      {/* GLOW */}
-
-      <div
-        className={`pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl ${
-          darkMode ? "bg-emerald-400/[0.06]" : "bg-emerald-600/[0.055]"
-        }`}
-      />
-
-      {/* ICON */}
-
-      <div
-        className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/10"
-            : "bg-emerald-800/[0.075] text-emerald-700 ring-1 ring-emerald-900/[0.04]"
-        }`}
-      >
-        {icon}
-      </div>
-
-      {/* NUMBER */}
-
-      <span
-        className={`relative mt-1.5 text-[25px] font-black leading-none tracking-[-0.05em] ${
-          darkMode ? "text-white" : "text-[#173321]"
-        }`}
-      >
-        {value}
-      </span>
-
-      {/* LABEL */}
-
-      <p
-        className={`relative mt-1.5 max-w-full text-[8.5px] font-extrabold leading-[1.25] ${
-          darkMode ? "text-white/52" : "text-[#66778c]"
-        }`}
-      >
-        {label}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
-   DESKTOP STAT
-========================================================= */
-
-function StatCard({ darkMode, icon, label, value, suffix }) {
-  return (
-    <div
-      className={`relative flex min-h-[92px] items-center overflow-hidden rounded-[18px] border px-4 py-4 backdrop-blur-xl transition duration-300 hover:-translate-y-1 ${
-        darkMode
-          ? "border-white/[0.09] bg-black/20 shadow-[0_12px_32px_rgba(0,0,0,0.12)]"
-          : "border-emerald-950/[0.08] bg-white/70 shadow-[0_10px_28px_rgba(25,55,34,0.05)]"
-      }`}
-    >
-      {/* GLOW */}
-
-      <div
-        className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full blur-3xl ${
-          darkMode ? "bg-emerald-400/[0.05]" : "bg-emerald-600/[0.045]"
-        }`}
-      />
-
-      {/* ICON */}
-
-      <div
-        className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/10"
-            : "bg-emerald-800/[0.075] text-emerald-700 ring-1 ring-emerald-900/[0.04]"
-        }`}
-      >
-        {icon}
-      </div>
-
-      {/* CONTENT */}
-
-      <div className="relative ml-4 min-w-0 flex-1">
-        <p
-          className={`truncate text-[9px] font-extrabold uppercase tracking-[0.08em] ${
-            darkMode ? "text-white/42" : "text-slate-500"
-          }`}
-        >
-          {label}
-        </p>
-
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <span
-            className={`text-[28px] font-black leading-none tracking-[-0.05em] ${
-              darkMode ? "text-white" : "text-[#173321]"
-            }`}
-          >
-            {value}
-          </span>
-
-          <span
-            className={`text-[9px] font-semibold ${
-              darkMode ? "text-white/32" : "text-slate-400"
-            }`}
-          >
-            {suffix}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   DESKTOP FILTER FIELD
-========================================================= */
-
-function DesktopFilterField({ label, darkMode, children }) {
-  return (
-    <div className="min-w-0">
-      <p
-        className={`mb-1.5 px-0.5 text-[9px] font-black uppercase tracking-[0.08em] ${
-          darkMode ? "text-white/45" : "text-slate-500"
-        }`}
-      >
-        {label}
-      </p>
-
-      {children}
-    </div>
-  );
-}
-
-/* =========================================================
-   MOBILE FILTER FIELD
-========================================================= */
-
-function MobileFilterField({ label, darkMode, children }) {
-  return (
-    <div className="min-w-0">
-      <p
-        className={`mb-1.5 flex items-center gap-1.5 px-0.5 text-[9px] font-black ${
-          darkMode ? "text-white/55" : "text-slate-600"
-        }`}
-      >
-        <span
-          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-            darkMode ? "bg-emerald-400" : "bg-emerald-700"
-          }`}
-        />
-
-        <span className="truncate">{label}</span>
-      </p>
-
-      {children}
-    </div>
-  );
-}
-
-/* =========================================================
    CUSTOM FILTER DROPDOWN
 ========================================================= */
 
 function FilterDropdown({
-  darkMode,
   value,
   onChange,
   options,
   placeholder,
   labels = {},
   mobile = false,
+  compact = false,
 }) {
   const [open, setOpen] = useState(false);
 
@@ -1954,10 +1654,6 @@ function FilterDropdown({
   const menuRef = useRef(null);
 
   const selectedLabel = value ? labels[value] || value : placeholder;
-
-  /* =====================================================
-     POSITION
-  ===================================================== */
 
   function updateMenuPosition() {
     const button = buttonRef.current;
@@ -2017,10 +1713,6 @@ function FilterDropdown({
     });
   }
 
-  /* =====================================================
-     OPEN EFFECTS
-  ===================================================== */
-
   useEffect(() => {
     if (!open) {
       return;
@@ -2059,20 +1751,14 @@ function FilterDropdown({
     }
 
     window.addEventListener("resize", handleResize);
-
     window.addEventListener("scroll", handleScroll, true);
-
     window.addEventListener("keydown", handleKeyDown);
-
     document.addEventListener("pointerdown", handlePointerDown);
 
     return () => {
       window.removeEventListener("resize", handleResize);
-
       window.removeEventListener("scroll", handleScroll, true);
-
       window.removeEventListener("keydown", handleKeyDown);
-
       document.removeEventListener("pointerdown", handlePointerDown);
     };
   }, [open]);
@@ -2091,37 +1777,23 @@ function FilterDropdown({
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`flex w-full items-center justify-between gap-2 border text-left font-bold outline-none transition ${
-          mobile
-            ? "h-[46px] rounded-[13px] px-3 text-[11px]"
-            : "h-[48px] rounded-[14px] px-3.5 text-[12px] lg:text-sm"
-        } ${
-          open
-            ? darkMode
-              ? "border-emerald-400/45 bg-[#0d1d13] text-white ring-2 ring-emerald-400/10"
-              : "border-emerald-700/40 bg-white text-slate-800 ring-2 ring-emerald-700/10"
-            : darkMode
-              ? "border-white/[0.08] bg-[#0c1b12] text-gray-200"
-              : "border-emerald-950/[0.09] bg-white text-slate-700 shadow-[0_3px_14px_rgba(25,55,34,0.035)]"
+        className={`vh-input flex items-center justify-between gap-2 text-left ${
+          compact
+            ? "!min-h-[40px] !rounded-full !py-2 !pl-4 !pr-2.5 !text-[13px]"
+            : mobile
+              ? "!min-h-[44px] !py-2 !pl-3 !pr-2 !text-[13px]"
+              : "!min-h-[44px] !py-2 !pl-3.5 !pr-2.5 !text-[14px]"
+        } ${open ? "!border-moss shadow-[0_0_0_3px_var(--moss-soft)]" : ""} ${
+          value ? "!text-ink" : "!text-ink-soft"
         }`}
       >
         <span className="min-w-0 truncate">{selectedLabel}</span>
 
-        <span
-          className={`flex shrink-0 items-center justify-center rounded-[9px] transition ${
-            mobile ? "h-6 w-6" : "h-7 w-7"
-          } ${
-            darkMode
-              ? "bg-white/[0.04] text-white/45"
-              : "bg-emerald-950/[0.035] text-slate-400"
+        <ChevronDownIcon
+          className={`h-4 w-4 shrink-0 text-faint transition-transform duration-200 ${
+            open ? "rotate-180" : ""
           }`}
-        >
-          <ChevronDownIcon
-            className={`h-3.5 w-3.5 transition-transform duration-200 ${
-              open ? "rotate-180" : ""
-            }`}
-          />
-        </span>
+        />
       </button>
 
       {open &&
@@ -2133,27 +1805,16 @@ function FilterDropdown({
             role="listbox"
             style={{
               position: "fixed",
-
               left: menuPosition.left,
-
               width: menuPosition.width,
-
               top: menuPosition.top,
-
               bottom: menuPosition.bottom,
-
               maxHeight: menuPosition.maxHeight,
-
               zIndex: 260,
             }}
-            className={`overflow-y-auto rounded-[16px] border p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.20)] backdrop-blur-2xl ${
-              darkMode
-                ? "border-white/10 bg-[#0b1810]/[0.98]"
-                : "border-emerald-950/10 bg-white/[0.98]"
-            }`}
+            className="overflow-y-auto rounded-[6px] border border-rule-strong bg-sheet-raised p-1 text-ink shadow-lift"
           >
             <DropdownOption
-              darkMode={darkMode}
               active={!value}
               label={placeholder}
               onClick={() => handleSelect("")}
@@ -2162,7 +1823,6 @@ function FilterDropdown({
             {options.map((option) => (
               <DropdownOption
                 key={option}
-                darkMode={darkMode}
                 active={value === option}
                 label={labels[option] || option}
                 onClick={() => handleSelect(option)}
@@ -2179,32 +1839,22 @@ function FilterDropdown({
    DROPDOWN OPTION
 ========================================================= */
 
-function DropdownOption({ darkMode, active, label, onClick }) {
+function DropdownOption({ active, label, onClick }) {
   return (
     <button
       type="button"
       role="option"
       aria-selected={active}
       onClick={onClick}
-      className={`flex min-h-[42px] w-full items-center justify-between gap-3 rounded-[11px] px-3 text-left text-[12px] font-bold transition ${
+      className={`flex min-h-[40px] w-full items-center justify-between gap-3 rounded-[4px] px-3 text-left text-[13px] transition ${
         active
-          ? darkMode
-            ? "bg-emerald-400/12 text-emerald-300"
-            : "bg-emerald-700/[0.09] text-emerald-800"
-          : darkMode
-            ? "text-gray-300 hover:bg-white/[0.05] hover:text-white"
-            : "text-slate-700 hover:bg-emerald-950/[0.04]"
+          ? "bg-moss-soft text-moss"
+          : "text-ink-soft hover:bg-moss-soft hover:text-ink"
       }`}
     >
       <span className="min-w-0 break-words">{label}</span>
 
-      {active && (
-        <CheckIcon
-          className={`h-4 w-4 shrink-0 ${
-            darkMode ? "text-emerald-300" : "text-emerald-700"
-          }`}
-        />
-      )}
+      {active && <CheckIcon className="h-4 w-4 shrink-0 text-moss" />}
     </button>
   );
 }
@@ -2213,173 +1863,256 @@ function DropdownOption({ darkMode, active, label, onClick }) {
    PLANT CARD
 ========================================================= */
 
-function PlantCard({ plant, darkMode, t, getPlantName, getLocation }) {
+function hasTextValue(value) {
+  return !(
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  );
+}
+
+function PlantCard({
+  plant,
+  t,
+  getPlantName,
+  getCommonName,
+  getLocation,
+  getCollector,
+}) {
   const image = plant.image_url || "";
 
+  const botanicalName = plant.botanical_name?.trim();
+
+  const commonName = getCommonName(plant);
+
+  const locality = getLocation(plant) || t.unknown;
+
+  const collector = getCollector(plant);
+
   return (
-    <article
-      className={`group relative min-w-0 overflow-hidden rounded-[1rem] border transition duration-300 md:rounded-[1.7rem] md:hover:-translate-y-1.5 ${
-        darkMode
-          ? "border-white/10 bg-[#0a1710] shadow-[0_8px_22px_rgba(0,0,0,0.18)] md:shadow-[0_16px_45px_rgba(0,0,0,0.22)] md:hover:border-emerald-400/25"
-          : "border-emerald-950/10 bg-white/90 shadow-[0_7px_20px_rgba(25,55,34,0.07)] md:shadow-[0_14px_35px_rgba(25,55,34,0.08)] md:hover:border-emerald-700/20"
-      }`}
-    >
-      <Link href={`/plants/${plant.id}`} className="block">
-        <div className="relative h-[108px] overflow-hidden min-[390px]:h-[122px] md:h-auto md:aspect-[1.45/1]">
+    <article className="vh-specimen group min-w-0">
+      <Link href={`/plants/${plant.id}`} className="flex flex-1 flex-col">
+        <div className="vh-specimen-media aspect-[4/5]">
           {image ? (
-            <img
-              src={image}
-              alt={getPlantName(plant)}
-              loading="lazy"
-              className="h-full w-full object-cover transition duration-700 md:group-hover:scale-[1.055]"
-            />
+            <img src={image} alt={getPlantName(plant)} loading="lazy" />
           ) : (
-            <div
-              className={`flex h-full w-full items-center justify-center ${
-                darkMode
-                  ? "bg-[radial-gradient(circle_at_center,rgba(52,140,78,0.18),transparent_70%),#102218]"
-                  : "bg-[radial-gradient(circle_at_center,rgba(30,110,62,0.12),transparent_70%),#edf5ed]"
-              }`}
-            >
-              <LeafIcon
-                className={`h-8 w-8 md:h-16 md:w-16 ${
-                  darkMode ? "text-emerald-400/40" : "text-emerald-800/30"
-                }`}
-              />
+            <div className="flex h-full w-full items-center justify-center bg-paper-deep">
+              <LeafIcon className="h-8 w-8 text-faint md:h-12 md:w-12" />
             </div>
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#020b05]/90 via-transparent to-black/10" />
-
-          <div className="absolute left-2 top-2 md:left-4 md:top-4">
-            <span className="inline-flex rounded-full border border-white/15 bg-black/35 px-1.5 py-0.5 text-[6px] font-black tracking-[0.1em] text-white backdrop-blur-xl min-[390px]:text-[7px] md:px-3 md:py-1.5 md:text-[9px] md:tracking-[0.16em]">
-              {t.specimen}
+          {hasTextValue(plant.artificial_group) && (
+            <span className="absolute left-2 top-2 max-w-[calc(100%-16px)] truncate rounded-full border border-rule bg-sheet/90 px-2 py-0.5 text-[10px] text-ink-soft md:left-3 md:top-3 md:px-2.5 md:text-[11px]">
+              {plant.artificial_group}
             </span>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col p-3 md:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="vh-family min-w-0 truncate !text-[10px] md:!text-[10.5px]">
+              {plant.family || "—"}
+            </span>
+
+            {hasTextValue(plant.pnu_no) && (
+              <span className="vh-catalog shrink-0 !text-[10px] md:!text-[11px]">
+                PNU {plant.pnu_no}
+              </span>
+            )}
           </div>
 
-          {plant.botanical_name && (
-            <div className="absolute inset-x-0 bottom-0 p-2 md:p-5">
-              <p className="truncate text-[9px] font-semibold italic text-emerald-200 min-[390px]:text-[10px] md:text-sm">
-                {plant.botanical_name}
-              </p>
-            </div>
+          <h3 className="vh-binomial mt-2 line-clamp-2 text-[1rem] leading-snug text-ink transition group-hover:text-moss md:text-[1.15rem]">
+            {botanicalName || getPlantName(plant)}
+          </h3>
+
+          {botanicalName && commonName && (
+            <p className="mt-1 truncate text-[12px] text-muted md:text-[13px]">
+              {commonName}
+            </p>
           )}
+
+          <div className="mt-auto pt-3 md:pt-4">
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1 border-t border-dashed border-rule-strong pt-2.5 text-[11px] md:pt-3 md:text-[12px]">
+              <dt className="text-faint">
+                <PinIcon className="h-3 w-3 translate-y-[1px] md:h-3.5 md:w-3.5" />
+                <span className="sr-only">{t.location}</span>
+              </dt>
+              <dd className="truncate text-ink-soft" title={locality}>
+                {locality}
+              </dd>
+
+              {collector && (
+                <>
+                  <dt className="hidden text-faint md:block">
+                    <UserIcon className="h-3.5 w-3.5 translate-y-[1px]" />
+                    <span className="sr-only">{t.collector}</span>
+                  </dt>
+                  <dd
+                    className="hidden truncate text-ink-soft md:block"
+                    title={collector}
+                  >
+                    {collector}
+                    {plant.collector_no && (
+                      <span className="vh-catalog ml-1.5">
+                        <span className="sr-only">{t.collectorNo} </span>
+                        {plant.collector_no}
+                      </span>
+                    )}
+                  </dd>
+                </>
+              )}
+
+              {!collector && plant.collector_no && (
+                <>
+                  <dt className="hidden text-faint md:block">
+                    <DocumentIcon className="h-3.5 w-3.5 translate-y-[1px]" />
+                    <span className="sr-only">{t.collectorNo}</span>
+                  </dt>
+                  <dd className="vh-catalog hidden truncate md:block">
+                    {plant.collector_no}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+
+          <span className="mt-3 hidden items-center gap-1.5 text-[12px] text-moss md:inline-flex">
+            {t.viewDetails}
+            <ChevronRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
         </div>
       </Link>
-
-      <div className="p-2.5 md:p-5">
-        <Link href={`/plants/${plant.id}`}>
-          <h3
-            className={`truncate text-[13px] font-black leading-5 tracking-tight min-[390px]:text-sm md:text-xl ${
-              darkMode ? "text-white" : "text-[#14271a]"
-            }`}
-          >
-            {getPlantName(plant)}
-          </h3>
-        </Link>
-
-        <div className="mt-2 grid grid-cols-1 gap-1.5 md:mt-4 md:grid-cols-2 md:gap-x-4 md:gap-y-3">
-          {plant.family && (
-            <InformationRow
-              darkMode={darkMode}
-              icon={<BranchIcon className="h-3 w-3 md:h-4 md:w-4" />}
-              label={t.family}
-              value={plant.family}
-            />
-          )}
-
-          <InformationRow
-            darkMode={darkMode}
-            icon={<PinIcon className="h-3 w-3 md:h-4 md:w-4" />}
-            label={t.location}
-            value={getLocation(plant) || t.unknown}
-          />
-
-          {plant.collected_by && (
-            <div className="hidden md:block">
-              <InformationRow
-                darkMode={darkMode}
-                icon={<UserIcon className="h-4 w-4" />}
-                label={t.collector}
-                value={plant.collected_by}
-              />
-            </div>
-          )}
-
-          {plant.specimen_number && (
-            <div className="hidden md:block">
-              <InformationRow
-                darkMode={darkMode}
-                icon={<DocumentIcon className="h-4 w-4" />}
-                label={t.specimenNumber}
-                value={plant.specimen_number}
-              />
-            </div>
-          )}
-        </div>
-
-        <div
-          className={`my-2.5 h-px md:my-5 ${
-            darkMode ? "bg-white/10" : "bg-emerald-950/10"
-          }`}
-        />
-
-        <Link
-          href={`/plants/${plant.id}`}
-          className={`group/button flex min-h-[34px] w-full items-center justify-between rounded-lg border px-2.5 text-[9px] font-bold transition min-[390px]:text-[10px] md:min-h-11 md:rounded-xl md:px-4 md:text-sm ${
-            darkMode
-              ? "border-white/10 bg-white/[0.025] text-gray-200 md:hover:border-emerald-400/25 md:hover:bg-emerald-400/[0.07] md:hover:text-emerald-200"
-              : "border-emerald-950/10 bg-[#f7faf6] text-slate-700 md:hover:border-emerald-700/20 md:hover:bg-emerald-50 md:hover:text-emerald-800"
-          }`}
-        >
-          <span className="flex min-w-0 items-center gap-1.5 md:gap-2">
-            <DocumentIcon className="h-3 w-3 shrink-0 md:h-4 md:w-4" />
-
-            <span className="truncate">{t.viewDetails}</span>
-          </span>
-
-          <ChevronRightIcon className="h-3 w-3 shrink-0 md:h-4 md:w-4" />
-        </Link>
-      </div>
     </article>
   );
 }
 
 /* =========================================================
-   INFORMATION ROW
+   SPECIMEN TABLE (LIST VIEW, DESKTOP)
 ========================================================= */
 
-function InformationRow({ darkMode, icon, label, value }) {
+function SpecimenTable({
+  plants,
+  t,
+  isEnglish,
+  getPlantName,
+  getCommonName,
+  getLocation,
+  getCollector,
+}) {
+  /* Thai headers must not get wide tracking */
+  const thClass = isEnglish ? "" : "!font-sans !text-[12px] !tracking-normal";
+
   return (
-    <div className="flex min-w-0 items-start gap-1.5 md:gap-3">
-      <div
-        className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md md:h-8 md:w-8 md:rounded-lg ${
-          darkMode
-            ? "bg-white/[0.04] text-emerald-300"
-            : "bg-emerald-800/[0.07] text-emerald-800"
-        }`}
-      >
-        {icon}
-      </div>
+    <div className="vh-panel mt-6 overflow-x-auto md:mt-8">
+      <table className="vh-table min-w-[680px]">
+        <thead>
+          <tr>
+            <th className="w-[72px]">
+              <span className="sr-only">{t.specimen}</span>
+            </th>
+            <th>PNU</th>
+            <th className={thClass}>{t.specimenColumn}</th>
+            <th className={thClass}>{t.family}</th>
+            <th className={`hidden lg:table-cell ${thClass}`}>{t.location}</th>
+            <th className={`hidden xl:table-cell ${thClass}`}>{t.collector}</th>
+            <th className="w-[64px]">
+              <span className="sr-only">{t.viewDetails}</span>
+            </th>
+          </tr>
+        </thead>
 
-      <div className="min-w-0">
-        <p
-          className={`truncate text-[6.5px] font-bold uppercase tracking-[0.06em] md:text-[9px] md:tracking-[0.12em] ${
-            darkMode ? "text-gray-500" : "text-slate-400"
-          }`}
-        >
-          {label}
-        </p>
+        <tbody>
+          {plants.map((plant) => {
+            const botanicalName = plant.botanical_name?.trim();
 
-        <p
-          className={`mt-0.5 truncate text-[8.5px] font-semibold min-[390px]:text-[9px] md:text-xs ${
-            darkMode ? "text-gray-300" : "text-slate-700"
-          }`}
-          title={value}
-        >
-          {value}
-        </p>
-      </div>
+            const commonName = getCommonName(plant);
+
+            const collector = getCollector(plant);
+
+            return (
+              <tr key={plant.id} className="group">
+                <td className="!py-2.5">
+                  <Link
+                    href={`/plants/${plant.id}`}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="block h-12 w-12 overflow-hidden rounded-[3px] bg-paper-deep"
+                  >
+                    {plant.image_url ? (
+                      <img
+                        src={plant.image_url}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center">
+                        <LeafIcon className="h-5 w-5 text-faint" />
+                      </span>
+                    )}
+                  </Link>
+                </td>
+
+                <td className="whitespace-nowrap">
+                  <span className="vh-catalog !text-[12px] !text-ink-soft">
+                    {hasTextValue(plant.pnu_no) ? plant.pnu_no : "—"}
+                  </span>
+                </td>
+
+                <td className="max-w-[280px]">
+                  <Link
+                    href={`/plants/${plant.id}`}
+                    className="vh-binomial block truncate text-[1.02rem] text-ink transition group-hover:text-moss"
+                  >
+                    {botanicalName || getPlantName(plant)}
+                  </Link>
+
+                  {botanicalName && commonName && (
+                    <span className="mt-0.5 block truncate text-[12px] text-muted">
+                      {commonName}
+                    </span>
+                  )}
+                </td>
+
+                <td className="whitespace-nowrap">
+                  <span className="vh-family">{plant.family || "—"}</span>
+                </td>
+
+                <td className="hidden max-w-[220px] lg:table-cell">
+                  <span
+                    className="block truncate text-[13px]"
+                    title={getLocation(plant)}
+                  >
+                    {getLocation(plant) || t.unknown}
+                  </span>
+                </td>
+
+                <td className="hidden max-w-[200px] xl:table-cell">
+                  <span className="block truncate text-[13px]">
+                    {collector || "—"}
+                  </span>
+
+                  {plant.collector_no && (
+                    <span className="vh-catalog mt-0.5 block">
+                      {t.collectorNo} {plant.collector_no}
+                    </span>
+                  )}
+                </td>
+
+                <td className="text-right">
+                  <Link
+                    href={`/plants/${plant.id}`}
+                    aria-label={`${t.viewDetails} ${botanicalName || getPlantName(plant)}`}
+                    className="vh-icon-btn !h-8 !w-8"
+                  >
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -2388,46 +2121,15 @@ function InformationRow({ darkMode, icon, label, value }) {
    SKELETON
 ========================================================= */
 
-function SkeletonCard({ darkMode }) {
+function SkeletonCard() {
   return (
-    <div
-      className={`overflow-hidden rounded-[1rem] border md:rounded-[1.7rem] ${
-        darkMode
-          ? "border-white/10 bg-[#0a1710]"
-          : "border-emerald-950/10 bg-white"
-      }`}
-    >
-      <div
-        className={`h-[108px] animate-pulse min-[390px]:h-[122px] md:h-auto md:aspect-[1.45/1] ${
-          darkMode ? "bg-white/[0.05]" : "bg-emerald-950/[0.05]"
-        }`}
-      />
+    <div className="vh-specimen">
+      <div className="vh-skeleton aspect-[4/5]" />
 
-      <div className="space-y-2 p-2.5 md:space-y-4 md:p-5">
-        <div
-          className={`h-4 w-2/3 animate-pulse rounded-md md:h-5 ${
-            darkMode ? "bg-white/[0.08]" : "bg-emerald-950/[0.07]"
-          }`}
-        />
-
-        <div className="space-y-1.5 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
-          {Array.from({
-            length: 2,
-          }).map((_, index) => (
-            <div
-              key={index}
-              className={`h-6 animate-pulse rounded-md md:h-9 ${
-                darkMode ? "bg-white/[0.05]" : "bg-emerald-950/[0.04]"
-              }`}
-            />
-          ))}
-        </div>
-
-        <div
-          className={`h-[34px] animate-pulse rounded-lg md:h-11 ${
-            darkMode ? "bg-white/[0.08]" : "bg-emerald-950/[0.06]"
-          }`}
-        />
+      <div className="space-y-2.5 p-3 md:p-4">
+        <div className="vh-skeleton h-3 w-16 rounded" />
+        <div className="vh-skeleton h-5 w-3/4 rounded" />
+        <div className="vh-skeleton h-3 w-1/2 rounded" />
       </div>
     </div>
   );
@@ -2450,7 +2152,6 @@ function SearchIcon({ className = "" }) {
       aria-hidden="true"
     >
       <circle cx="11" cy="11" r="7" />
-
       <path d="m20 20-4-4" />
     </svg>
   );
@@ -2488,11 +2189,8 @@ function RefreshIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M20 11a8 8 0 0 0-14.9-3.9L3 10" />
-
       <path d="M3 4v6h6" />
-
       <path d="M4 13a8 8 0 0 0 14.9 3.9L21 14" />
-
       <path d="M21 20v-6h-6" />
     </svg>
   );
@@ -2505,14 +2203,13 @@ function LeafIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
-
-      <path d="M4 20c4-5 7-7 13-10" />
+      <path d="M20.5 3.5C14 3.8 8.2 6 5.2 10.1c-2.2 3-1.9 6.4.1 8.6 2.2 2.4 6.1 2.4 9-.1 3.8-3.3 5.6-8.9 6.2-15.1Z" />
+      <path d="M4 20c3.2-4.9 7.1-8.4 12.7-11.2" />
     </svg>
   );
 }
@@ -2530,13 +2227,12 @@ function PinIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-
       <circle cx="12" cy="10" r="2.5" />
     </svg>
   );
 }
 
-function BranchIcon({ className = "" }) {
+function GridIcon({ className = "" }) {
   return (
     <svg
       className={className}
@@ -2548,11 +2244,32 @@ function BranchIcon({ className = "" }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M12 20V6" />
-      <path d="M12 9 7 5" />
-      <path d="M12 13l5-4" />
-      <path d="M7 5 5 3" />
-      <path d="M17 9l2-2" />
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" />
+    </svg>
+  );
+}
+
+function ListIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9 6h11" />
+      <path d="M9 12h11" />
+      <path d="M9 18h11" />
+      <path d="M4.5 6h.01" />
+      <path d="M4.5 12h.01" />
+      <path d="M4.5 18h.01" />
     </svg>
   );
 }
@@ -2607,15 +2324,10 @@ function UserIcon({ className = "" }) {
       aria-hidden="true"
     >
       <circle cx="12" cy="8" r="4" />
-
       <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   );
 }
-
-/* =========================================================
-   PAGINATION LEFT
-========================================================= */
 
 function ChevronLeftIcon({ className = "" }) {
   return (
@@ -2624,7 +2336,7 @@ function ChevronLeftIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -2641,7 +2353,7 @@ function ChevronRightIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -2664,9 +2376,7 @@ function CloseCircleIcon({ className = "" }) {
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="9" />
-
       <path d="m9 9 6 6" />
-
       <path d="m15 9-6 6" />
     </svg>
   );
@@ -2679,7 +2389,7 @@ function CloseIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -2697,7 +2407,7 @@ function CheckIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

@@ -4,16 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import BioHeroLazy from "@/components/BioHeroLazy";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
-
-/* =========================================================
-   FOREST
-========================================================= */
-
-const FOREST_IMAGE =
-  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=88";
 
 /* =========================================================
    PAGE
@@ -22,8 +16,7 @@ const FOREST_IMAGE =
 export default function AccountPage() {
   const router = useRouter();
 
-  const { language, darkMode } = useSiteSettings();
-
+  const { language } = useSiteSettings();
   const isEnglish = language === "EN";
 
   /* =====================================================
@@ -31,18 +24,18 @@ export default function AccountPage() {
   ===================================================== */
 
   const [user, setUser] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const [profile, setProfile] = useState(null);
-
   const [plants, setPlants] = useState([]);
 
   const [loading, setLoading] = useState(true);
-
   const [plantsLoading, setPlantsLoading] = useState(false);
 
   const [error, setError] = useState("");
-
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deletingPlantId, setDeletingPlantId] = useState("");
+  const [pendingDeletePlant, setPendingDeletePlant] = useState(null);
 
   /* =====================================================
      TEXT
@@ -50,168 +43,164 @@ export default function AccountPage() {
 
   const text = {
     TH: {
-      eyebrow: "PERSONAL HERBARIUM",
+      eyebrow: "ADMIN HERBARIUM",
 
-      title: "พื้นที่พรรณไม้ของฉัน",
+      title: "ศูนย์จัดการคลังพรรณไม้",
 
       subtitle:
-        "จัดการบัญชีและตัวอย่างพรรณไม้ที่คุณเพิ่มเข้าสู่ Virtual Herbarium",
+        "จัดการข้อมูลตัวอย่างพรรณไม้ทั้งหมดใน Virtual Herbarium สำหรับผู้ดูแลระบบ",
 
       welcome: "ยินดีต้อนรับกลับ",
 
       addPlant: "เพิ่มพรรณไม้",
-
       managePlants: "จัดการทั้งหมด",
 
-      profileLabel: "PROFILE",
-
-      memberSince: "เป็นสมาชิกตั้งแต่",
+      profileLabel: "ADMIN PROFILE",
+      memberSince: "เริ่มใช้งานผู้ดูแลตั้งแต่",
 
       verified: "ยืนยันอีเมลแล้ว",
-
       unverified: "ยังไม่ได้ยืนยันอีเมล",
 
       editProfile: "แก้ไขบัญชี",
-
       logout: "ออกจากระบบ",
-
       loggingOut: "กำลังออก...",
 
-      myPlants: "พรรณไม้ของฉัน",
+      myPlants: "คลังพรรณไม้ทั้งหมด",
+      myPlantsLabel: "PLANT COLLECTION",
 
-      myPlantsLabel: "MY COLLECTION",
-
-      myPlantsDescription: "ตัวอย่างพรรณไม้ที่คุณเป็นผู้เพิ่มเข้าสู่คลัง",
+      myPlantsDescription: "จัดการข้อมูลตัวอย่างพรรณไม้ทุกรายการในคลัง",
 
       totalPlants: "ตัวอย่างทั้งหมด",
-
       families: "วงศ์พืช",
-
-      provinces: "จังหวัด",
+      groups: "กลุ่มพืช",
 
       edit: "แก้ไข",
-
       view: "ดู",
+      delete: "ลบ",
+      deleting: "กำลังลบ...",
+
+      deleteConfirm:
+        "ต้องการลบข้อมูลพรรณไม้นี้ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้",
+
+      deleteError: "ไม่สามารถลบข้อมูลพรรณไม้ได้",
 
       noPlants: "ยังไม่มีข้อมูลพรรณไม้",
 
-      noPlantsDescription:
-        "เริ่มสร้างคลังส่วนตัวด้วยการเพิ่มตัวอย่างพรรณไม้แรกของคุณ",
-
-      loading: "กำลังเปิดพื้นที่ของคุณ...",
-
+      loading: "กำลังเปิดระบบผู้ดูแล...",
       loadingPlants: "กำลังโหลดพรรณไม้...",
 
       family: "วงศ์",
+      locality: "สถานที่ / อุทยาน / จังหวัด",
+      collectorNo: "หมายเลขผู้เก็บ",
 
-      province: "จังหวัด",
+      login: "เข้าสู่ระบบ Admin",
 
-      specimen: "ตัวอย่าง",
+      notLoggedIn: "สำหรับผู้ดูแลระบบเท่านั้น",
 
-      login: "เข้าสู่ระบบ",
+      notLoggedDescription: "เข้าสู่ระบบด้วยบัญชี Admin เพื่อจัดการคลังพรรณไม้",
 
-      register: "สมัครสมาชิก",
-
-      notLoggedIn: "กรุณาเข้าสู่ระบบ",
-
-      notLoggedDescription: "เข้าสู่ระบบเพื่อจัดการบัญชีและคลังพรรณไม้ของคุณ",
+      denied: "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ",
 
       loadError: "ไม่สามารถโหลดข้อมูลพรรณไม้ได้",
-
       retry: "ลองอีกครั้ง",
 
-      unknownPlant: "ไม่ระบุชื่อ",
+      unknownPlant: "ไม่ระบุชื่อวิทยาศาสตร์",
 
       morePlants: "รายการเพิ่มเติม",
-
       showAll: "ดูทั้งหมด",
+
+      noPlantsDescription: "เริ่มต้นเพิ่มตัวอย่างพรรณไม้รายการแรกเข้าสู่คลัง",
+      recentLabel: "ระเบียนล่าสุด",
+      colAccession: "เลขทะเบียน",
+      colSpecimen: "ตัวอย่าง",
+      colActions: "จัดการ",
+      deleteTitle: "ลบระเบียนพรรณไม้",
+      cancel: "ยกเลิก",
     },
 
     EN: {
-      eyebrow: "PERSONAL HERBARIUM",
+      eyebrow: "ADMIN HERBARIUM",
 
-      title: "My Botanical Space",
+      title: "Herbarium Admin Dashboard",
 
       subtitle:
-        "Manage your account and plant specimens contributed to the Virtual Herbarium.",
+        "Manage all botanical specimen records in the Virtual Herbarium as an administrator.",
 
       welcome: "Welcome back",
 
       addPlant: "Add Plant",
-
       managePlants: "Manage All",
 
-      profileLabel: "PROFILE",
-
-      memberSince: "Member since",
+      profileLabel: "ADMIN PROFILE",
+      memberSince: "Administrator since",
 
       verified: "Email verified",
-
       unverified: "Email not verified",
 
       editProfile: "Edit Account",
-
       logout: "Sign Out",
-
       loggingOut: "Signing out...",
 
-      myPlants: "My Plants",
-
-      myPlantsLabel: "MY COLLECTION",
+      myPlants: "All Plant Records",
+      myPlantsLabel: "PLANT COLLECTION",
 
       myPlantsDescription:
-        "Plant specimens contributed to the collection by you.",
+        "Manage all plant specimen records in the collection.",
 
       totalPlants: "Total Specimens",
-
       families: "Plant Families",
-
-      provinces: "Provinces",
+      groups: "Plant Groups",
 
       edit: "Edit",
-
       view: "View",
+      delete: "Delete",
+      deleting: "Deleting...",
+
+      deleteConfirm:
+        "Are you sure you want to delete this plant record? This action cannot be undone.",
+
+      deleteError: "Unable to delete plant record",
 
       noPlants: "No plant records yet",
 
-      noPlantsDescription:
-        "Begin your personal collection by adding your first specimen.",
-
-      loading: "Opening your workspace...",
-
+      loading: "Opening the admin dashboard...",
       loadingPlants: "Loading your plants...",
 
       family: "Family",
+      locality: "Locality / NP / Province",
+      collectorNo: "Collector No.",
 
-      province: "Province",
+      login: "Admin Login",
 
-      specimen: "Specimen",
-
-      login: "Login",
-
-      register: "Register",
-
-      notLoggedIn: "You are not signed in",
+      notLoggedIn: "Administrator access only",
 
       notLoggedDescription:
-        "Sign in to manage your account and plant collection.",
+        "Sign in with an Admin account to manage the plant collection.",
+
+      denied: "This account does not have administrator access.",
 
       loadError: "Unable to load your plants.",
-
       retry: "Try Again",
 
-      unknownPlant: "Unnamed Plant",
+      unknownPlant: "Botanical Name Not Specified",
 
       morePlants: "More plants",
-
       showAll: "View all",
+
+      noPlantsDescription: "Start by adding the first specimen record to the collection.",
+      recentLabel: "Recent records",
+      colAccession: "Accession",
+      colSpecimen: "Specimen",
+      colActions: "Actions",
+      deleteTitle: "Delete specimen record",
+      cancel: "Cancel",
     },
   };
 
   const t = isEnglish ? text.EN : text.TH;
 
   /* =====================================================
-     FETCH PROFILE
+     FETCH ADMIN PROFILE
   ===================================================== */
 
   async function fetchProfile(currentUser) {
@@ -220,56 +209,52 @@ export default function AccountPage() {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", currentUser.id)
         .maybeSingle();
 
-      if (error) {
-        console.error("Load profile error:", error);
-
+      if (profileError) {
+        console.error("Load admin profile error:", profileError);
         return null;
       }
 
       return data || null;
     } catch (err) {
-      console.error("Load profile failed:", err);
-
+      console.error("Load admin profile failed:", err);
       return null;
     }
   }
 
   /* =====================================================
-     FETCH MY PLANTS
+     FETCH ALL PLANTS
+
+     Admin จัดการพรรณไม้ทั้งหมด
+     ไม่กรองด้วย user_id อีกแล้ว
   ===================================================== */
 
-  async function fetchMyPlants(userId) {
-    if (!userId) return;
-
+  async function fetchAllPlants() {
     setPlantsLoading(true);
-
     setError("");
 
     try {
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from("plants")
         .select("*")
-        .eq("user_id", userId)
         .order("created_at", {
           ascending: false,
         });
 
-      if (error) {
-        throw error;
+      if (fetchError) {
+        throw fetchError;
       }
 
       setPlants(data || []);
     } catch (err) {
-      console.error("Fetch my plants failed:", err);
+      console.error("Fetch admin plants failed:", err);
 
       setPlants([]);
-
       setError(err?.message || t.loadError);
     } finally {
       setPlantsLoading(false);
@@ -277,7 +262,7 @@ export default function AccountPage() {
   }
 
   /* =====================================================
-     INITIAL LOAD
+     ADMIN AUTH CHECK
   ===================================================== */
 
   useEffect(() => {
@@ -285,30 +270,43 @@ export default function AccountPage() {
 
     async function init() {
       setLoading(true);
-
       setError("");
+      setAccessDenied(false);
 
       try {
-        const {
-          data: { user: currentUser },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError) {
-          throw userError;
-        }
+        const { data, error: userError } = await supabase.auth.getUser();
 
         if (!mounted) return;
 
-        if (!currentUser) {
+        if (userError || !data?.user) {
           setUser(null);
-
           setProfile(null);
-
           setPlants([]);
+          return;
+        }
+
+        const currentUser = data.user;
+
+        /* =============================================
+           VERIFY ADMIN ROLE
+        ============================================= */
+
+        if (currentUser.app_metadata?.role !== "admin") {
+          await supabase.auth.signOut();
+
+          if (!mounted) return;
+
+          setUser(null);
+          setProfile(null);
+          setPlants([]);
+          setAccessDenied(true);
 
           return;
         }
+
+        /* =============================================
+           ADMIN VERIFIED
+        ============================================= */
 
         setUser(currentUser);
 
@@ -318,18 +316,13 @@ export default function AccountPage() {
 
         setProfile(profileData);
 
-        await fetchMyPlants(currentUser.id);
+        await fetchAllPlants();
       } catch (err) {
-        console.error("Account loading error:", err);
+        console.error("Admin dashboard error:", err);
 
-        if (!mounted) return;
-
-        setError(
-          err?.message ||
-            (isEnglish
-              ? "Unable to load account."
-              : "ไม่สามารถโหลดข้อมูลบัญชีได้"),
-        );
+        if (mounted) {
+          setError(err?.message || t.loadError);
+        }
       } finally {
         if (mounted) {
           setLoading(false);
@@ -345,36 +338,21 @@ export default function AccountPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((event) => {
       if (!mounted) return;
 
-      const currentUser = session?.user || null;
-
-      setUser(currentUser);
-
-      if (!currentUser) {
+      if (event === "SIGNED_OUT") {
+        setUser(null);
         setProfile(null);
-
         setPlants([]);
-
-        return;
       }
-
-      const profileData = await fetchProfile(currentUser);
-
-      if (!mounted) return;
-
-      setProfile(profileData);
-
-      await fetchMyPlants(currentUser.id);
     });
 
     return () => {
       mounted = false;
-
       subscription.unsubscribe();
     };
-  }, [isEnglish]);
+  }, []);
 
   /* =====================================================
      LOGOUT
@@ -384,24 +362,20 @@ export default function AccountPage() {
     if (loggingOut) return;
 
     setLoggingOut(true);
-
     setError("");
 
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error: logoutError } = await supabase.auth.signOut();
 
-      if (error) {
-        throw error;
+      if (logoutError) {
+        throw logoutError;
       }
 
       setUser(null);
-
       setProfile(null);
-
       setPlants([]);
 
       router.push("/");
-
       router.refresh();
     } catch (err) {
       console.error("Logout error:", err);
@@ -416,6 +390,122 @@ export default function AccountPage() {
   }
 
   /* =====================================================
+     DELETE PLANT - ADMIN ONLY
+
+     ใช้ id (uuid) ของตาราง plants
+  ===================================================== */
+
+  async function deletePlant(plant) {
+    const plantId = plant.id;
+
+    if (!plantId || !user?.id || deletingPlantId) {
+      return;
+    }
+
+    setDeletingPlantId(plantId);
+    setError("");
+
+    try {
+      /* =============================================
+         VERIFY ADMIN BEFORE DELETE
+      ============================================= */
+
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+      if (
+        authError ||
+        authData?.user?.id !== user.id ||
+        authData.user.app_metadata?.role !== "admin"
+      ) {
+        throw new Error(t.denied);
+      }
+
+      /* =============================================
+         DELETE PLANT FROM DATABASE
+      ============================================= */
+
+      const { data: deleted, error: deleteError } = await supabase
+        .from("plants")
+        .delete()
+        .eq("id", plantId)
+        .select("id")
+        .maybeSingle();
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      if (!deleted) {
+        throw new Error(t.deleteError);
+      }
+
+      /* =============================================
+         REMOVE FROM UI
+      ============================================= */
+
+      setPlants((previous) =>
+        previous.filter((item) => item.id !== plantId),
+      );
+
+      /* =============================================
+         REMOVE ASSOCIATED STORAGE IMAGE
+      ============================================= */
+
+      const imagePath = getPlantImageStoragePath(plant.image_url);
+
+      if (imagePath) {
+        const { error: storageError } = await supabase.storage
+          .from("plant-images")
+          .remove([imagePath]);
+
+        if (storageError) {
+          console.error("Delete plant image error:", storageError);
+        }
+      }
+    } catch (err) {
+      console.error("Delete plant error:", err);
+      setError(err?.message || t.deleteError);
+    } finally {
+      setDeletingPlantId("");
+      setPendingDeletePlant(null);
+    }
+  }
+
+  /* =====================================================
+     DELETE CONFIRM DIALOG
+     (replaces window.confirm – same confirm-then-delete flow)
+  ===================================================== */
+
+  function requestDelete(plant) {
+    if (!plant?.id || deletingPlantId) return;
+
+    setPendingDeletePlant(plant);
+  }
+
+  function cancelDelete() {
+    if (deletingPlantId) return;
+
+    setPendingDeletePlant(null);
+  }
+
+  useEffect(() => {
+    if (!pendingDeletePlant) return;
+
+    function onKeyDown(event) {
+      if (event.key === "Escape" && !deletingPlantId) {
+        setPendingDeletePlant(null);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [pendingDeletePlant, deletingPlantId]);
+
+  /* =====================================================
      STATS
   ===================================================== */
 
@@ -424,14 +514,14 @@ export default function AccountPage() {
       plants.map((plant) => plant.family).filter(Boolean),
     ).size;
 
-    const provinces = new Set(
-      plants.map((plant) => plant.province).filter(Boolean),
+    const groups = new Set(
+      plants.map((plant) => plant.artificial_group).filter(Boolean),
     ).size;
 
     return {
       plants: plants.length,
       families,
-      provinces,
+      groups,
     };
   }, [plants]);
 
@@ -488,17 +578,9 @@ export default function AccountPage() {
 
         <section className="flex min-h-[60dvh] items-center justify-center px-5">
           <div className="text-center">
-            <LoadingIcon
-              className={`mx-auto h-8 w-8 animate-spin ${
-                darkMode ? "text-emerald-300" : "text-emerald-700"
-              }`}
-            />
+            <LoadingIcon className="mx-auto h-7 w-7 animate-spin text-moss" />
 
-            <p
-              className={`mt-4 text-sm font-semibold ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
+            <p className="mt-4 font-serif text-[15px] italic text-muted">
               {t.loading}
             </p>
           </div>
@@ -508,7 +590,7 @@ export default function AccountPage() {
   }
 
   /* =====================================================
-     NOT LOGGED IN
+     NOT LOGGED IN / NOT ADMIN
   ===================================================== */
 
   if (!user) {
@@ -516,72 +598,37 @@ export default function AccountPage() {
       <main className="page overflow-x-hidden">
         <Navbar />
 
-        <section className="relative isolate flex min-h-[calc(100dvh-58px)] items-center justify-center overflow-hidden px-5 py-10 md:min-h-[calc(100dvh-78px)]">
+        <section className="relative isolate flex min-h-[calc(100dvh-58px)] items-center justify-center overflow-hidden px-4 py-12 md:min-h-[calc(100dvh-78px)]">
           <div
-            className="absolute inset-0 -z-30 bg-cover bg-center"
-            style={{
-              backgroundImage: `url("${FOREST_IMAGE}")`,
-            }}
+            aria-hidden="true"
+            className="vh-grid-paper pointer-events-none absolute inset-0 -z-10 opacity-40 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]"
           />
 
-          <div
-            className={`absolute inset-0 -z-20 ${
-              darkMode ? "bg-black/75" : "bg-[#edf5eb]/85"
-            }`}
-          />
-
-          <div
-            className={`w-full max-w-md rounded-[24px] border p-6 text-center shadow-xl backdrop-blur-xl sm:p-8 ${
-              darkMode
-                ? "border-white/10 bg-[#07130c]/85"
-                : "border-white/60 bg-white/85"
-            }`}
-          >
-            <div
-              className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ${
-                darkMode
-                  ? "bg-emerald-400/10 text-emerald-300"
-                  : "bg-emerald-800/10 text-emerald-800"
-              }`}
-            >
-              <UserIcon className="h-6 w-6" />
+          <div className="vh-sheet page-enter w-full max-w-md p-7 text-center sm:p-9">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-rule-strong text-moss">
+              <UserIcon className="h-5 w-5" />
             </div>
 
-            <h1
-              className={`mt-5 text-2xl font-black leading-tight ${
-                darkMode ? "text-white" : "text-[#14271a]"
-              }`}
-            >
-              {t.notLoggedIn}
+            <p className="vh-eyebrow mt-6 flex items-center justify-center gap-3">
+              <span className="h-px w-6 bg-ochre" />
+              {t.eyebrow}
+              <span className="h-px w-6 bg-ochre" />
+            </p>
+
+            <h1 className="vh-display mt-3 text-[1.9rem] leading-tight">
+              {accessDenied ? t.denied : t.notLoggedIn}
             </h1>
 
-            <p
-              className={`mt-2 text-sm leading-7 ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
+            <p className="mt-3 text-[14px] leading-7 text-muted">
               {t.notLoggedDescription}
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-2.5">
-              <Link
-                href="/login"
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-black text-white transition hover:bg-emerald-600"
-              >
-                {t.login}
-              </Link>
+            <div className="vh-rule my-6" />
 
-              <Link
-                href="/register"
-                className={`inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-black transition ${
-                  darkMode
-                    ? "border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
-                    : "border-emerald-950/10 bg-white text-slate-700 hover:bg-emerald-50"
-                }`}
-              >
-                {t.register}
-              </Link>
-            </div>
+            <Link href="/login" className="vh-btn vh-btn-primary">
+              {t.login}
+              <ArrowRightIcon className="h-4 w-4" />
+            </Link>
           </div>
         </section>
       </main>
@@ -589,7 +636,7 @@ export default function AccountPage() {
   }
 
   /* =====================================================
-     USER DATA
+     ADMIN DATA
   ===================================================== */
 
   const username =
@@ -599,7 +646,7 @@ export default function AccountPage() {
     user.user_metadata?.full_name ||
     user.user_metadata?.name ||
     user.user_metadata?.display_name ||
-    (isEnglish ? "User" : "ผู้ใช้งาน");
+    (isEnglish ? "Administrator" : "ผู้ดูแลระบบ");
 
   const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || "";
 
@@ -616,6 +663,17 @@ export default function AccountPage() {
       )
     : "-";
 
+  const statItems = [
+    { label: t.totalPlants, value: stats.plants },
+    { label: t.groups, value: stats.groups },
+    { label: t.families, value: stats.families },
+  ];
+
+  const pendingDeleteId = pendingDeletePlant?.id || "";
+
+  const pendingDeleting =
+    Boolean(pendingDeleteId) && deletingPlantId === pendingDeleteId;
+
   /* =====================================================
      PAGE
   ===================================================== */
@@ -625,501 +683,403 @@ export default function AccountPage() {
       <Navbar />
 
       {/* =====================================================
-          HERO
+          DASHBOARD HEADER
       ===================================================== */}
 
-      <section className="relative isolate overflow-hidden">
-        {/* FOREST */}
-
+      <section className="relative overflow-hidden border-b border-rule">
         <div
-          className="absolute inset-0 -z-30 bg-cover bg-center"
-          style={{
-            backgroundImage: `url("${FOREST_IMAGE}")`,
-          }}
+          aria-hidden="true"
+          className="vh-grid-paper pointer-events-none absolute inset-0 opacity-30 [mask-image:radial-gradient(ellipse_at_80%_30%,black,transparent_70%)]"
         />
 
-        {/* OVERLAY */}
+        <div className="vh-container relative grid gap-10 py-10 md:py-14 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end lg:gap-14">
+          {/* LEFT – GREETING + STATS */}
 
-        <div
-          className={`absolute inset-0 -z-20 ${
-            darkMode
-              ? "bg-[linear-gradient(90deg,rgba(2,9,5,.95),rgba(3,14,7,.72))]"
-              : "bg-[linear-gradient(90deg,rgba(240,247,238,.96),rgba(236,245,234,.72))]"
-          }`}
-        />
+          <div className="page-enter min-w-0">
+            <p className="vh-eyebrow flex items-center gap-3">
+              <span className="h-px w-6 bg-ochre" />
+              {t.eyebrow}
+            </p>
 
-        {/* BOTTOM FADE */}
+            <h1 className="vh-display mt-5 text-[2.3rem] min-[390px]:text-[2.6rem] md:text-[3.4rem]">
+              <span className="block">{t.welcome},</span>
 
-        <div
-          className={`absolute inset-x-0 bottom-0 -z-10 h-24 ${
-            darkMode
-              ? "bg-gradient-to-t from-[#07100b]"
-              : "bg-gradient-to-t from-[#f1f6f1]"
-          } to-transparent`}
-        />
+              <span className="block truncate italic text-moss">
+                {username}
+              </span>
+            </h1>
 
-        <div className="container">
-          <div className="py-7 sm:py-10 lg:py-12">
-            <div className="max-w-3xl">
-              {/* BADGE */}
+            <p className="mt-5 font-serif text-[1.2rem] leading-snug text-ink md:text-[1.35rem]">
+              {t.title}
+            </p>
 
-              <div
-                className={`inline-flex items-center gap-2.5 rounded-full border px-3.5 py-1.5 backdrop-blur-xl ${
-                  darkMode
-                    ? "border-emerald-300/20 bg-black/20 text-emerald-200"
-                    : "border-emerald-950/10 bg-white/60 text-emerald-900"
-                }`}
+            <p className="vh-prose mt-2 max-w-[560px]">{t.subtitle}</p>
+
+            {/* STATS – ruled row */}
+
+            <dl className="mt-9 grid max-w-[560px] grid-cols-3 border-t border-rule">
+              {statItems.map((stat, index) => (
+                <div
+                  key={stat.label}
+                  className={`min-w-0 pt-5 ${
+                    index > 0 ? "border-l border-rule pl-4 sm:pl-5" : ""
+                  }`}
+                >
+                  <dt className="vh-eyebrow truncate !text-[10px]">
+                    {stat.label}
+                  </dt>
+
+                  <dd className="mt-2 font-serif text-[2rem] leading-none text-ink tabular-nums md:text-[2.4rem]">
+                    {plantsLoading ? (
+                      <span className="vh-skeleton inline-block h-8 w-12 rounded" />
+                    ) : (
+                      stat.value.toLocaleString()
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+            {/* QUICK ACTIONS */}
+
+            <div className="mt-9 flex flex-wrap gap-2.5">
+              <Link
+                href="/account/plants/new"
+                className="vh-btn vh-btn-primary"
               >
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${
-                    darkMode ? "bg-emerald-400" : "bg-emerald-700"
-                  }`}
+                <PlusIcon className="h-4 w-4" />
+                {t.addPlant}
+              </Link>
+
+              <Link href="/account/plants" className="vh-btn vh-btn-outline">
+                <CollectionIcon className="h-4 w-4" />
+                {t.managePlants}
+              </Link>
+            </div>
+          </div>
+
+          {/* RIGHT – ADMIN PROFILE */}
+
+          <div className="flex min-w-0 flex-col lg:self-stretch">
+            {/* Featured specimen – fills the empty space above the card */}
+            <div className="relative hidden min-h-0 flex-1 lg:block">
+              <div className="absolute inset-x-0 bottom-6 top-0">
+                <BioHeroLazy variant="helix" minWidth={1024} opacity={0.85} />
+              </div>
+            </div>
+
+            <aside className="vh-sheet page-enter p-5 [animation-delay:100ms] sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <span className="vh-eyebrow !text-[10px]">{t.profileLabel}</span>
+
+                <StatusBadge
+                  verified={Boolean(user.email_confirmed_at)}
+                  text={user.email_confirmed_at ? t.verified : t.unverified}
                 />
-
-                <span className="text-[9px] font-black tracking-[0.2em]">
-                  {t.eyebrow}
-                </span>
               </div>
 
-              {/* TEXT */}
+              <div className="mt-5 flex min-w-0 items-center gap-4">
+                <ProfileAvatar avatarUrl={avatarUrl} username={username} />
 
-              <div className="mt-4 flex max-w-3xl flex-col gap-2.5 sm:mt-5 sm:gap-3">
-                <p
-                  className={`text-[13px] font-bold leading-6 sm:text-sm sm:leading-6 ${
-                    darkMode ? "text-emerald-300" : "text-emerald-800"
-                  }`}
-                >
-                  {t.welcome}, {username}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate font-serif text-[1.45rem] leading-tight text-ink">
+                    {username}
+                  </h2>
 
-                <h1
-                  className={`font-black ${
-                    isEnglish
-                      ? "text-[2rem] leading-[1.12] tracking-[-0.04em] sm:text-4xl sm:leading-[1.12] lg:text-5xl"
-                      : "text-[2.05rem] leading-[1.28] tracking-[-0.025em] sm:text-[2.8rem] sm:leading-[1.24] lg:text-[3.4rem] lg:leading-[1.2]"
-                  } ${darkMode ? "text-white" : "text-[#102218]"}`}
-                >
-                  {t.title}
-                </h1>
-
-                <p
-                  className={`max-w-2xl text-[13px] font-medium leading-6 sm:text-[15px] sm:leading-7 ${
-                    darkMode ? "text-[#bdccc1]" : "text-[#4d6354]"
-                  }`}
-                >
-                  {t.subtitle}
-                </p>
+                  <p className="mt-1 truncate font-mono text-[12px] text-muted">
+                    {email}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            {/* =================================================
-                STATS
-            ================================================= */}
+              <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-3 border-t border-dashed border-rule-strong pt-4 text-[12.5px]">
+                <dt className="text-faint">{t.memberSince}</dt>
+                <dd className="truncate text-right text-ink-soft">{joinedDate}</dd>
+              </dl>
 
-            <div className="mt-6 grid grid-cols-3 gap-2.5 sm:mt-7 sm:gap-4 lg:max-w-[840px] lg:gap-5">
-              <StatCard
-                darkMode={darkMode}
-                icon={<LeafIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
-                label={t.totalPlants}
-                value={stats.plants}
-              />
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <Link
+                  href="/account/edit"
+                  className="vh-btn vh-btn-outline vh-btn-sm min-w-0"
+                >
+                  <EditIcon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{t.editProfile}</span>
+                </Link>
 
-              <StatCard
-                darkMode={darkMode}
-                icon={<PinIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
-                label={t.provinces}
-                value={stats.provinces}
-              />
-
-              <StatCard
-                darkMode={darkMode}
-                icon={<BranchIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
-                label={t.families}
-                value={stats.families}
-              />
-            </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="vh-btn vh-btn-ghost vh-btn-sm min-w-0 text-clay hover:!text-clay"
+                >
+                  {loggingOut ? (
+                    <LoadingIcon className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  ) : (
+                    <LogoutIcon className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span className="truncate">
+                    {loggingOut ? t.loggingOut : t.logout}
+                  </span>
+                </button>
+              </div>
+            </aside>
           </div>
         </div>
       </section>
 
       {/* =====================================================
-          BODY
+          RECENT RECORDS
       ===================================================== */}
 
-      <section className="container py-5 sm:py-8 lg:py-10">
-        <div className="space-y-5 lg:space-y-6">
-          {/* =================================================
-              PROFILE
-          ================================================= */}
+      <section className="vh-container py-12 md:py-16">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="vh-eyebrow flex items-center gap-3">
+              <span className="h-px w-6 bg-ochre" />
+              {t.myPlantsLabel}
+            </p>
 
-          <section
-            className={`relative overflow-hidden rounded-[22px] border p-4 shadow-lg sm:p-6 ${
-              darkMode
-                ? "border-white/10 bg-[#0a1710]"
-                : "border-emerald-950/[0.08] bg-white/90"
-            }`}
+            <h2 className="vh-display mt-3 text-[2rem] md:text-[2.6rem]">
+              {t.myPlants}
+            </h2>
+
+            <p className="mt-2 text-[14px] leading-6 text-muted">
+              {t.myPlantsDescription}
+            </p>
+          </div>
+
+          <Link
+            href="/account/plants"
+            className="group inline-flex items-center gap-2 text-sm text-moss transition hover:text-moss-hover"
           >
-            {/* SUBTLE GLOW */}
+            {t.showAll}
+            <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
 
-            <div
-              className={`pointer-events-none absolute -right-20 -top-24 h-60 w-60 rounded-full blur-3xl ${
-                darkMode ? "bg-emerald-400/[0.04]" : "bg-emerald-700/[0.035]"
-              }`}
-            />
+        {/* ERROR */}
 
-            <div className="relative">
-              {/* TOP AREA */}
-
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
-                {/* USER */}
-
-                <div className="flex min-w-0 items-center gap-3.5 sm:gap-5">
-                  <ProfileAvatar
-                    avatarUrl={avatarUrl}
-                    username={username}
-                    darkMode={darkMode}
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={`text-[9px] font-black tracking-[0.18em] ${
-                        darkMode ? "text-emerald-400" : "text-emerald-700"
-                      }`}
-                    >
-                      {t.profileLabel}
-                    </p>
-
-                    <h2
-                      className={`mt-1 truncate text-[1.65rem] font-black leading-[1.18] tracking-tight sm:text-3xl ${
-                        darkMode ? "text-white" : "text-[#14271a]"
-                      }`}
-                    >
-                      {username}
-                    </h2>
-
-                    <p
-                      className={`mt-1 truncate text-[12px] leading-5 sm:text-sm ${
-                        darkMode ? "text-gray-400" : "text-slate-500"
-                      }`}
-                    >
-                      {email}
-                    </p>
-
-                    <div className="mt-2.5">
-                      <StatusBadge
-                        darkMode={darkMode}
-                        verified={Boolean(user.email_confirmed_at)}
-                        text={
-                          user.email_confirmed_at ? t.verified : t.unverified
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* ACTIONS */}
-
-                <div className="grid grid-cols-2 gap-2.5 lg:w-[360px] lg:shrink-0">
-                  <Link
-                    href="/account/edit"
-                    className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition sm:text-sm ${
-                      darkMode
-                        ? "border-white/10 bg-white/[0.045] text-gray-100 hover:border-emerald-400/20 hover:bg-white/[0.08]"
-                        : "border-emerald-950/10 bg-[#f8faf7] text-slate-700 hover:border-emerald-700/20 hover:bg-emerald-50"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition ${
-                        darkMode
-                          ? "bg-white/[0.05] text-emerald-300 group-hover:bg-emerald-400/10"
-                          : "bg-emerald-800/[0.07] text-emerald-800 group-hover:bg-emerald-100"
-                      }`}
-                    >
-                      <EditIcon className="h-3.5 w-3.5" />
-                    </span>
-
-                    <span className="truncate">{t.editProfile}</span>
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                    className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition sm:text-sm disabled:cursor-not-allowed disabled:opacity-50 ${
-                      darkMode
-                        ? "border-red-400/10 bg-red-400/[0.055] text-red-300 hover:border-red-400/20 hover:bg-red-400/[0.1]"
-                        : "border-red-100 bg-red-50/80 text-red-700 hover:border-red-200 hover:bg-red-100"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                        darkMode ? "bg-red-400/[0.08]" : "bg-red-100"
-                      }`}
-                    >
-                      <LogoutIcon className="h-3.5 w-3.5" />
-                    </span>
-
-                    <span className="truncate">
-                      {loggingOut ? t.loggingOut : t.logout}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* MEMBER SINCE */}
-
-              <div
-                className={`mt-4 flex items-center gap-3 border-t pt-4 ${
-                  darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.07]"
-                }`}
-              >
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                    darkMode
-                      ? "bg-emerald-400/[0.08] text-emerald-300"
-                      : "bg-emerald-800/[0.06] text-emerald-700"
-                  }`}
-                >
-                  <CalendarIcon className="h-4 w-4" />
-                </div>
-
-                <div className="flex min-w-0 items-baseline gap-2">
-                  <span
-                    className={`shrink-0 text-[10px] font-bold ${
-                      darkMode ? "text-gray-500" : "text-slate-400"
-                    }`}
-                  >
-                    {t.memberSince}
-                  </span>
-
-                  <span
-                    className={`truncate text-[12px] font-bold sm:text-sm ${
-                      darkMode ? "text-gray-200" : "text-slate-700"
-                    }`}
-                  >
-                    {joinedDate}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-              MY PLANTS
-          ================================================= */}
-
-          <section
-            className={`rounded-[22px] border p-4 shadow-lg sm:p-6 lg:p-7 ${
-              darkMode
-                ? "border-white/10 bg-[#0a1710]"
-                : "border-emerald-950/[0.08] bg-white/90"
-            }`}
+        {error && (
+          <div
+            role="alert"
+            className="mt-8 flex items-start gap-3 rounded-[6px] border border-clay/40 bg-clay-soft p-4 text-clay"
           >
-            {/* HEADER */}
+            <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="min-w-0">
-                <p
-                  className={`text-[9px] font-black tracking-[0.18em] ${
-                    darkMode ? "text-emerald-400" : "text-emerald-700"
-                  }`}
-                >
-                  {t.myPlantsLabel}
-                </p>
+            <div className="min-w-0">
+              <p className="text-sm leading-6">{error}</p>
 
-                <h2
-                  className={`mt-1.5 text-[1.75rem] font-black leading-[1.25] tracking-tight sm:text-3xl ${
-                    darkMode ? "text-white" : "text-[#14271a]"
-                  }`}
-                >
-                  {t.myPlants}
-                </h2>
-
-                <p
-                  className={`mt-1.5 text-[12px] leading-5 sm:text-sm sm:leading-6 ${
-                    darkMode ? "text-gray-400" : "text-slate-500"
-                  }`}
-                >
-                  {t.myPlantsDescription}
-                </p>
-              </div>
-
-              {/* COLLECTION ACTIONS */}
-
-              <div className="grid grid-cols-2 gap-2 sm:w-auto">
-                <Link
-                  href="/account/plants"
-                  className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-[11px] font-bold transition sm:text-[12px] ${
-                    darkMode
-                      ? "border-white/10 bg-white/[0.035] text-gray-200 hover:bg-white/[0.08]"
-                      : "border-emerald-950/10 bg-[#f7faf6] text-slate-700 hover:bg-emerald-50"
-                  }`}
-                >
-                  <CollectionIcon className="h-4 w-4" />
-
-                  <span className="truncate">{t.managePlants}</span>
-                </Link>
-
-                <Link
-                  href="/account/plants/new"
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 text-[11px] font-black text-white transition hover:bg-emerald-600 sm:text-[12px]"
-                >
-                  <PlusIcon className="h-4 w-4" />
-
-                  <span className="truncate">{t.addPlant}</span>
-                </Link>
-              </div>
+              <button
+                type="button"
+                onClick={fetchAllPlants}
+                className="vh-btn vh-btn-danger vh-btn-sm mt-3"
+              >
+                <RefreshIcon className="h-3.5 w-3.5" />
+                {t.retry}
+              </button>
             </div>
+          </div>
+        )}
 
-            {/* ERROR */}
+        {/* LOADING */}
 
-            {error && (
+        {plantsLoading && (
+          <div className="mt-8 border-t border-rule" aria-busy="true">
+            <p className="sr-only">{t.loadingPlants}</p>
+
+            {Array.from({ length: 4 }).map((_, index) => (
               <div
-                className={`mt-5 flex items-start gap-3 rounded-xl border p-4 ${
-                  darkMode
-                    ? "border-red-400/15 bg-red-400/[0.06] text-red-200"
-                    : "border-red-200 bg-red-50 text-red-700"
-                }`}
+                key={index}
+                className="flex items-center gap-4 border-b border-rule py-4"
               >
-                <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="vh-skeleton h-12 w-12 shrink-0 rounded-[3px]" />
 
-                <div>
-                  <p className="text-sm leading-6">{error}</p>
-
-                  <button
-                    type="button"
-                    onClick={() => fetchMyPlants(user.id)}
-                    className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-lg bg-red-600 px-3 text-xs font-bold text-white"
-                  >
-                    <RefreshIcon className="h-3.5 w-3.5" />
-
-                    {t.retry}
-                  </button>
+                <div className="flex-1 space-y-2">
+                  <div className="vh-skeleton h-3 w-20 rounded" />
+                  <div className="vh-skeleton h-4 w-2/3 max-w-[280px] rounded" />
                 </div>
               </div>
-            )}
+            ))}
+          </div>
+        )}
 
-            {/* LOADING */}
+        {/* EMPTY */}
 
-            {plantsLoading && (
-              <div className="grid min-h-[180px] place-items-center">
-                <div className="text-center">
-                  <LoadingIcon
-                    className={`mx-auto h-7 w-7 animate-spin ${
-                      darkMode ? "text-emerald-300" : "text-emerald-700"
-                    }`}
-                  />
+        {!plantsLoading && !error && plants.length === 0 && (
+          <div className="vh-panel mt-8 px-6 py-12 text-center">
+            <LeafIcon className="mx-auto h-7 w-7 text-moss" />
 
-                  <p
-                    className={`mt-3 text-xs ${
-                      darkMode ? "text-gray-400" : "text-slate-500"
-                    }`}
-                  >
-                    {t.loadingPlants}
-                  </p>
-                </div>
-              </div>
-            )}
+            <h3 className="mt-4 font-serif text-xl italic text-muted">
+              {t.noPlants}
+            </h3>
 
-            {/* EMPTY */}
+            <p className="mx-auto mt-2 max-w-sm text-[13px] leading-6 text-faint">
+              {t.noPlantsDescription}
+            </p>
 
-            {!plantsLoading && !error && plants.length === 0 && (
-              <div
-                className={`mt-5 rounded-[18px] border border-dashed px-5 py-10 text-center ${
-                  darkMode
-                    ? "border-white/15 bg-white/[0.02]"
-                    : "border-emerald-950/10 bg-[#f7faf6]"
-                }`}
-              >
-                <LeafIcon
-                  className={`mx-auto h-9 w-9 ${
-                    darkMode ? "text-emerald-300" : "text-emerald-700"
-                  }`}
-                />
+            <Link
+              href="/account/plants/new"
+              className="vh-btn vh-btn-primary vh-btn-sm mt-6"
+            >
+              <PlusIcon className="h-4 w-4" />
+              {t.addPlant}
+            </Link>
+          </div>
+        )}
 
-                <h3
-                  className={`mt-4 text-lg font-black ${
-                    darkMode ? "text-white" : "text-[#14271a]"
-                  }`}
-                >
-                  {t.noPlants}
-                </h3>
-
-                <p
-                  className={`mx-auto mt-2 max-w-sm text-xs leading-6 ${
-                    darkMode ? "text-gray-400" : "text-slate-500"
-                  }`}
-                >
-                  {t.noPlantsDescription}
-                </p>
-
-                <Link
-                  href="/account/plants/new"
-                  className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-700 px-5 text-xs font-black text-white transition hover:bg-emerald-600"
-                >
-                  <PlusIcon className="h-4 w-4" />
-
-                  {t.addPlant}
-                </Link>
-              </div>
-            )}
-
+        {!plantsLoading && !error && plants.length > 0 && (
+          <>
             {/* =================================================
-                MOBILE GRID
-                2 ต่อแถว / สูงสุด 4 block
+                MOBILE – stacked rows (max 4)
             ================================================= */}
 
-            {!plantsLoading && !error && plants.length > 0 && (
-              <>
-                <div className="mt-5 grid grid-cols-2 gap-3 md:hidden">
-                  {mobilePreview.items.map((plant) => (
-                    <MyPlantCard
-                      key={plant.id || plant.plant_id}
+            <ol className="mt-8 border-t border-rule-strong md:hidden">
+              {mobilePreview.items.map((plant, index) => (
+                <MobilePlantRow
+                  key={plant.id}
+                  plant={plant}
+                  index={index}
+                  t={t}
+                  onDelete={requestDelete}
+                  deleting={deletingPlantId === plant.id}
+                />
+              ))}
+
+              {mobilePreview.remaining > 0 && (
+                <li>
+                  <MorePlantsLink count={mobilePreview.remaining} t={t} />
+                </li>
+              )}
+            </ol>
+
+            {/* =================================================
+                DESKTOP – table (max 6)
+            ================================================= */}
+
+            <div className="vh-panel mt-8 hidden overflow-x-auto md:block">
+              <table className="vh-table">
+                <thead>
+                  <tr>
+                    <th className="w-[1%] whitespace-nowrap">№</th>
+                    <th>{t.colSpecimen}</th>
+                    <th className="whitespace-nowrap">{t.colAccession}</th>
+                    <th className="hidden lg:table-cell">{t.locality}</th>
+                    <th className="hidden whitespace-nowrap xl:table-cell">
+                      {t.collectorNo}
+                    </th>
+                    <th className="text-right">{t.colActions}</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {desktopPreview.items.map((plant, index) => (
+                    <DesktopPlantRow
+                      key={plant.id}
                       plant={plant}
-                      darkMode={darkMode}
+                      index={index}
                       t={t}
-                      mobile
+                      onDelete={requestDelete}
+                      deleting={deletingPlantId === plant.id}
                     />
                   ))}
+                </tbody>
+              </table>
 
-                  {mobilePreview.remaining > 0 && (
-                    <MorePlantsCard
-                      count={mobilePreview.remaining}
-                      darkMode={darkMode}
-                      t={t}
-                      mobile
-                    />
-                  )}
-                </div>
-
-                {/* =================================================
-                    DESKTOP GRID
-                    3 ต่อแถว / สูงสุด 6 block
-                ================================================= */}
-
-                <div className="mt-6 hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-3">
-                  {desktopPreview.items.map((plant) => (
-                    <MyPlantCard
-                      key={plant.id || plant.plant_id}
-                      plant={plant}
-                      darkMode={darkMode}
-                      t={t}
-                    />
-                  ))}
-
-                  {desktopPreview.remaining > 0 && (
-                    <MorePlantsCard
-                      count={desktopPreview.remaining}
-                      darkMode={darkMode}
-                      t={t}
-                    />
-                  )}
-                </div>
-              </>
-            )}
-          </section>
-        </div>
+              {desktopPreview.remaining > 0 && (
+                <MorePlantsLink count={desktopPreview.remaining} t={t} />
+              )}
+            </div>
+          </>
+        )}
       </section>
+
+      {/* =====================================================
+          DELETE CONFIRM DIALOG
+      ===================================================== */}
+
+      {pendingDeletePlant && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/40 p-4 sm:items-center"
+          onClick={cancelDelete}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+            aria-describedby="delete-dialog-description"
+            onClick={(event) => event.stopPropagation()}
+            className="vh-sheet page-enter w-full max-w-md p-6 shadow-lift sm:p-7"
+          >
+            <p className="vh-eyebrow flex items-center gap-3 !text-clay">
+              <span className="h-px w-6 bg-clay" />
+              {t.delete}
+            </p>
+
+            <h2
+              id="delete-dialog-title"
+              className="vh-display mt-3 text-[1.7rem] leading-tight"
+            >
+              {t.deleteTitle}
+            </h2>
+
+            <div className="vh-label-card mt-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="vh-family truncate">
+                  {pendingDeletePlant.family || "—"}
+                </span>
+
+                {pendingDeletePlant.pnu_no && (
+                  <span className="vh-catalog shrink-0">
+                    PNU {pendingDeletePlant.pnu_no}
+                  </span>
+                )}
+              </div>
+
+              <p
+                className={`mt-1.5 line-clamp-2 text-[1.15rem] leading-snug text-ink ${
+                  pendingDeletePlant.botanical_name
+                    ? "vh-binomial"
+                    : "font-serif"
+                }`}
+              >
+                {pendingDeletePlant.botanical_name || t.unknownPlant}
+              </p>
+            </div>
+
+            <p
+              id="delete-dialog-description"
+              className="mt-5 text-[14px] leading-7 text-ink-soft"
+            >
+              {t.deleteConfirm}
+            </p>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={cancelDelete}
+                disabled={pendingDeleting}
+                className="vh-btn vh-btn-outline"
+              >
+                {t.cancel}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => deletePlant(pendingDeletePlant)}
+                disabled={pendingDeleting}
+                className="vh-btn vh-btn-danger"
+              >
+                {pendingDeleting ? (
+                  <LoadingIcon className="h-4 w-4 animate-spin" />
+                ) : (
+                  <DeleteIcon className="h-4 w-4" />
+                )}
+                {pendingDeleting ? t.deleting : t.delete}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -1128,7 +1088,7 @@ export default function AccountPage() {
    PROFILE AVATAR
 ========================================================= */
 
-function ProfileAvatar({ avatarUrl, username, darkMode }) {
+function ProfileAvatar({ avatarUrl, username }) {
   const [imageError, setImageError] = useState(false);
 
   const showImage = avatarUrl && !imageError;
@@ -1140,26 +1100,16 @@ function ProfileAvatar({ avatarUrl, username, darkMode }) {
       .toUpperCase() || "V";
 
   return (
-    <div
-      className={`h-[66px] w-[66px] shrink-0 overflow-hidden rounded-[18px] border sm:h-20 sm:w-20 sm:rounded-[22px] ${
-        darkMode
-          ? "border-white/10 bg-emerald-400/10"
-          : "border-emerald-950/10 bg-emerald-800/10"
-      }`}
-    >
+    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-rule-strong bg-paper-deep p-[3px] sm:h-[72px] sm:w-[72px]">
       {showImage ? (
         <img
           src={avatarUrl}
           alt={username}
-          className="h-full w-full object-cover"
+          className="h-full w-full rounded-full object-cover"
           onError={() => setImageError(true)}
         />
       ) : (
-        <div
-          className={`flex h-full w-full items-center justify-center text-xl font-black sm:text-2xl ${
-            darkMode ? "text-emerald-300" : "text-emerald-800"
-          }`}
-        >
+        <div className="flex h-full w-full items-center justify-center rounded-full bg-moss-soft font-serif text-2xl text-moss">
           {initial}
         </div>
       )}
@@ -1171,311 +1121,325 @@ function ProfileAvatar({ avatarUrl, username, darkMode }) {
    STATUS BADGE
 ========================================================= */
 
-function StatusBadge({ darkMode, verified, text }) {
+function StatusBadge({ verified, text }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
-        verified
-          ? darkMode
-            ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
-            : "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : darkMode
-            ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
-            : "border-amber-200 bg-amber-50 text-amber-700"
+      className={`vh-tag shrink-0 !text-[11px] ${
+        verified ? "vh-tag-moss" : "!border-transparent !bg-ochre-soft !text-ochre"
       }`}
     >
       <span
         className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-          verified ? "bg-emerald-400" : "bg-amber-400"
+          verified ? "bg-moss" : "bg-ochre"
         }`}
       />
-
       {text}
     </span>
   );
 }
 
 /* =========================================================
-   STAT CARD
+   PLANT HELPERS
 ========================================================= */
 
-function StatCard({ darkMode, icon, label, value }) {
+function getPlantMeta(plant, t) {
+  const plantId = plant.id;
+
+  return {
+    plantId,
+    image: plant.image_url || "",
+    botanicalName: plant.botanical_name || "",
+    name:
+      plant.botanical_name ||
+      (plant.pnu_no ? `PNU ${plant.pnu_no}` : "") ||
+      t.unknownPlant,
+    family: plant.family || "",
+    group: plant.artificial_group || "",
+    locality: plant.locality || "",
+    collectorNo: plant.collector_no || "",
+    pnuNo: plant.pnu_no || "",
+  };
+}
+
+function PlantThumb({ image, name, className = "" }) {
   return (
     <div
-      className={`group min-w-0 rounded-[18px] border px-2 py-4 text-center backdrop-blur-xl transition duration-300 sm:min-h-[170px] sm:rounded-[28px] sm:px-5 sm:py-5 lg:min-h-[185px] lg:px-6 lg:py-6 lg:hover:-translate-y-1 ${
-        darkMode
-          ? "border-white/10 bg-black/25 shadow-[0_14px_38px_rgba(0,0,0,0.18)]"
-          : "border-white/80 bg-white/80 shadow-[0_14px_40px_rgba(28,65,38,0.08)]"
-      }`}
+      className={`shrink-0 overflow-hidden rounded-[3px] border border-rule bg-paper-deep ${className}`}
     >
-      <div className="flex h-full flex-col items-center justify-center">
-        {/* ICON */}
-
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] sm:h-14 sm:w-14 sm:rounded-[17px] lg:h-16 lg:w-16 lg:rounded-[20px] ${
-            darkMode
-              ? "bg-emerald-400/10 text-emerald-300"
-              : "bg-[#eaf3ee] text-emerald-700"
-          }`}
-        >
-          {icon}
+      {image ? (
+        <img
+          src={image}
+          alt={name}
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-faint">
+          <LeafIcon className="h-5 w-5" />
         </div>
-
-        {/* NUMBER */}
-
-        <p
-          className={`mt-2.5 text-[28px] font-black leading-none tracking-[-0.04em] sm:mt-3 sm:text-[42px] lg:text-[48px] ${
-            darkMode ? "text-white" : "text-[#123d24]"
-          }`}
-        >
-          {value}
-        </p>
-
-        {/* LABEL */}
-
-        <p
-          className={`mt-1.5 max-w-full truncate text-[9px] font-bold leading-4 sm:mt-2 sm:text-[12px] lg:text-[13px] ${
-            darkMode ? "text-gray-400" : "text-[#61718a]"
-          }`}
-        >
-          {label}
-        </p>
-      </div>
+      )}
     </div>
   );
 }
 
+function PlantName({ meta, t, className = "" }) {
+  return meta.botanicalName ? (
+    <span className={`vh-binomial text-ink ${className}`}>
+      {meta.botanicalName}
+    </span>
+  ) : (
+    <span className={`font-serif text-muted ${className}`}>
+      {meta.pnuNo ? `PNU ${meta.pnuNo}` : t.unknownPlant}
+    </span>
+  );
+}
+
 /* =========================================================
-   PLANT CARD
+   DESKTOP TABLE ROW
 ========================================================= */
 
-function MyPlantCard({ plant, darkMode, t, mobile = false }) {
-  const plantId = plant.id || plant.plant_id;
+function DesktopPlantRow({ plant, index, t, onDelete, deleting }) {
+  const meta = getPlantMeta(plant, t);
 
-  const image = plant.image_url || "";
-
-  const name = plant.common_name || plant.botanical_name || t.unknownPlant;
-
-  const botanicalName = plant.botanical_name || "";
-
-  const family = plant.family || "";
-
-  const province = plant.province || "";
-
-  const specimen = plant.specimen_number || "";
+  const viewHref = meta.plantId
+    ? `/account/plants/${meta.plantId}`
+    : "/account/plants";
 
   return (
-    <article
-      className={`group min-w-0 overflow-hidden rounded-[17px] border transition duration-300 ${
-        darkMode
-          ? "border-white/10 bg-[#08140d] hover:border-emerald-400/20"
-          : "border-emerald-950/[0.09] bg-white hover:border-emerald-700/20"
-      }`}
-    >
-      {/* IMAGE */}
+    <tr>
+      <td className="align-middle font-mono text-[12px] text-ochre">
+        {String(index + 1).padStart(2, "0")}
+      </td>
 
-      <Link href={plantId ? `/plants/${plantId}` : "/plants"} className="block">
-        <div
-          className={`relative overflow-hidden ${
-            mobile ? "aspect-[1.25/1]" : "aspect-[1.55/1]"
-          }`}
-        >
-          {image ? (
-            <img
-              src={image}
-              alt={name}
-              loading="lazy"
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+      <td className="min-w-[240px]">
+        <Link href={viewHref} className="group flex items-center gap-3.5">
+          <PlantThumb image={meta.image} name={meta.name} className="h-12 w-12" />
+
+          <span className="min-w-0">
+            <PlantName
+              meta={meta}
+              t={t}
+              className="block truncate text-[1.05rem] leading-snug transition group-hover:text-moss"
             />
-          ) : (
-            <div
-              className={`flex h-full w-full items-center justify-center ${
-                darkMode ? "bg-[#102218]" : "bg-[#edf5ed]"
-              }`}
+
+            <span className="mt-1 flex min-w-0 items-center gap-2">
+              {meta.family && (
+                <span className="vh-family truncate">{meta.family}</span>
+              )}
+
+              {meta.group && (
+                <span className="truncate text-[12px] text-faint">
+                  {meta.family ? "· " : ""}
+                  {meta.group}
+                </span>
+              )}
+            </span>
+          </span>
+        </Link>
+      </td>
+
+      <td className="whitespace-nowrap">
+        <span className="vh-catalog !text-[12px] !text-ink-soft">
+          {meta.pnuNo ? `PNU ${meta.pnuNo}` : "—"}
+        </span>
+      </td>
+
+      <td className="hidden max-w-[220px] lg:table-cell">
+        <span className="block truncate text-[13px]" title={meta.locality}>
+          {meta.locality || "—"}
+        </span>
+      </td>
+
+      <td className="hidden whitespace-nowrap xl:table-cell">
+        <span className="vh-catalog !text-[12px]">
+          {meta.collectorNo || "—"}
+        </span>
+      </td>
+
+      <td className="text-right">
+        {meta.plantId && (
+          <div className="inline-flex items-center justify-end gap-1">
+            <Link
+              href={`/account/plants/${meta.plantId}`}
+              className="vh-icon-btn !h-9 !w-9 !border-transparent"
+              aria-label={t.view}
+              title={t.view}
             >
-              <LeafIcon
-                className={`h-9 w-9 ${
-                  darkMode ? "text-emerald-400/35" : "text-emerald-800/25"
-                }`}
-              />
-            </div>
+              <EyeIcon className="h-4 w-4" />
+            </Link>
+
+            <Link
+              href={`/account/plants/${meta.plantId}/edit`}
+              className="vh-icon-btn !h-9 !w-9 !border-transparent"
+              aria-label={t.edit}
+              title={t.edit}
+            >
+              <EditIcon className="h-4 w-4" />
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => onDelete?.(plant)}
+              disabled={deleting}
+              className="vh-icon-btn !h-9 !w-9 !border-transparent hover:!bg-clay-soft hover:!text-clay"
+              aria-label={deleting ? t.deleting : t.delete}
+              title={deleting ? t.deleting : t.delete}
+            >
+              {deleting ? (
+                <LoadingIcon className="h-4 w-4 animate-spin" />
+              ) : (
+                <DeleteIcon className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/* =========================================================
+   MOBILE STACKED ROW
+========================================================= */
+
+function MobilePlantRow({ plant, index, t, onDelete, deleting }) {
+  const meta = getPlantMeta(plant, t);
+
+  const viewHref = meta.plantId
+    ? `/account/plants/${meta.plantId}`
+    : "/account/plants";
+
+  return (
+    <li className="border-b border-rule py-4">
+      <Link href={viewHref} className="flex min-w-0 gap-3.5">
+        <PlantThumb image={meta.image} name={meta.name} className="h-16 w-16" />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[11px] text-ochre">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+
+            {meta.pnuNo && (
+              <span className="vh-catalog shrink-0">PNU {meta.pnuNo}</span>
+            )}
+          </div>
+
+          <PlantName
+            meta={meta}
+            t={t}
+            className="mt-1 block truncate text-[1.08rem] leading-snug"
+          />
+
+          {meta.family && (
+            <span className="vh-family mt-1 block truncate">{meta.family}</span>
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/5" />
-
-          {botanicalName && (
-            <p className="absolute inset-x-3 bottom-2.5 truncate text-[10px] font-semibold italic text-emerald-100 sm:text-xs">
-              {botanicalName}
+          {meta.locality && (
+            <p className="mt-1 truncate text-[12px] text-muted">
+              <span className="text-faint">{t.locality}: </span>
+              {meta.locality}
             </p>
           )}
         </div>
       </Link>
 
-      {/* BODY */}
-
-      <div className={mobile ? "p-3" : "p-4"}>
-        <h3
-          className={`line-clamp-2 font-black ${
-            mobile
-              ? "min-h-[38px] text-[15px] leading-[19px]"
-              : "min-h-[44px] text-lg leading-[22px]"
-          } ${darkMode ? "text-white" : "text-[#14271a]"}`}
-        >
-          {name}
-        </h3>
-
-        {/* MOBILE META */}
-
-        {mobile ? (
-          <div className="mt-2.5 space-y-1.5">
-            {family && (
-              <MiniMeta darkMode={darkMode} label={t.family} value={family} />
-            )}
-
-            {province && (
-              <MiniMeta
-                darkMode={darkMode}
-                label={t.province}
-                value={province}
-              />
-            )}
-          </div>
-        ) : (
-          /* DESKTOP META */
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {family && (
-              <MiniMeta darkMode={darkMode} label={t.family} value={family} />
-            )}
-
-            {province && (
-              <MiniMeta
-                darkMode={darkMode}
-                label={t.province}
-                value={province}
-              />
-            )}
-
-            {specimen && (
-              <div className="col-span-2">
-                <MiniMeta
-                  darkMode={darkMode}
-                  label={t.specimen}
-                  value={specimen}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ACTION */}
-
-        {plantId && (
-          <div
-            className={`mt-3 grid grid-cols-2 gap-1.5 border-t pt-3 ${
-              darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.07]"
-            }`}
+      {meta.plantId && (
+        <div className="mt-3 grid grid-cols-3 gap-1.5 pl-[78px]">
+          <Link
+            href={`/account/plants/${meta.plantId}`}
+            className="vh-btn vh-btn-ghost vh-btn-sm min-w-0 !px-2"
           >
-            <Link
-              href={`/plants/${plantId}`}
-              className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border px-2 text-[10px] font-bold transition sm:text-[11px] ${
-                darkMode
-                  ? "border-white/10 bg-white/[0.03] text-gray-200 hover:bg-white/[0.07]"
-                  : "border-emerald-950/[0.08] bg-[#f7faf6] text-slate-700 hover:bg-emerald-50"
-              }`}
-            >
-              <EyeIcon className="h-3.5 w-3.5" />
+            <EyeIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{t.view}</span>
+          </Link>
 
-              {t.view}
-            </Link>
+          <Link
+            href={`/account/plants/${meta.plantId}/edit`}
+            className="vh-btn vh-btn-outline vh-btn-sm min-w-0 !px-2"
+          >
+            <EditIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{t.edit}</span>
+          </Link>
 
-            <Link
-              href={`/account/plants/${plantId}/edit`}
-              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-2 text-[10px] font-black text-white transition hover:bg-emerald-600 sm:text-[11px]"
-            >
-              <EditIcon className="h-3.5 w-3.5" />
-
-              {t.edit}
-            </Link>
-          </div>
-        )}
-      </div>
-    </article>
+          <button
+            type="button"
+            onClick={() => onDelete?.(plant)}
+            disabled={deleting}
+            className="vh-btn vh-btn-danger vh-btn-sm min-w-0 !px-2"
+          >
+            {deleting ? (
+              <LoadingIcon className="h-3.5 w-3.5 shrink-0 animate-spin" />
+            ) : (
+              <DeleteIcon className="h-3.5 w-3.5 shrink-0" />
+            )}
+            <span className="truncate">{deleting ? t.deleting : t.delete}</span>
+          </button>
+        </div>
+      )}
+    </li>
   );
 }
 
 /* =========================================================
-   MINI META
+   MORE PLANTS LINK
 ========================================================= */
 
-function MiniMeta({ darkMode, label, value }) {
-  return (
-    <div className="min-w-0">
-      <p
-        className={`truncate text-[8px] font-bold uppercase tracking-[0.06em] ${
-          darkMode ? "text-gray-500" : "text-slate-400"
-        }`}
-      >
-        {label}
-      </p>
-
-      <p
-        className={`mt-0.5 truncate text-[10px] font-bold leading-4 sm:text-[11px] ${
-          darkMode ? "text-gray-300" : "text-slate-700"
-        }`}
-        title={value}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
-   MORE PLANTS CARD
-========================================================= */
-
-function MorePlantsCard({ count, darkMode, t, mobile = false }) {
+function MorePlantsLink({ count, t }) {
   return (
     <Link
       href="/account/plants"
-      className={`flex min-w-0 flex-col items-center justify-center rounded-[17px] border text-center transition duration-300 ${
-        mobile ? "min-h-[250px] p-3" : "min-h-[330px] p-5"
-      } ${
-        darkMode
-          ? "border-white/10 bg-[#08140d] hover:border-emerald-400/20"
-          : "border-emerald-950/[0.09] bg-[#f8fbf7] hover:border-emerald-700/20"
-      }`}
+      className="group flex items-baseline gap-3 px-0 py-4 transition md:px-4"
     >
-      <div
-        className={`flex items-center justify-center rounded-full font-black ${
-          mobile ? "h-14 w-14 text-xl" : "h-20 w-20 text-3xl"
-        } ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-100 text-emerald-800"
-        }`}
-      >
+      <span className="font-serif text-[1.3rem] leading-none text-ochre tabular-nums">
         +{count}
-      </div>
+      </span>
 
-      <p
-        className={`mt-3 font-black leading-5 ${
-          mobile ? "text-[12px]" : "text-base"
-        } ${darkMode ? "text-white" : "text-[#14271a]"}`}
-      >
+      <span className="text-[14px] text-ink-soft transition group-hover:text-moss">
         {t.morePlants}
-      </p>
+      </span>
 
-      <p
-        className={`mt-1 text-[10px] ${
-          darkMode ? "text-gray-500" : "text-slate-500"
-        }`}
-      >
+      <span
+        aria-hidden="true"
+        className="flex-1 translate-y-[-3px] border-b border-dotted border-rule-strong"
+      />
+
+      <span className="inline-flex items-center gap-1.5 text-[13px] text-moss">
         {t.showAll}
-      </p>
+        <ArrowRightIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+      </span>
     </Link>
   );
+}
+
+/* =========================================================
+   IMAGE STORAGE PATH
+========================================================= */
+
+function getPlantImageStoragePath(imageUrl) {
+  if (!imageUrl) {
+    return "";
+  }
+
+  const marker = "/storage/v1/object/public/plant-images/";
+
+  const url = String(imageUrl);
+
+  if (!url.includes(marker)) {
+    return "";
+  }
+
+  const encodedPath = url.split(marker)[1]?.split("?")[0] || "";
+
+  if (!encodedPath) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(encodedPath);
+  } catch {
+    return encodedPath;
+  }
 }
 
 /* =========================================================
@@ -1489,58 +1453,13 @@ function LeafIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
-
-      <path d="M4 20c4-5 7-7 13-10" />
-    </svg>
-  );
-}
-
-function BranchIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 20V6" />
-
-      <path d="M12 9 7 5" />
-
-      <path d="M12 13l5-4" />
-
-      <path d="M7 5 5 3" />
-
-      <path d="M17 9l2-2" />
-    </svg>
-  );
-}
-
-function PinIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-
-      <circle cx="12" cy="10" r="2.5" />
+      <path d="M20.5 3.5C14 3.8 8.2 6 5.2 10.1c-2.2 3-1.9 6.4.1 8.6 2.2 2.4 6.1 2.4 9-.1 3.8-3.3 5.6-8.9 6.2-15.1Z" />
+      <path d="M4 20c3.2-4.9 7.1-8.4 12.7-11.2" />
     </svg>
   );
 }
@@ -1558,31 +1477,7 @@ function UserIcon({ className = "" }) {
       aria-hidden="true"
     >
       <circle cx="12" cy="8" r="4" />
-
       <path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
-  );
-}
-
-function CalendarIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="5" width="18" height="16" rx="2" />
-
-      <path d="M8 3v4" />
-
-      <path d="M16 3v4" />
-
-      <path d="M3 10h18" />
     </svg>
   );
 }
@@ -1600,11 +1495,8 @@ function CollectionIcon({ className = "" }) {
       aria-hidden="true"
     >
       <rect x="4" y="3" width="16" height="18" rx="2" />
-
       <path d="M8 7h8" />
-
       <path d="M8 11h8" />
-
       <path d="M8 15h5" />
     </svg>
   );
@@ -1622,8 +1514,25 @@ function PlusIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M12 5v14" />
-
       <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function ArrowRightIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
     </svg>
   );
 }
@@ -1641,7 +1550,6 @@ function EditIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M12 20h9" />
-
       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
     </svg>
   );
@@ -1660,8 +1568,28 @@ function EyeIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-
       <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  );
+}
+
+function DeleteIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v5" />
+      <path d="M14 11v5" />
     </svg>
   );
 }
@@ -1673,15 +1601,13 @@ function LogoutIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
       <path d="M10 17l5-5-5-5" />
-
       <path d="M15 12H3" />
-
       <path d="M21 19V5a2 2 0 0 0-2-2h-6" />
     </svg>
   );
@@ -1694,15 +1620,13 @@ function AlertIcon({ className = "" }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="9" />
-
       <path d="M12 8v5" />
-
       <path d="M12 16.5h.01" />
     </svg>
   );
@@ -1721,11 +1645,8 @@ function RefreshIcon({ className = "" }) {
       aria-hidden="true"
     >
       <path d="M20 11a8.1 8.1 0 0 0-14.9-3.9L3 10" />
-
       <path d="M3 4v6h6" />
-
       <path d="M4 13a8.1 8.1 0 0 0 14.9 3.9L21 14" />
-
       <path d="M21 20v-6h-6" />
     </svg>
   );
@@ -1733,12 +1654,7 @@ function RefreshIcon({ className = "" }) {
 
 function LoadingIcon({ className = "" }) {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle
         cx="12"
         cy="12"
@@ -1747,7 +1663,6 @@ function LoadingIcon({ className = "" }) {
         strokeWidth="2"
         opacity="0.25"
       />
-
       <path
         d="M21 12a9 9 0 0 0-9-9"
         stroke="currentColor"

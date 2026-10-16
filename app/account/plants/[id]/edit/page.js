@@ -30,9 +30,9 @@ const DEFAULT_MAP_CENTER = {
 
 const DEFAULT_MAP_ZOOM = 5;
 
-const REVERSE_GEOCODING_URL =
-  process.env.NEXT_PUBLIC_REVERSE_GEOCODING_URL ||
-  "https://nominatim.openstreetmap.org/reverse";
+const FORWARD_GEOCODING_URL =
+  process.env.NEXT_PUBLIC_FORWARD_GEOCODING_URL ||
+  "https://nominatim.openstreetmap.org/search";
 
 const MAP_TILE_URL =
   process.env.NEXT_PUBLIC_MAP_TILE_URL ||
@@ -43,28 +43,17 @@ const ELEVATION_URL =
   "https://api.open-meteo.com/v1/elevation";
 
 const INITIAL_FORM = {
+  pnu_no: "",
+  artificial_group: "",
   family: "",
-  common_name: "",
   botanical_name: "",
-
-  province: "",
-  district: "",
-  subdistrict: "",
-  postcode: "",
-  location: "",
+  collected_by: "",
+  collector_no: "",
+  locality: "",
 
   latitude: null,
   longitude: null,
-
   elevation: "",
-
-  collection_date: "",
-  habitat: "",
-  notes: "",
-
-  collected_by: "",
-  specimen_number: "",
-  duplicates: "",
 };
 
 /* =========================================================
@@ -73,81 +62,69 @@ const INITIAL_FORM = {
 
 const COPY = {
   TH: {
-    eyebrow: "EDIT SPECIMEN",
+    eyebrow: "แก้ไขตัวอย่างพรรณไม้",
 
     title: "แก้ไขข้อมูลพรรณไม้",
 
     subtitle:
-      "ปรับปรุงข้อมูลตัวอย่าง รูปภาพ ตำแหน่งที่พบ และข้อมูลการเก็บตัวอย่าง",
+      "แก้ไขข้อมูลตัวอย่างพรรณไม้ รูปภาพ ตำแหน่งพิกัด และระดับความสูงจากน้ำทะเล",
 
     back: "กลับคลังพรรณไม้",
 
     plant: "ข้อมูลพรรณไม้",
 
-    plantDesc: "แก้ไขชื่อและข้อมูลอนุกรมวิธานของตัวอย่าง",
+    plantDesc: "แก้ไขข้อมูลตัวอย่างพรรณไม้ตามชุดข้อมูล PNU",
 
-    common: "ชื่อพรรณไม้",
+    pnuNo: "หมายเลข PNU",
 
-    commonPh: "เช่น มะม่วง",
+    pnuNoPh: "เช่น 5001",
 
-    botanical: "ชื่อวิทยาศาสตร์",
+    artificialGroup: "กลุ่มพืช",
 
-    botanicalPh: "เช่น Mangifera indica",
+    artificialGroupPh: "เช่น angiosperm",
 
     family: "วงศ์",
 
-    familyPh: "เช่น Anacardiaceae",
+    familyPh: "เช่น Euphorbiaceae",
 
-    location: "สถานที่พบ",
+    botanical: "ชื่อวิทยาศาสตร์",
+
+    botanicalPh: "เช่น Chaetocarpus castanocarpus (Roxb.) Thw.",
+
+    collection: "ข้อมูลผู้เก็บตัวอย่าง",
+
+    collectionDesc: "แก้ไขชื่อผู้เก็บตัวอย่างและหมายเลขผู้เก็บ",
+
+    collector: "ผู้เก็บตัวอย่าง",
+
+    collectorPh: "เช่น A. Boonkongchart",
+
+    collectorNo: "หมายเลขผู้เก็บ",
+
+    collectorNoPh: "เช่น 175 หรือ 584(2)",
+
+    location: "สถานที่และพิกัด",
 
     locationDesc:
-      "ตำแหน่งเดิมจะแสดงบนแผนที่ หากต้องการเปลี่ยนให้แตะแผนที่ ลากหมุด หรือใช้ตำแหน่งปัจจุบัน",
-
-    collection: "ข้อมูลการเก็บตัวอย่าง",
-
-    collectionDesc:
-      "แก้ไขวันที่ ผู้เก็บ หมายเลขตัวอย่าง ถิ่นอาศัย และรายละเอียดเพิ่มเติม",
-
-    date: "วันที่เก็บตัวอย่าง",
-
-    collector: "ชื่อผู้เก็บตัวอย่าง",
-
-    collectorPh: "ชื่อผู้เก็บตัวอย่าง",
-
-    specimen: "หมายเลขตัวอย่าง",
-
-    specimenPh: "เช่น VH-0001",
-
-    duplicates: "จำนวนตัวอย่างซ้ำ",
-
-    duplicatesPh: "เช่น 2",
-
-    habitat: "ถิ่นอาศัย",
-
-    habitatPh: "เช่น ป่าดิบแล้ง ริมลำธาร พื้นที่เกษตร...",
-
-    notes: "รายละเอียดเพิ่มเติม",
-
-    notesPh: "ลักษณะเด่น สี กลิ่น การใช้ประโยชน์ หรือข้อสังเกตอื่น ๆ...",
-
-    optional: "ข้อมูลอื่นสามารถเว้นว่างได้",
+      "แก้ไขสถานที่ได้โดยพิมพ์ Locality แล้วหยุดประมาณ 1 วินาที ระบบจะค้นหาและเลื่อนหมุดให้อัตโนมัติ",
 
     image: "รูปภาพตัวอย่าง",
 
-    imageDesc:
-      "เพิ่มภาพที่เห็นลักษณะของตัวอย่างได้ชัดเจน สามารถเลือกจากเครื่องหรือถ่ายด้วยกล้อง",
+    imageDesc: "ใช้รูปเดิม เปลี่ยนรูปจากเครื่อง หรือถ่ายภาพใหม่ได้",
 
     currentImage: "รูปภาพปัจจุบัน",
 
     newImage: "รูปภาพใหม่",
 
-    noImage: "ยังไม่ได้เลือกรูปภาพ",
+    noImage: "ยังไม่มีรูปภาพ",
 
     chooseImage: "เลือกรูปจากเครื่อง",
 
     takePhoto: "ถ่ายด้วยกล้อง",
 
-    imageHint: "JPG, PNG, WEBP, HEIC และ HEIFv ไม่เกิน 10MB",
+    cameraUnavailable: "สามารถถ่ายรูปได้จากมือถือหรือแท็บเล็ตเท่านั้น",
+
+    imageHint: "JPG, PNG, WEBP ไม่เกิน 10MB • HEIC / HEIF จะถูกแปลงเป็น JPEG",
 
     invalidImage: "รองรับเฉพาะ JPG, PNG, WEBP, HEIC และ HEIF",
 
@@ -168,9 +145,11 @@ const COPY = {
 
     requiredLabel: "จำเป็น",
 
-    required: "กรุณากรอกชื่อพรรณไม้",
+    pnuRequired: "กรุณากรอกหมายเลข PNU",
 
-    duplicateError: "จำนวนตัวอย่างซ้ำต้องเป็นเลขจำนวนเต็มตั้งแต่ 0 ขึ้นไป",
+    pnuError: "หมายเลข PNU ต้องเป็นเลขจำนวนเต็มตั้งแต่ 1 ขึ้นไป",
+
+    botanicalRequired: "กรุณากรอกชื่อวิทยาศาสตร์",
 
     loginRequired: "กรุณาเข้าสู่ระบบ",
 
@@ -197,69 +176,55 @@ const COPY = {
     title: "Edit Plant Record",
 
     subtitle:
-      "Update specimen information, image, collection location and field data.",
+      "Update specimen information, image, coordinates and elevation above sea level.",
 
     back: "Back to Plant Collection",
 
     plant: "Plant Information",
 
-    plantDesc: "Update the identity and taxonomic information.",
+    plantDesc: "Update the specimen information used by the PNU dataset.",
 
-    common: "Common Name",
+    pnuNo: "PNU No.",
 
-    commonPh: "e.g. Mango",
+    pnuNoPh: "e.g. 5001",
 
-    botanical: "Scientific Name",
+    artificialGroup: "Artificial Group",
 
-    botanicalPh: "e.g. Mangifera indica",
+    artificialGroupPh: "e.g. angiosperm",
 
     family: "Family",
 
-    familyPh: "e.g. Anacardiaceae",
+    familyPh: "e.g. Euphorbiaceae",
 
-    location: "Collection Location",
+    botanical: "Botanical Name",
+
+    botanicalPh: "e.g. Chaetocarpus castanocarpus (Roxb.) Thw.",
+
+    collection: "Collector Information",
+
+    collectionDesc: "Update the collector name and collector number.",
+
+    collector: "Collector",
+
+    collectorPh: "e.g. A. Boonkongchart",
+
+    collectorNo: "Collector No.",
+
+    collectorNoPh: "e.g. 175 or 584(2)",
+
+    location: "Location & Coordinates",
 
     locationDesc:
-      "The saved point is shown on the map. Tap the map, drag the marker, or use your current location to change it.",
-
-    collection: "Collection Information",
-
-    collectionDesc:
-      "Update the date, collector, specimen number, habitat and notes.",
-
-    date: "Collection Date",
-
-    collector: "Collected By",
-
-    collectorPh: "Collector name",
-
-    specimen: "Specimen Number",
-
-    specimenPh: "e.g. VH-0001",
-
-    duplicates: "Duplicates",
-
-    duplicatesPh: "e.g. 2",
-
-    habitat: "Habitat",
-
-    habitatPh: "e.g. evergreen forest, stream bank or agricultural area...",
-
-    notes: "Additional Notes",
-
-    notesPh:
-      "Distinctive characters, colour, scent, uses or other observations...",
-
-    optional: "Other information can be left blank",
+      "Edit the locality and pause typing for about one second. The map will automatically find the location and move the marker.",
 
     image: "Plant Image",
 
     imageDesc:
-      "Add a clear specimen image. You can choose a file or capture a new photo.",
+      "Keep the current image, choose another image, or take a new photo.",
 
-    currentImage: "Current image",
+    currentImage: "Current Image",
 
-    newImage: "New image",
+    newImage: "New Image",
 
     noImage: "No image selected",
 
@@ -267,7 +232,9 @@ const COPY = {
 
     takePhoto: "Take Photo",
 
-    imageHint: "JPG, PNG, WEBP, HEIC and HEIF up to 10MB",
+    cameraUnavailable: "Photo capture is available on mobile or tablet only.",
+
+    imageHint: "JPG, PNG, WEBP up to 10MB • HEIC / HEIF is converted to JPEG",
 
     invalidImage: "Supported formats: JPG, PNG, WEBP, HEIC and HEIF",
 
@@ -288,10 +255,11 @@ const COPY = {
 
     requiredLabel: "Required",
 
-    required: "Please enter the plant name",
+    pnuRequired: "Please enter the PNU No.",
 
-    duplicateError:
-      "Duplicates must be a whole number greater than or equal to 0",
+    pnuError: "PNU No. must be a whole number greater than or equal to 1",
+
+    botanicalRequired: "Please enter the Botanical Name",
 
     loginRequired: "Please log in",
 
@@ -320,9 +288,10 @@ const COPY = {
 
 export default function EditPlantPage() {
   const router = useRouter();
+
   const params = useParams();
 
-  const { language, darkMode } = useSiteSettings();
+  const { language } = useSiteSettings();
 
   const isEnglish = language === "EN";
 
@@ -344,6 +313,8 @@ export default function EditPlantPage() {
 
   const [oldImageUrl, setOldImageUrl] = useState("");
 
+  const [canUseCamera, setCanUseCamera] = useState(false);
+
   const [processingImage, setProcessingImage] = useState(false);
 
   const [imageNotice, setImageNotice] = useState("");
@@ -358,9 +329,36 @@ export default function EditPlantPage() {
 
   const [success, setSuccess] = useState("");
 
+  /* snapshot of the saved record, used for the page header */
+  const [record, setRecord] = useState({
+    pnu_no: "",
+
+    botanical_name: "",
+
+    family: "",
+  });
+
   const fileInputRef = useRef(null);
 
   const cameraInputRef = useRef(null);
+
+  /* =====================================================
+     CAMERA SUPPORT
+  ===================================================== */
+
+  useEffect(() => {
+    if (typeof navigator === "undefined") {
+      return;
+    }
+
+    const userAgent = navigator.userAgent || navigator.vendor || "";
+
+    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+
+    const iPadOS = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
+
+    setCanUseCamera(mobile || iPadOS);
+  }, []);
 
   /* =====================================================
      LOAD USER + PLANT
@@ -371,6 +369,7 @@ export default function EditPlantPage() {
 
     async function loadPlant() {
       setLoading(true);
+
       setFatalError("");
 
       try {
@@ -406,23 +405,16 @@ export default function EditPlantPage() {
             `
                 id,
                 user_id,
+                pnu_no,
+                artificial_group,
                 family,
-                common_name,
                 botanical_name,
-                province,
-                district,
-                subdistrict,
-                postcode,
-                location,
+                collected_by,
+                collector_no,
+                locality,
                 latitude,
                 longitude,
                 elevation,
-                collection_date,
-                habitat,
-                notes,
-                collected_by,
-                specimen_number,
-                duplicates,
                 image_url
               `,
           )
@@ -438,52 +430,43 @@ export default function EditPlantPage() {
           throw new Error(t.notFound);
         }
 
-        /*
-         * รองรับข้อมูลเก่าที่เคยเก็บ
-         * Coordinates ไว้ใน location
-         */
-        const legacy = extractLegacyCoordinates(plant.location);
-
         setForm({
-          family: plant.family || "",
+          pnu_no:
+            plant.pnu_no !== null && plant.pnu_no !== undefined
+              ? String(plant.pnu_no)
+              : "",
 
-          common_name: plant.common_name || "",
+          artificial_group: plant.artificial_group || "",
+
+          family: plant.family || "",
 
           botanical_name: plant.botanical_name || "",
 
-          province: plant.province || "",
+          collected_by: plant.collected_by || "",
 
-          district: plant.district || "",
+          collector_no: plant.collector_no || "",
 
-          subdistrict: plant.subdistrict || "",
+          locality: plant.locality || "",
 
-          postcode: plant.postcode || "",
+          latitude: toFiniteNumberOrNull(plant.latitude),
 
-          location: cleanLegacyLocation(plant.location),
-
-          latitude: toFiniteNumberOrNull(plant.latitude) ?? legacy.latitude,
-
-          longitude: toFiniteNumberOrNull(plant.longitude) ?? legacy.longitude,
+          longitude: toFiniteNumberOrNull(plant.longitude),
 
           elevation:
             plant.elevation !== null && plant.elevation !== undefined
               ? String(plant.elevation)
               : "",
+        });
 
-          collection_date: plant.collection_date || "",
-
-          habitat: plant.habitat || "",
-
-          notes: plant.notes || "",
-
-          collected_by: plant.collected_by || "",
-
-          specimen_number: plant.specimen_number || "",
-
-          duplicates:
-            plant.duplicates !== null && plant.duplicates !== undefined
-              ? String(plant.duplicates)
+        setRecord({
+          pnu_no:
+            plant.pnu_no !== null && plant.pnu_no !== undefined
+              ? String(plant.pnu_no)
               : "",
+
+          botanical_name: plant.botanical_name || "",
+
+          family: plant.family || "",
         });
 
         const existingImage = plant.image_url || "";
@@ -530,10 +513,12 @@ export default function EditPlantPage() {
   function updateField(name, value) {
     setForm((previous) => ({
       ...previous,
+
       [name]: value,
     }));
 
     setError("");
+
     setSuccess("");
   }
 
@@ -545,38 +530,36 @@ export default function EditPlantPage() {
     setForm((previous) => ({
       ...previous,
 
-      province: locationData.province || "",
+      latitude:
+        locationData.latitude !== undefined
+          ? toFiniteNumberOrNull(locationData.latitude)
+          : previous.latitude,
 
-      district: locationData.district || "",
-
-      subdistrict: locationData.subdistrict || "",
-
-      postcode: locationData.postcode || "",
-
-      location: locationData.address || "",
-
-      latitude: toFiniteNumberOrNull(locationData.latitude),
-
-      longitude: toFiniteNumberOrNull(locationData.longitude),
+      longitude:
+        locationData.longitude !== undefined
+          ? toFiniteNumberOrNull(locationData.longitude)
+          : previous.longitude,
 
       elevation:
-        locationData.elevation !== null &&
-        locationData.elevation !== undefined &&
-        Number.isFinite(Number(locationData.elevation))
-          ? String(Math.round(Number(locationData.elevation)))
-          : "",
+        locationData.elevation !== undefined
+          ? locationData.elevation !== null &&
+            Number.isFinite(Number(locationData.elevation))
+            ? String(Math.round(Number(locationData.elevation)))
+            : ""
+          : previous.elevation,
     }));
 
     setError("");
+
     setSuccess("");
+  }
+
+  function handleLocationFieldChange(name, value) {
+    updateField(name, value);
   }
 
   /* =====================================================
      IMAGE BUTTONS
-
-     ทั้งสองปุ่มแยกกันจริง:
-     - ปุ่มเลือกรูป -> fileInputRef
-     - ปุ่มถ่ายกล้อง -> cameraInputRef
   ===================================================== */
 
   function handleChooseImage() {
@@ -584,6 +567,10 @@ export default function EditPlantPage() {
   }
 
   function handleTakePhoto() {
+    if (!canUseCamera) {
+      return;
+    }
+
     cameraInputRef.current?.click();
   }
 
@@ -603,7 +590,9 @@ export default function EditPlantPage() {
     }
 
     setError("");
+
     setSuccess("");
+
     setImageNotice("");
 
     setProcessingImage(true);
@@ -659,7 +648,9 @@ export default function EditPlantPage() {
     setPreview(oldImageUrl || "");
 
     setImageNotice("");
+
     setError("");
+
     setSuccess("");
   }
 
@@ -719,10 +710,27 @@ export default function EditPlantPage() {
     }
 
     setError("");
+
     setSuccess("");
 
-    if (!form.common_name.trim()) {
-      setError(t.required);
+    const pnuText = String(form.pnu_no || "").trim();
+
+    if (!pnuText) {
+      setError(t.pnuRequired);
+
+      return;
+    }
+
+    const pnuValue = normalizePositiveInteger(pnuText);
+
+    if (pnuValue === null) {
+      setError(t.pnuError);
+
+      return;
+    }
+
+    if (!String(form.botanical_name || "").trim()) {
+      setError(t.botanicalRequired);
 
       return;
     }
@@ -737,18 +745,6 @@ export default function EditPlantPage() {
       setError(t.notFound);
 
       return;
-    }
-
-    let duplicatesValue = null;
-
-    if (form.duplicates.trim() !== "") {
-      duplicatesValue = Number(form.duplicates);
-
-      if (!Number.isInteger(duplicatesValue) || duplicatesValue < 0) {
-        setError(t.duplicateError);
-
-        return;
-      }
     }
 
     setSaving(true);
@@ -767,47 +763,38 @@ export default function EditPlantPage() {
       }
 
       const updateData = {
-        family: form.family.trim() || null,
+        pnu_no: pnuValue,
 
-        common_name: form.common_name.trim(),
+        artificial_group: String(form.artificial_group || "").trim() || null,
 
-        botanical_name: form.botanical_name.trim() || null,
+        family: String(form.family || "").trim() || null,
 
-        province: form.province.trim() || null,
+        botanical_name: String(form.botanical_name || "").trim() || null,
 
-        district: form.district.trim() || null,
+        collected_by: String(form.collected_by || "").trim() || null,
 
-        subdistrict: form.subdistrict.trim() || null,
+        collector_no: String(form.collector_no || "").trim() || null,
 
-        postcode: form.postcode.trim() || null,
-
-        location: form.location.trim() || null,
+        locality: String(form.locality || "").trim() || null,
 
         latitude: toFiniteNumberOrNull(form.latitude),
 
         longitude: toFiniteNumberOrNull(form.longitude),
 
         /*
-         * elevation ในฐานข้อมูลเดิมเป็น text
+         * elevation ของฐานข้อมูลเดิมรองรับค่า text
+         * จึงเก็บเป็นข้อความเหมือนเดิม
          */
-        elevation: form.elevation.trim() || null,
-
-        collection_date: form.collection_date || null,
-
-        habitat: form.habitat.trim() || null,
-
-        notes: form.notes.trim() || null,
-
-        collected_by: form.collected_by.trim() || null,
-
-        specimen_number: form.specimen_number.trim() || null,
-
-        duplicates: duplicatesValue,
+        elevation: String(form.elevation || "").trim() || null,
 
         image_url: imageUrl,
       };
 
-      const { data, error: updateError } = await supabase
+      const {
+        data,
+
+        error: updateError,
+      } = await supabase
         .from("plants")
         .update(updateData)
         .eq("id", plantId)
@@ -822,7 +809,11 @@ export default function EditPlantPage() {
       setSuccess(t.success);
 
       window.setTimeout(() => {
-        router.push("/account/plants");
+        if (window.history.length > 1) {
+          router.back();
+        } else {
+          router.push("/account/plants");
+        }
 
         router.refresh();
       }, 700);
@@ -830,9 +821,9 @@ export default function EditPlantPage() {
       console.error("Update plant error:", err);
 
       /*
-       * ถ้า upload รูปใหม่สำเร็จ
+       * ถ้าอัปโหลดรูปใหม่สำเร็จ
        * แต่ update database ไม่สำเร็จ
-       * ให้ลบรูปใหม่ที่ไม่ได้ใช้งานออก
+       * ให้ลบไฟล์ใหม่ที่ยังไม่ได้ใช้ออก
        */
       if (uploadedImagePath) {
         try {
@@ -854,24 +845,14 @@ export default function EditPlantPage() {
 
   if (loading) {
     return (
-      <PageShell darkMode={darkMode}>
+      <PageShell>
         <Navbar />
 
-        <div className="flex min-h-[65dvh] items-center justify-center px-5">
+        <div className="vh-container flex min-h-[65dvh] items-center justify-center py-10">
           <div className="text-center">
-            <LoadingIcon
-              className={`mx-auto h-7 w-7 animate-spin ${
-                darkMode ? "text-emerald-300" : "text-emerald-700"
-              }`}
-            />
+            <LoadingIcon className="mx-auto h-6 w-6 animate-spin text-moss" />
 
-            <p
-              className={`mt-4 text-[13px] font-medium ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
-              {t.loading}
-            </p>
+            <p className="vh-eyebrow mt-4">{t.loading}</p>
           </div>
         </div>
       </PageShell>
@@ -884,35 +865,27 @@ export default function EditPlantPage() {
 
   if (fatalError) {
     return (
-      <PageShell darkMode={darkMode}>
+      <PageShell>
         <Navbar />
 
-        <div className="container flex min-h-[65dvh] items-center justify-center py-10">
-          <div
-            className={`w-full max-w-md rounded-[20px] border p-6 text-center shadow-sm sm:p-8 ${
-              darkMode
-                ? "border-white/[0.08] bg-[#0a1710]"
-                : "border-emerald-950/[0.07] bg-white"
-            }`}
-          >
-            <AlertIcon className="mx-auto h-9 w-9 text-red-400" />
+        <div className="vh-container flex min-h-[65dvh] items-center justify-center py-10">
+          <div className="vh-panel w-full max-w-md p-6 text-center sm:p-8">
+            <AlertIcon className="mx-auto h-7 w-7 text-clay" />
 
-            <h1 className="mt-4 text-xl font-black sm:text-2xl">
+            <h1 className="vh-display mt-4 text-[1.5rem] leading-[1.35] sm:text-[1.75rem]">
               {t.notFound}
             </h1>
 
-            <p
-              className={`mt-3 text-[12px] leading-6 sm:text-[13px] ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
+            <p className="mt-3 font-serif text-[15px] italic leading-7 text-muted">
               {fatalError}
             </p>
 
             <Link
               href="/account/plants"
-              className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-emerald-700 px-5 text-[12px] font-black text-white transition hover:bg-emerald-600"
+              className="vh-btn vh-btn-primary mt-6"
             >
+              <ArrowLeftIcon className="h-4 w-4" />
+
               {t.back}
             </Link>
           </div>
@@ -925,328 +898,121 @@ export default function EditPlantPage() {
      PAGE
   ===================================================== */
 
+  const pnuFieldError =
+    error && (error === t.pnuRequired || error === t.pnuError) ? error : "";
+
+  const botanicalFieldError = error === t.botanicalRequired ? error : "";
+
   return (
-    <PageShell darkMode={darkMode}>
+    <PageShell>
       <Navbar />
 
       {/* =================================================
-          HERO
+          HEADER
       ================================================= */}
 
-      <section
-        className={`border-b ${
-          darkMode
-            ? "border-white/[0.08] bg-[#09150f]"
-            : "border-emerald-950/[0.06] bg-white/85"
-        }`}
-      >
-        <div className="container py-5 sm:py-7 lg:py-9">
+      <header className="border-b border-rule">
+        <div className="vh-container py-6 sm:py-8 lg:py-10">
           <Link
             href="/account/plants"
-            className={`hidden min-h-10 w-fit items-center gap-2 rounded-xl border px-4 text-xs font-bold transition md:inline-flex ${
-              darkMode
-                ? "border-white/10 bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]"
-                : "border-emerald-950/10 bg-white text-slate-600 hover:bg-emerald-50"
-            }`}
+            className="vh-btn vh-btn-ghost vh-btn-sm -ml-3.5"
           >
             <ArrowLeftIcon className="h-4 w-4" />
 
             {t.back}
           </Link>
 
-          <div className="max-w-3xl md:mt-5">
-            <div
-              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 ${
-                darkMode
-                  ? "border-emerald-300/15 bg-emerald-400/[0.05] text-emerald-300"
-                  : "border-emerald-900/10 bg-emerald-50 text-emerald-800"
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  darkMode ? "bg-emerald-400" : "bg-emerald-700"
-                }`}
-              />
+          <div className="page-enter mt-4 max-w-3xl">
+            <p className="vh-eyebrow flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="h-px w-6 bg-ochre" />
 
-              <span className="text-[8px] font-black tracking-[0.2em] sm:text-[9px]">
-                {t.eyebrow}
-              </span>
-            </div>
+              <span>{t.eyebrow}</span>
+
+              {record.pnu_no && (
+                <>
+                  <span aria-hidden="true" className="text-faint">
+                    ·
+                  </span>
+
+                  <span className="font-mono text-ochre">
+                    PNU {record.pnu_no}
+                  </span>
+                </>
+              )}
+            </p>
 
             <h1
-              className={`mt-3 font-black tracking-[-0.035em] ${
-                isEnglish
-                  ? "text-[1.85rem] leading-[1.18] sm:text-[2.35rem] lg:text-[2.65rem]"
-                  : "text-[1.9rem] leading-[1.32] sm:text-[2.4rem] sm:leading-[1.28] lg:text-[2.7rem]"
-              } ${darkMode ? "text-white" : "text-[#102218]"}`}
-            >
-              {t.title}
-            </h1>
-
-            <p
-              className={`mt-2.5 max-w-2xl text-[12px] leading-[1.85] sm:mt-3 sm:text-[13px] lg:text-[14px] ${
-                darkMode ? "text-[#aebeb3]" : "text-[#526858]"
+              className={`vh-display mt-3 break-words text-[2rem] sm:text-[2.6rem] lg:text-[3rem] ${
+                record.botanical_name ? "vh-binomial leading-[1.1]" : "leading-[1.3]"
               }`}
             >
+              {record.botanical_name || t.title}
+            </h1>
+
+            {record.family && (
+              <p className="vh-family mt-3">{record.family}</p>
+            )}
+
+            <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted sm:text-[15px]">
               {t.subtitle}
             </p>
           </div>
         </div>
-      </section>
+      </header>
 
       {/* =================================================
           CONTENT
       ================================================= */}
 
-      <section className="container pb-8 pt-5 sm:pb-10 sm:pt-7 lg:pb-12 lg:pt-8">
+      <section className="vh-container pb-8 pt-6 sm:pt-8 md:pb-14">
         <form onSubmit={handleSubmit}>
-          <div className="mx-auto grid max-w-[1160px] gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-            {/* =================================================
-                MAIN
-            ================================================= */}
-
-            <div className="space-y-4 sm:space-y-5">
-              {/* PLANT */}
-
-              <FormCard darkMode={darkMode}>
-                <SectionHeader
-                  icon={<LeafIcon className="h-5 w-5" />}
-                  title={t.plant}
-                  description={t.plantDesc}
-                  darkMode={darkMode}
-                />
-
-                <div className="mt-5 grid gap-4 sm:gap-5 md:grid-cols-2">
-                  <Field
-                    label={t.common}
-                    name="common_name"
-                    value={form.common_name}
-                    onChange={updateField}
-                    placeholder={t.commonPh}
-                    required
-                    requiredText={t.requiredLabel}
-                    darkMode={darkMode}
-                    disabled={saving}
-                  />
-
-                  <Field
-                    label={t.botanical}
-                    name="botanical_name"
-                    value={form.botanical_name}
-                    onChange={updateField}
-                    placeholder={t.botanicalPh}
-                    italic
-                    darkMode={darkMode}
-                    disabled={saving}
-                  />
-
-                  <div className="md:col-span-2">
-                    <Field
-                      label={t.family}
-                      name="family"
-                      value={form.family}
-                      onChange={updateField}
-                      placeholder={t.familyPh}
-                      darkMode={darkMode}
-                      disabled={saving}
-                    />
-                  </div>
-                </div>
-              </FormCard>
-
-              {/* MAP */}
-
-              <AutoLocationMap
-                darkMode={darkMode}
-                language={language}
-                title={t.location}
-                description={t.locationDesc}
-                initialLocation={{
-                  province: form.province,
-
-                  district: form.district,
-
-                  subdistrict: form.subdistrict,
-
-                  postcode: form.postcode,
-
-                  address: form.location,
-
-                  latitude: form.latitude,
-
-                  longitude: form.longitude,
-
-                  elevation: toApproxNumberOrNull(form.elevation),
-                }}
-                onLocationResolved={handleLocationResolved}
-              />
-
-              {/* COLLECTION */}
-
-              <FormCard darkMode={darkMode}>
-                <SectionHeader
-                  icon={<DocumentIcon className="h-5 w-5" />}
-                  title={t.collection}
-                  description={t.collectionDesc}
-                  darkMode={darkMode}
-                />
-
-                <div className="mt-5 grid gap-4 sm:gap-5 md:grid-cols-2">
-                  <Field
-                    label={t.date}
-                    name="collection_date"
-                    type="date"
-                    value={form.collection_date}
-                    onChange={updateField}
-                    darkMode={darkMode}
-                    disabled={saving}
-                  />
-
-                  <Field
-                    label={t.collector}
-                    name="collected_by"
-                    value={form.collected_by}
-                    onChange={updateField}
-                    placeholder={t.collectorPh}
-                    darkMode={darkMode}
-                    disabled={saving}
-                  />
-
-                  <Field
-                    label={t.specimen}
-                    name="specimen_number"
-                    value={form.specimen_number}
-                    onChange={updateField}
-                    placeholder={t.specimenPh}
-                    darkMode={darkMode}
-                    disabled={saving}
-                  />
-
-                  <Field
-                    label={t.duplicates}
-                    name="duplicates"
-                    type="number"
-                    min="0"
-                    step="1"
-                    inputMode="numeric"
-                    value={form.duplicates}
-                    onChange={updateField}
-                    placeholder={t.duplicatesPh}
-                    darkMode={darkMode}
-                    disabled={saving}
-                  />
-
-                  <div className="md:col-span-2">
-                    <TextArea
-                      label={t.habitat}
-                      name="habitat"
-                      value={form.habitat}
-                      onChange={updateField}
-                      placeholder={t.habitatPh}
-                      rows={3}
-                      darkMode={darkMode}
-                      disabled={saving}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <TextArea
-                      label={t.notes}
-                      name="notes"
-                      value={form.notes}
-                      onChange={updateField}
-                      placeholder={t.notesPh}
-                      rows={4}
-                      darkMode={darkMode}
-                      disabled={saving}
-                    />
-                  </div>
-                </div>
-
-                <p
-                  className={`mt-4 text-[10px] leading-5 sm:text-[11px] ${
-                    darkMode ? "text-gray-500" : "text-slate-400"
-                  }`}
-                >
-                  {t.optional}
-                </p>
-              </FormCard>
-            </div>
-
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[400px_minmax(0,1fr)]">
             {/* =================================================
                 IMAGE
-
-                ปุ่มเป็น 2 ปุ่มแยกกันจริง
             ================================================= */}
 
-            <aside className="order-first lg:order-none lg:sticky lg:top-24">
-              <FormCard darkMode={darkMode} compact>
-                <SectionHeader
-                  icon={<CameraIcon className="h-5 w-5" />}
-                  title={t.image}
-                  description={t.imageDesc}
-                  darkMode={darkMode}
-                />
+            <aside className="min-w-0 lg:sticky lg:top-24">
+              <div className="vh-panel p-4 sm:p-5">
+                <p className="vh-eyebrow">{t.image}</p>
+
+                <p className="mt-1.5 text-[13px] leading-6 text-muted">
+                  {t.imageDesc}
+                </p>
 
                 {/* PREVIEW */}
 
-                <div
-                  className={`relative mt-5 h-[250px] overflow-hidden rounded-[18px] border sm:h-[300px] lg:h-auto lg:aspect-square ${
-                    darkMode
-                      ? "border-white/10 bg-black/20"
-                      : "border-emerald-950/[0.08] bg-[#f4f8f4]"
-                  }`}
-                >
+                <div className="relative mt-4 aspect-[4/5] max-h-[460px] w-full overflow-hidden rounded-[4px] border border-rule bg-paper-deep">
                   {preview ? (
                     <>
                       <img
                         src={preview}
-                        alt={form.common_name || "Plant preview"}
+                        alt={
+                          form.botanical_name ||
+                          (form.pnu_no ? `PNU ${form.pnu_no}` : "Plant preview")
+                        }
                         className="h-full w-full object-cover"
                       />
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
 
-                      <span className="absolute bottom-3 left-3 rounded-full bg-black/55 px-2.5 py-1 text-[8px] font-black text-white backdrop-blur-md sm:text-[9px]">
+                      <span className="absolute bottom-3 left-3 text-[12px] font-medium text-white">
                         {imageFile ? t.newImage : t.currentImage}
                       </span>
                     </>
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center px-5 text-center">
+                    <div className="vh-grid-paper flex h-full w-full items-center justify-center px-6 text-center">
                       <div>
-                        <div
-                          className={`mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] sm:h-16 sm:w-16 ${
-                            darkMode
-                              ? "bg-emerald-400/10 text-emerald-300"
-                              : "bg-emerald-800/[0.08] text-emerald-700"
-                          }`}
-                        >
-                          <ImageIcon className="h-6 w-6 sm:h-7 sm:w-7" />
-                        </div>
+                        <ImageIcon className="mx-auto h-7 w-7 text-faint" />
 
-                        <p
-                          className={`mt-3 text-[12px] font-black sm:text-[13px] ${
-                            darkMode ? "text-gray-300" : "text-slate-700"
-                          }`}
-                        >
+                        <p className="mt-3 font-serif text-[16px] italic text-muted">
                           {t.noImage}
-                        </p>
-
-                        <p
-                          className={`mt-1.5 text-[9px] leading-5 sm:text-[10px] ${
-                            darkMode ? "text-gray-500" : "text-slate-400"
-                          }`}
-                        >
-                          {t.imageHint}
                         </p>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* =================================================
-                    INPUT 1 : เลือกรูปจากเครื่อง
-                ================================================= */}
+                {/* FILE INPUT */}
 
                 <input
                   ref={fileInputRef}
@@ -1257,11 +1023,7 @@ export default function EditPlantPage() {
                   className="hidden"
                 />
 
-                {/* =================================================
-                    INPUT 2 : กล้อง
-
-                    เป็นคนละ input กับเลือกรูป
-                ================================================= */}
+                {/* CAMERA INPUT */}
 
                 <input
                   ref={cameraInputRef}
@@ -1269,135 +1031,72 @@ export default function EditPlantPage() {
                   accept="image/*"
                   capture="environment"
                   onChange={handleImageChange}
-                  disabled={saving || processingImage}
+                  disabled={saving || processingImage || !canUseCamera}
                   className="hidden"
                 />
 
-                {/* =================================================
-                    TWO SEPARATE BUTTONS
-                ================================================= */}
+                {/* REPLACE DROPZONE */}
 
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  {/* BUTTON 1 */}
-
-                  <button
-                    type="button"
-                    onClick={handleChooseImage}
-                    disabled={saving || processingImage}
-                    className="
-                      inline-flex
-                      min-h-[46px]
-                      min-w-0
-                      items-center
-                      justify-center
-                      gap-2
-                      rounded-[13px]
-                      bg-emerald-700
-                      px-2.5
-                      text-[10px]
-                      font-black
-                      text-white
-                      shadow-[0_6px_16px_rgba(5,110,78,0.16)]
-                      transition
-                      hover:bg-emerald-600
-                      active:scale-[0.99]
-                      disabled:cursor-not-allowed
-                      disabled:opacity-50
-                      sm:px-3
-                      sm:text-[11px]
-                    "
-                  >
-                    {processingImage ? (
-                      <LoadingIcon className="h-4 w-4 shrink-0 animate-spin" />
-                    ) : (
-                      <UploadIcon className="h-4 w-4 shrink-0" />
-                    )}
-
-                    <span className="min-w-0 truncate">
-                      {processingImage ? t.converting : t.chooseImage}
-                    </span>
-                  </button>
-
-                  {/* BUTTON 2 */}
-
-                  <button
-                    type="button"
-                    onClick={handleTakePhoto}
-                    disabled={saving || processingImage}
-                    className={`inline-flex min-h-[46px] min-w-0 items-center justify-center gap-2 rounded-[13px] border px-2.5 text-[10px] font-black transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 sm:px-3 sm:text-[11px] ${
-                      darkMode
-                        ? "border-white/10 bg-white/[0.04] text-emerald-300 hover:bg-white/[0.08]"
-                        : "border-emerald-950/10 bg-white text-emerald-700 hover:bg-emerald-50"
-                    }`}
-                  >
-                    <CameraIcon className="h-4 w-4 shrink-0" />
-
-                    <span className="min-w-0 truncate">{t.takePhoto}</span>
-                  </button>
-                </div>
-
-                {/* HINT */}
-
-                <p
-                  className={`mt-2.5 text-[9px] leading-5 sm:text-[10px] ${
-                    darkMode ? "text-gray-500" : "text-slate-400"
-                  }`}
+                <button
+                  type="button"
+                  onClick={handleChooseImage}
+                  disabled={saving || processingImage}
+                  className="mt-4 flex w-full flex-col items-center justify-center gap-2 rounded-[6px] border border-dashed border-rule-strong bg-paper-deep px-4 py-6 text-center transition-colors hover:border-moss hover:bg-moss-soft"
                 >
-                  {t.imageHint}
-                </p>
+                  {processingImage ? (
+                    <LoadingIcon className="h-5 w-5 animate-spin text-moss" />
+                  ) : (
+                    <UploadIcon className="h-5 w-5 text-moss" />
+                  )}
 
-                {/* HEIC NOTICE */}
+                  <span className="text-[14px] font-medium text-ink">
+                    {processingImage ? t.converting : t.chooseImage}
+                  </span>
+
+                  <span className="text-[12px] leading-5 text-faint">
+                    {t.imageHint}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTakePhoto}
+                  disabled={saving || processingImage || !canUseCamera}
+                  className="vh-btn vh-btn-outline mt-3 w-full"
+                >
+                  <CameraIcon className="h-4 w-4 shrink-0" />
+
+                  <span className="min-w-0 truncate">{t.takePhoto}</span>
+                </button>
+
+                {!canUseCamera && (
+                  <p className="mt-2 text-[12px] leading-5 text-faint">
+                    {t.cameraUnavailable}
+                  </p>
+                )}
 
                 {imageNotice && (
-                  <div
-                    className={`mt-3 rounded-xl border px-3 py-2.5 text-[10px] leading-5 ${
-                      darkMode
-                        ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-200"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    }`}
-                  >
+                  <div className="mt-3 rounded-[4px] border border-moss/25 bg-moss-soft px-3 py-2.5 text-[13px] leading-5 text-moss">
                     {imageNotice}
                   </div>
                 )}
 
-                {/* NEW FILE */}
-
                 {imageFile && (
-                  <div className="mt-3">
-                    <div
-                      className={`rounded-xl border px-3 py-2.5 ${
-                        darkMode
-                          ? "border-white/[0.08] bg-white/[0.025]"
-                          : "border-emerald-950/[0.07] bg-[#f8faf7]"
-                      }`}
-                    >
-                      <p
-                        className={`text-[8px] font-bold uppercase tracking-[0.08em] ${
-                          darkMode ? "text-gray-500" : "text-slate-400"
-                        }`}
-                      >
-                        {t.selectedFile}
-                      </p>
+                  <div className="mt-4 border-t border-dashed border-rule-strong pt-4">
+                    <p className="vh-field-label mb-1">{t.selectedFile}</p>
 
-                      <p
-                        className={`mt-1 truncate text-[10px] font-bold ${
-                          darkMode ? "text-gray-200" : "text-slate-700"
-                        }`}
-                        title={imageFile.name}
-                      >
-                        {imageFile.name}
-                      </p>
-                    </div>
+                    <p
+                      className="truncate font-mono text-[12px] text-ink-soft"
+                      title={imageFile.name}
+                    >
+                      {imageFile.name}
+                    </p>
 
                     <button
                       type="button"
                       onClick={restoreOldImage}
                       disabled={saving}
-                      className={`mt-2.5 inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-[11px] border px-3 text-[10px] font-bold transition ${
-                        darkMode
-                          ? "border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]"
-                          : "border-emerald-950/10 bg-white text-slate-700 hover:bg-emerald-50"
-                      }`}
+                      className="vh-btn vh-btn-ghost vh-btn-sm mt-3 w-full"
                     >
                       <UndoIcon className="h-3.5 w-3.5" />
 
@@ -1405,83 +1104,166 @@ export default function EditPlantPage() {
                     </button>
                   </div>
                 )}
-              </FormCard>
+              </div>
             </aside>
+
+            {/* =================================================
+                FORM SECTIONS
+            ================================================= */}
+
+            <div className="min-w-0 space-y-6">
+              {/* 01 — IDENTIFICATION */}
+
+              <FormSection
+                number="01"
+                title={t.plant}
+                description={t.plantDesc}
+              >
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field
+                    label={t.pnuNo}
+                    name="pnu_no"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={form.pnu_no}
+                    onChange={updateField}
+                    placeholder={t.pnuNoPh}
+                    required
+                    requiredText={t.requiredLabel}
+                    disabled={saving}
+                    mono
+                    error={pnuFieldError}
+                  />
+
+                  <Field
+                    label={t.family}
+                    name="family"
+                    value={form.family}
+                    onChange={updateField}
+                    placeholder={t.familyPh}
+                    disabled={saving}
+                  />
+
+                  <Field
+                    className="sm:col-span-2"
+                    label={t.botanical}
+                    name="botanical_name"
+                    value={form.botanical_name}
+                    onChange={updateField}
+                    placeholder={t.botanicalPh}
+                    binomial
+                    required
+                    requiredText={t.requiredLabel}
+                    disabled={saving}
+                    error={botanicalFieldError}
+                  />
+
+                  <Field
+                    label={t.artificialGroup}
+                    name="artificial_group"
+                    value={form.artificial_group}
+                    onChange={updateField}
+                    placeholder={t.artificialGroupPh}
+                    disabled={saving}
+                  />
+                </div>
+              </FormSection>
+
+              {/* 02 — COLLECTION */}
+
+              <FormSection
+                number="02"
+                title={t.collection}
+                description={t.collectionDesc}
+              >
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field
+                    label={t.collector}
+                    name="collected_by"
+                    value={form.collected_by}
+                    onChange={updateField}
+                    placeholder={t.collectorPh}
+                    disabled={saving}
+                  />
+
+                  <Field
+                    label={t.collectorNo}
+                    name="collector_no"
+                    value={form.collector_no}
+                    onChange={updateField}
+                    placeholder={t.collectorNoPh}
+                    disabled={saving}
+                    mono
+                  />
+                </div>
+              </FormSection>
+
+              {/* 03 — LOCALITY */}
+
+              <AutoLocationMap
+                number="03"
+                language={language}
+                title={t.location}
+                description={t.locationDesc}
+                initialLocation={{
+                  locality: form.locality,
+
+                  latitude: form.latitude,
+
+                  longitude: form.longitude,
+
+                  elevation: toFiniteNumberOrNull(form.elevation),
+                }}
+                onLocationResolved={handleLocationResolved}
+                onLocationFieldChange={handleLocationFieldChange}
+              />
+            </div>
           </div>
 
           {/* =================================================
-              ERROR / SUCCESS
+              ERROR / SUCCESS + ACTIONS
           ================================================= */}
 
-          <div className="mx-auto max-w-[1160px]">
-            {error && (
-              <div className="mt-5">
-                <AlertBox darkMode={darkMode} type="error">
-                  {error}
-                </AlertBox>
-              </div>
-            )}
+          <div className="lg:grid lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[400px_minmax(0,1fr)]">
+            <div className="min-w-0 lg:col-start-2">
+              {error && (
+                <div className="mt-6">
+                  <AlertBox type="error">{error}</AlertBox>
+                </div>
+              )}
 
-            {success && (
-              <div className="mt-5">
-                <AlertBox darkMode={darkMode} type="success">
-                  {success}
-                </AlertBox>
-              </div>
-            )}
+              {success && (
+                <div className="mt-6">
+                  <AlertBox type="success">{success}</AlertBox>
+                </div>
+              )}
 
-            {/* =================================================
-                SAVE ACTIONS
+              <div className="sticky bottom-0 z-30 -mx-4 mt-6 border-t border-rule bg-paper/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm md:static md:mx-0 md:bg-transparent md:px-0 md:pb-0 md:pt-6 md:backdrop-blur-none">
+                <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-2.5 md:flex md:items-center md:justify-end md:gap-3">
+                  <Link
+                    href="/account/plants"
+                    className="vh-btn vh-btn-outline md:min-w-[120px]"
+                  >
+                    {t.cancel}
+                  </Link>
 
-                มือถือ = sticky
-                Desktop = อยู่ตรงกลาง
-            ================================================= */}
+                  <button
+                    type="submit"
+                    disabled={saving || processingImage || Boolean(success)}
+                    aria-busy={saving}
+                    className="vh-btn vh-btn-primary md:min-w-[200px]"
+                  >
+                    {saving ? (
+                      <LoadingIcon className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <SaveIcon className="h-4 w-4" />
+                    )}
 
-            <div
-              className={`sticky bottom-0 z-30 -mx-4 mt-5 border-t px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl
-                sm:-mx-0 sm:rounded-[18px] sm:border sm:p-3
-                lg:static lg:mt-7 lg:flex lg:justify-center lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none
-                ${
-                  darkMode
-                    ? "border-white/10 bg-[#07100c]/94"
-                    : "border-emerald-950/[0.08] bg-[#f3f8f3]/94"
-                }`}
-            >
-              <div
-                className={`grid grid-cols-[0.8fr_1.2fr] gap-2.5
-                  sm:flex sm:items-center sm:justify-center
-                  lg:w-auto lg:rounded-[16px] lg:border lg:p-2
-                  ${
-                    darkMode
-                      ? "lg:border-white/[0.08] lg:bg-[#0a1710]"
-                      : "lg:border-emerald-950/[0.07] lg:bg-white"
-                  }`}
-              >
-                <Link
-                  href="/account/plants"
-                  className={`inline-flex min-h-[46px] items-center justify-center rounded-[12px] border px-4 text-[12px] font-bold transition lg:min-w-[110px] ${
-                    darkMode
-                      ? "border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]"
-                      : "border-emerald-950/10 bg-white text-slate-700 hover:bg-emerald-50"
-                  }`}
-                >
-                  {t.cancel}
-                </Link>
-
-                <button
-                  type="submit"
-                  disabled={saving || processingImage || Boolean(success)}
-                  aria-busy={saving}
-                  className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-[12px] bg-emerald-700 px-5 text-[12px] font-black text-white shadow-[0_7px_18px_rgba(5,110,78,0.18)] transition hover:bg-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 sm:min-w-[190px] lg:min-w-[210px]"
-                >
-                  {saving ? (
-                    <LoadingIcon className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <SaveIcon className="h-4 w-4" />
-                  )}
-
-                  {saving ? t.saving : t.save}
-                </button>
+                    {saving ? t.saving : t.save}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1496,12 +1278,13 @@ export default function EditPlantPage() {
 ========================================================= */
 
 function AutoLocationMap({
-  darkMode,
+  number,
   language,
   title,
   description,
   initialLocation,
   onLocationResolved,
+  onLocationFieldChange,
 }) {
   const isEnglish = language === "EN";
 
@@ -1513,27 +1296,42 @@ function AutoLocationMap({
 
   const leafletRef = useRef(null);
 
-  const reverseTimerRef = useRef(null);
+  const forwardTimerRef = useRef(null);
 
-  const reverseAbortRef = useRef(null);
+  const forwardAbortRef = useRef(null);
 
-  const reverseCacheRef = useRef(new Map());
+  const forwardCacheRef = useRef(new Map());
 
-  const lastReverseRequestRef = useRef(0);
-
-  const resolveSequenceRef = useRef(0);
-
-  const languageRef = useRef(language);
+  const selectionSequenceRef = useRef(0);
 
   const callbackRef = useRef(onLocationResolved);
 
+  const fieldChangeRef = useRef(onLocationFieldChange);
+
   const initialLocationRef = useRef(initialLocation);
+
+  /*
+   * หน้า Edit มีข้อมูลพิกัดเก่าอยู่แล้ว
+   * จึงไม่ควรค้นหา Locality ใหม่ทันทีตอนเปิดหน้า
+   * จะค้นหาอัตโนมัติเมื่อผู้ใช้แก้ข้อความ Locality
+   */
+  const firstLocalityRef = useRef(
+    String(initialLocation?.locality || "").trim(),
+  );
+
+  const firstCoordinatesRef = useRef(
+    hasValidCoordinates(initialLocation?.latitude, initialLocation?.longitude),
+  );
+
+  const didHandleInitialSearchRef = useRef(false);
 
   const [mapReady, setMapReady] = useState(false);
 
   const [locating, setLocating] = useState(false);
 
-  const [resolving, setResolving] = useState(false);
+  const [searchingLocation, setSearchingLocation] = useState(false);
+
+  const [readingElevation, setReadingElevation] = useState(false);
 
   const [mapError, setMapError] = useState("");
 
@@ -1547,15 +1345,15 @@ function AutoLocationMap({
 
   const m = isEnglish
     ? {
-        province: "Province",
+        locality: "Locality / NP / Province",
 
-        district: "District",
+        localityPh: "e.g. Khao Yai National Park, Mo Singto area",
 
-        subdistrict: "Subdistrict",
+        searching: "Searching location...",
 
-        postcode: "Postcode",
+        notFound: "Location not found.",
 
-        address: "Location Details",
+        searchError: "Unable to search for this location.",
 
         coordinates: "Coordinates",
 
@@ -1563,9 +1361,7 @@ function AutoLocationMap({
 
         longitude: "Longitude",
 
-        dms: "DMS Coordinates",
-
-        elevation: "Approx. Elevation",
+        elevation: "Elevation Above Sea Level",
 
         meters: "m",
 
@@ -1573,14 +1369,11 @@ function AutoLocationMap({
 
         locating: "Finding location...",
 
-        reading: "Reading map data...",
+        reading: "Reading elevation...",
 
-        hint: "Tap the map or drag the marker to adjust the collection point.",
+        hint: "Tap the map or drag the marker to adjust the specimen location.",
 
-        noSaved:
-          "This record has no saved coordinates yet. Choose a point on the map to add them.",
-
-        emptyAddress: "Choose a point on the map to read its location details.",
+        noSaved: "Type the locality or choose a point on the map.",
 
         noValue: "—",
 
@@ -1588,20 +1381,17 @@ function AutoLocationMap({
 
         denied:
           "Unable to access your location. Allow location access or choose a point on the map.",
-
-        reverseError:
-          "Coordinates were selected, but the address details could not be loaded.",
       }
     : {
-        province: "จังหวัด",
+        locality: "สถานที่ / อุทยาน / จังหวัด",
 
-        district: "อำเภอ / เขต",
+        localityPh: "เช่น Khao Yai National Park, Mo Singto area",
 
-        subdistrict: "ตำบล / แขวง",
+        searching: "กำลังค้นหาสถานที่...",
 
-        postcode: "รหัสไปรษณีย์",
+        notFound: "ไม่พบสถานที่ที่พิมพ์",
 
-        address: "ข้อมูลตำแหน่ง",
+        searchError: "ไม่สามารถค้นหาสถานที่นี้ได้",
 
         coordinates: "พิกัด",
 
@@ -1609,9 +1399,7 @@ function AutoLocationMap({
 
         longitude: "ลองจิจูด",
 
-        dms: "พิกัดแบบ DMS",
-
-        elevation: "ระดับความสูงโดยประมาณ",
+        elevation: "ระดับความสูงจากน้ำทะเล",
 
         meters: "ม.",
 
@@ -1619,14 +1407,11 @@ function AutoLocationMap({
 
         locating: "กำลังค้นหาตำแหน่ง...",
 
-        reading: "กำลังอ่านข้อมูลจากแผนที่...",
+        reading: "กำลังอ่านระดับความสูง...",
 
-        hint: "แตะบนแผนที่หรือลากหมุดเพื่อปรับจุดที่พบตัวอย่าง",
+        hint: "แตะบนแผนที่หรือลากหมุดเพื่อปรับตำแหน่งตัวอย่าง",
 
-        noSaved:
-          "รายการนี้ยังไม่มีพิกัดเดิม กรุณาเลือกจุดบนแผนที่เพื่อเพิ่มพิกัด",
-
-        emptyAddress: "เลือกจุดบนแผนที่เพื่อให้ระบบอ่านรายละเอียดสถานที่",
+        noSaved: "พิมพ์สถานที่หรือเลือกจุดบนแผนที่เพื่อเพิ่มพิกัด",
 
         noValue: "—",
 
@@ -1634,9 +1419,6 @@ function AutoLocationMap({
 
         denied:
           "ไม่สามารถเข้าถึงตำแหน่งปัจจุบันได้ กรุณาอนุญาต Location หรือเลือกจุดบนแผนที่แทน",
-
-        reverseError:
-          "เลือกพิกัดแล้ว แต่ไม่สามารถอ่านรายละเอียดที่อยู่ได้ กรุณาลองเลือกจุดอีกครั้ง",
       };
 
   /* =====================================================
@@ -1644,16 +1426,64 @@ function AutoLocationMap({
   ===================================================== */
 
   useEffect(() => {
-    languageRef.current = language;
-  }, [language]);
-
-  useEffect(() => {
     callbackRef.current = onLocationResolved;
   }, [onLocationResolved]);
 
   useEffect(() => {
+    fieldChangeRef.current = onLocationFieldChange;
+  }, [onLocationFieldChange]);
+
+  useEffect(() => {
     initialLocationRef.current = initialLocation;
   }, [initialLocation]);
+
+  /* =====================================================
+     AUTO SEARCH LOCALITY
+  ===================================================== */
+
+  useEffect(() => {
+    if (!mapReady) {
+      return;
+    }
+
+    const keyword = String(initialLocation?.locality || "").trim();
+
+    /*
+     * ถ้ามี Coordinates เดิมอยู่แล้ว
+     * รอบแรกไม่ต้อง Search ใหม่
+     */
+    if (!didHandleInitialSearchRef.current) {
+      didHandleInitialSearchRef.current = true;
+
+      if (firstCoordinatesRef.current && keyword === firstLocalityRef.current) {
+        return;
+      }
+    }
+
+    if (forwardTimerRef.current) {
+      window.clearTimeout(forwardTimerRef.current);
+    }
+
+    forwardAbortRef.current?.abort();
+
+    if (keyword.length < 3) {
+      setSearchingLocation(false);
+
+      setMapError("");
+
+      return;
+    }
+
+    forwardTimerRef.current = window.setTimeout(() => {
+      searchLocality(keyword);
+    }, 1000);
+
+    return () => {
+      if (forwardTimerRef.current) {
+        window.clearTimeout(forwardTimerRef.current);
+      }
+    };
+  }, [initialLocation?.locality, mapReady]);
 
   /* =====================================================
      INITIALIZE MAP
@@ -1682,7 +1512,6 @@ function AutoLocationMap({
           preferCanvas: true,
         }).setView(
           [DEFAULT_MAP_CENTER.latitude, DEFAULT_MAP_CENTER.longitude],
-
           DEFAULT_MAP_ZOOM,
         );
 
@@ -1694,7 +1523,13 @@ function AutoLocationMap({
         }).addTo(map);
 
         map.on("click", (event) => {
-          selectLocation(event.latlng.lat, event.latlng.lng, true);
+          selectLocation(
+            event.latlng.lat,
+
+            event.latlng.lng,
+
+            true,
+          );
         });
 
         mapRef.current = map;
@@ -1706,15 +1541,9 @@ function AutoLocationMap({
         if (hasValidCoordinates(initial.latitude, initial.longitude)) {
           placeMarker(initial.latitude, initial.longitude);
 
-          map.setView(
-            [initial.latitude, initial.longitude],
-
-            16,
-
-            {
-              animate: false,
-            },
-          );
+          map.setView([initial.latitude, initial.longitude], 16, {
+            animate: false,
+          });
         }
 
         setMapReady(true);
@@ -1727,9 +1556,7 @@ function AutoLocationMap({
 
         if (mounted) {
           setMapError(
-            languageRef.current === "EN"
-              ? "Unable to load the map."
-              : "ไม่สามารถโหลดแผนที่ได้",
+            isEnglish ? "Unable to load the map." : "ไม่สามารถโหลดแผนที่ได้",
           );
         }
       }
@@ -1740,17 +1567,17 @@ function AutoLocationMap({
     return () => {
       mounted = false;
 
-      if (reverseTimerRef.current) {
-        window.clearTimeout(reverseTimerRef.current);
+      if (forwardTimerRef.current) {
+        window.clearTimeout(forwardTimerRef.current);
       }
 
-      reverseAbortRef.current?.abort();
+      forwardAbortRef.current?.abort();
 
       if (mapRef.current) {
         mapRef.current.remove();
-      }
 
-      mapRef.current = null;
+        mapRef.current = null;
+      }
 
       markerRef.current = null;
 
@@ -1778,8 +1605,8 @@ function AutoLocationMap({
           height:38px;
           border-radius:14px 14px 14px 4px;
           transform:rotate(-45deg);
-          background:#047857;
-          border:4px solid rgba(255,255,255,.96);
+          background:var(--moss);
+          border:4px solid var(--sheet-raised);
           box-shadow:0 8px 20px rgba(0,0,0,.28);
           display:flex;
           align-items:center;
@@ -1789,7 +1616,7 @@ function AutoLocationMap({
             width:10px;
             height:10px;
             border-radius:999px;
-            background:white;
+            background:var(--on-moss);
           "></div>
         </div>
       `,
@@ -1836,42 +1663,40 @@ function AutoLocationMap({
      SELECT LOCATION
   ===================================================== */
 
-  function selectLocation(latitude, longitude, moveMap = false) {
+  async function selectLocation(latitude, longitude, moveMap = false) {
     const map = mapRef.current;
 
-    if (!map || !leafletRef.current) {
+    const lat = Number(latitude);
+
+    const lng = Number(longitude);
+
+    if (
+      !map ||
+      !leafletRef.current ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng)
+    ) {
       return;
     }
 
+    const sequence = selectionSequenceRef.current + 1;
+
+    selectionSequenceRef.current = sequence;
+
     setMapError("");
 
-    placeMarker(latitude, longitude);
+    placeMarker(lat, lng);
 
     if (moveMap) {
-      map.setView(
-        [latitude, longitude],
-
-        Math.max(map.getZoom(), 16),
-
-        {
-          animate: true,
-        },
-      );
+      map.setView([lat, lng], Math.max(map.getZoom(), 16), {
+        animate: true,
+      });
     }
 
     const snapshot = {
-      province: "",
-      district: "",
-      subdistrict: "",
-      postcode: "",
-      address: "",
+      latitude: lat,
 
-      latitude,
-      longitude,
-
-      latitudeDms: decimalToDms(latitude, true),
-
-      longitudeDms: decimalToDms(longitude, false),
+      longitude: lng,
 
       elevation: null,
     };
@@ -1880,7 +1705,130 @@ function AutoLocationMap({
 
     callbackRef.current?.(snapshot);
 
-    scheduleResolveLocation(latitude, longitude);
+    setReadingElevation(true);
+
+    try {
+      const elevation = await fetchElevation(lat, lng);
+
+      if (sequence !== selectionSequenceRef.current) {
+        return;
+      }
+
+      const result = {
+        latitude: lat,
+
+        longitude: lng,
+
+        elevation,
+      };
+
+      setLocationData(result);
+
+      callbackRef.current?.(result);
+    } finally {
+      if (sequence === selectionSequenceRef.current) {
+        setReadingElevation(false);
+      }
+    }
+  }
+
+  /* =====================================================
+     SEARCH LOCALITY
+  ===================================================== */
+
+  async function searchLocality(query) {
+    const keyword = String(query || "").trim();
+
+    if (!keyword || keyword.length < 3 || !mapReady) {
+      return;
+    }
+
+    const cacheKey = keyword.toLowerCase();
+
+    const cached = forwardCacheRef.current.get(cacheKey);
+
+    if (cached) {
+      await selectLocation(cached.latitude, cached.longitude, true);
+
+      return;
+    }
+
+    forwardAbortRef.current?.abort();
+
+    const controller = new AbortController();
+
+    forwardAbortRef.current = controller;
+
+    setSearchingLocation(true);
+
+    setMapError("");
+
+    try {
+      const searchUrl = new URL(FORWARD_GEOCODING_URL);
+
+      searchUrl.searchParams.set("q", keyword);
+
+      searchUrl.searchParams.set("format", "jsonv2");
+
+      searchUrl.searchParams.set("limit", "1");
+
+      searchUrl.searchParams.set("addressdetails", "1");
+
+      searchUrl.searchParams.set("countrycodes", "th");
+
+      const response = await fetch(searchUrl.toString(), {
+        method: "GET",
+
+        cache: "no-store",
+
+        headers: {
+          Accept: "application/json",
+        },
+
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Forward geocoding failed: ${response.status}`);
+      }
+
+      const results = await response.json();
+
+      if (!Array.isArray(results) || results.length === 0) {
+        setMapError(m.notFound);
+
+        return;
+      }
+
+      const latitude = Number(results[0]?.lat);
+
+      const longitude = Number(results[0]?.lon);
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        setMapError(m.notFound);
+
+        return;
+      }
+
+      forwardCacheRef.current.set(cacheKey, {
+        latitude,
+        longitude,
+      });
+
+      await selectLocation(latitude, longitude, true);
+    } catch (err) {
+      if (err?.name === "AbortError") {
+        return;
+      }
+
+      console.error("Search locality error:", err);
+
+      setMapError(m.searchError);
+    } finally {
+      if (forwardAbortRef.current === controller) {
+        setSearchingLocation(false);
+      }
+    }
   }
 
   /* =====================================================
@@ -1930,147 +1878,30 @@ function AutoLocationMap({
   }
 
   /* =====================================================
-     REVERSE GEOCODING
-  ===================================================== */
-
-  function scheduleResolveLocation(latitude, longitude) {
-    if (reverseTimerRef.current) {
-      window.clearTimeout(reverseTimerRef.current);
-    }
-
-    reverseAbortRef.current?.abort();
-
-    const sequence = resolveSequenceRef.current + 1;
-
-    resolveSequenceRef.current = sequence;
-
-    setResolving(true);
-
-    reverseTimerRef.current = window.setTimeout(() => {
-      resolveLocation(latitude, longitude, sequence);
-    }, 1100);
-  }
-
-  async function resolveLocation(latitude, longitude, sequence) {
-    if (sequence !== resolveSequenceRef.current) {
-      return;
-    }
-
-    const cacheKey = `${Number(latitude).toFixed(5)},${Number(
-      longitude,
-    ).toFixed(5)},${languageRef.current}`;
-
-    const cached = reverseCacheRef.current.get(cacheKey);
-
-    if (cached) {
-      setLocationData(cached);
-
-      callbackRef.current?.(cached);
-
-      setResolving(false);
-
-      return;
-    }
-
-    try {
-      const elapsed = Date.now() - lastReverseRequestRef.current;
-
-      if (elapsed < 1000) {
-        await wait(1000 - elapsed);
-      }
-
-      if (sequence !== resolveSequenceRef.current) {
-        return;
-      }
-
-      const controller = new AbortController();
-
-      reverseAbortRef.current = controller;
-
-      lastReverseRequestRef.current = Date.now();
-
-      const reverseUrl = new URL(REVERSE_GEOCODING_URL);
-
-      reverseUrl.searchParams.set("format", "jsonv2");
-
-      reverseUrl.searchParams.set("lat", String(latitude));
-
-      reverseUrl.searchParams.set("lon", String(longitude));
-
-      reverseUrl.searchParams.set("zoom", "18");
-
-      reverseUrl.searchParams.set("addressdetails", "1");
-
-      reverseUrl.searchParams.set("layer", "address");
-
-      reverseUrl.searchParams.set(
-        "accept-language",
-
-        languageRef.current === "EN" ? "en,th" : "th,en",
-      );
-
-      const reverseResponse = await fetch(reverseUrl.toString(), {
-        headers: {
-          Accept: "application/json",
-        },
-
-        signal: controller.signal,
-      });
-
-      if (!reverseResponse.ok) {
-        throw new Error(`Reverse geocoding failed: ${reverseResponse.status}`);
-      }
-
-      const reverseData = await reverseResponse.json();
-
-      const elevation = await fetchElevation(latitude, longitude);
-
-      if (sequence !== resolveSequenceRef.current) {
-        return;
-      }
-
-      const parsed = parseMapLocation(
-        reverseData,
-        latitude,
-        longitude,
-        elevation,
-      );
-
-      reverseCacheRef.current.set(cacheKey, parsed);
-
-      setLocationData(parsed);
-
-      callbackRef.current?.(parsed);
-
-      setMapError("");
-    } catch (err) {
-      if (err?.name === "AbortError") {
-        return;
-      }
-
-      console.error("Resolve map location error:", err);
-
-      setMapError(m.reverseError);
-    } finally {
-      if (sequence === resolveSequenceRef.current) {
-        setResolving(false);
-      }
-    }
-  }
-
-  /* =====================================================
      ELEVATION
   ===================================================== */
 
   async function fetchElevation(latitude, longitude) {
+    const lat = Number(latitude);
+
+    const lng = Number(longitude);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return null;
+    }
+
     try {
       const elevationUrl = new URL(ELEVATION_URL);
 
-      elevationUrl.searchParams.set("latitude", String(latitude));
+      elevationUrl.searchParams.set("latitude", String(lat));
 
-      elevationUrl.searchParams.set("longitude", String(longitude));
+      elevationUrl.searchParams.set("longitude", String(lng));
 
       const response = await fetch(elevationUrl.toString(), {
+        method: "GET",
+
+        cache: "no-store",
+
         headers: {
           Accept: "application/json",
         },
@@ -2082,11 +1913,11 @@ function AutoLocationMap({
 
       const data = await response.json();
 
-      const raw = Array.isArray(data?.elevation)
+      const rawValue = Array.isArray(data?.elevation)
         ? data.elevation[0]
         : data?.elevation;
 
-      const value = Number(raw);
+      const value = Number(rawValue);
 
       return Number.isFinite(value) ? value : null;
     } catch (err) {
@@ -2106,102 +1937,61 @@ function AutoLocationMap({
   ===================================================== */
 
   return (
-    <section
-      className={`overflow-hidden rounded-[18px] border shadow-sm sm:rounded-[20px] ${
-        darkMode
-          ? "border-white/[0.08] bg-[#0a1710]"
-          : "border-emerald-950/[0.07] bg-white"
-      }`}
-    >
-      {/* HEADER */}
-
-      <div className="p-4 sm:p-5 lg:p-6">
-        <SectionHeader
-          icon={<MapPinIcon className="h-5 w-5" />}
-          title={title}
-          description={description}
-          darkMode={darkMode}
+    <FormSection number={number} title={title} description={description} flush>
+      <div className="px-4 pt-5 sm:px-6 sm:pt-6">
+        <Field
+          label={m.locality}
+          name="locality"
+          value={initialLocation?.locality || ""}
+          onChange={(name, value) => fieldChangeRef.current?.(name, value)}
+          placeholder={m.localityPh}
         />
 
-        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
-          <MapInfoCard
-            label={m.province}
-            value={locationData.province || m.noValue}
-            darkMode={darkMode}
-          />
+        {searchingLocation && (
+          <p className="mt-2 flex items-center gap-2 text-[12px] text-muted">
+            <LoadingIcon className="h-3.5 w-3.5 animate-spin" />
 
-          <MapInfoCard
-            label={m.district}
-            value={locationData.district || m.noValue}
-            darkMode={darkMode}
-          />
-
-          <MapInfoCard
-            label={m.subdistrict}
-            value={locationData.subdistrict || m.noValue}
-            darkMode={darkMode}
-          />
-
-          <MapInfoCard
-            label={m.postcode}
-            value={locationData.postcode || m.noValue}
-            darkMode={darkMode}
-          />
-        </div>
+            {m.searching}
+          </p>
+        )}
       </div>
 
-      {/* MAP */}
+      {/* =================================================
+          MAP
+      ================================================= */}
 
-      <div
-        className={`border-y ${
-          darkMode ? "border-white/[0.08]" : "border-emerald-950/[0.07]"
-        }`}
-      >
+      <div className="mx-4 mt-5 overflow-hidden rounded-[4px] border border-rule sm:mx-6">
         <div className="relative">
           <div
             ref={mapContainerRef}
-            className={`h-[225px] w-full sm:h-[275px] lg:h-[330px] ${
-              darkMode ? "brightness-[0.78] contrast-[1.05]" : ""
-            }`}
+            className="h-[240px] w-full sm:h-[290px] lg:h-[340px] dark:brightness-[0.78] dark:contrast-[1.05]"
           />
 
           {!mapReady && !mapError && (
-            <div
-              className={`absolute inset-0 flex items-center justify-center ${
-                darkMode ? "bg-[#0d1a12]" : "bg-[#edf5ed]"
-              }`}
-            >
-              <LoadingIcon
-                className={`h-6 w-6 animate-spin ${
-                  darkMode ? "text-emerald-300" : "text-emerald-700"
-                }`}
-              />
+            <div className="vh-skeleton absolute inset-0 flex items-center justify-center">
+              <LoadingIcon className="h-6 w-6 animate-spin text-moss" />
             </div>
           )}
         </div>
 
-        <div
-          className={`flex items-start gap-2 px-4 py-2.5 text-[10px] leading-5 sm:px-5 ${
-            darkMode
-              ? "bg-black/20 text-gray-500"
-              : "bg-[#f7faf7] text-slate-500"
-          }`}
-        >
+        <div className="flex items-start gap-2 border-t border-rule bg-paper-deep px-3.5 py-2.5 text-[12px] leading-5 text-muted">
           <HandIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
 
           <span>{hasCoordinates ? m.hint : m.noSaved}</span>
         </div>
       </div>
 
-      {/* DETAILS */}
+      {/* =================================================
+          COORDINATES
+      ================================================= */}
 
-      <div className="p-4 sm:p-5 lg:p-6">
+      <div className="px-4 pb-5 pt-5 sm:px-6 sm:pb-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={useCurrentLocation}
             disabled={locating || !mapReady}
-            className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[12px] bg-emerald-700 px-4 text-[12px] font-black text-white shadow-[0_7px_18px_rgba(6,78,45,0.18)] transition hover:bg-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
+            className="vh-btn vh-btn-outline w-full sm:w-auto"
           >
             {locating ? (
               <LoadingIcon className="h-4 w-4 animate-spin" />
@@ -2212,104 +2002,46 @@ function AutoLocationMap({
             {locating ? m.locating : m.current}
           </button>
 
-          {resolving && (
-            <div
-              className={`inline-flex items-center gap-2 text-[10px] font-medium ${
-                darkMode ? "text-gray-400" : "text-slate-500"
-              }`}
-            >
+          {readingElevation && (
+            <p className="inline-flex items-center gap-2 text-[12px] text-muted">
               <LoadingIcon className="h-3.5 w-3.5 animate-spin" />
 
               {m.reading}
-            </div>
+            </p>
           )}
         </div>
 
         {mapError && (
-          <div
-            className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2.5 text-[10px] leading-5 sm:text-[11px] ${
-              darkMode
-                ? "border-amber-400/15 bg-amber-400/[0.06] text-amber-200"
-                : "border-amber-200 bg-amber-50 text-amber-800"
-            }`}
-          >
-            <InfoIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <div className="mt-3 flex items-start gap-2 rounded-[4px] border border-ochre/30 bg-ochre-soft px-3 py-2.5 text-[13px] leading-5 text-ink-soft">
+            <InfoIcon className="mt-0.5 h-4 w-4 shrink-0 text-ochre" />
 
             <span>{mapError}</span>
           </div>
         )}
 
-        <div
-          className={`mt-4 rounded-[16px] border p-3.5 sm:p-4 lg:p-5 ${
-            darkMode
-              ? "border-white/[0.08] bg-white/[0.025]"
-              : "border-emerald-950/[0.07] bg-[#f8faf7]"
-          }`}
-        >
-          {/* ADDRESS */}
+        <div className="vh-label-card mt-5">
+          <p className="vh-eyebrow">{m.coordinates}</p>
 
-          <DetailTitle darkMode={darkMode}>{m.address}</DetailTitle>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-3 sm:gap-6">
+            <CoordinateCard
+              label={m.latitude}
+              value={
+                hasCoordinates
+                  ? Number(locationData.latitude).toFixed(7)
+                  : m.noValue
+              }
+            />
 
-          <p
-            className={`mt-2.5 break-words text-[12px] font-medium leading-[1.8] sm:text-[13px] ${
-              darkMode ? "text-gray-300" : "text-slate-700"
-            }`}
-          >
-            {locationData.address || m.emptyAddress}
-          </p>
+            <CoordinateCard
+              label={m.longitude}
+              value={
+                hasCoordinates
+                  ? Number(locationData.longitude).toFixed(7)
+                  : m.noValue
+              }
+            />
 
-          {/* DECIMAL */}
-
-          <div className="mt-4">
-            <DetailTitle darkMode={darkMode}>{m.coordinates}</DetailTitle>
-
-            <div className="mt-2 grid grid-cols-2 gap-2.5 sm:gap-3">
-              <CoordinateCard
-                label={m.latitude}
-                value={
-                  hasCoordinates
-                    ? Number(locationData.latitude).toFixed(7)
-                    : m.noValue
-                }
-                darkMode={darkMode}
-              />
-
-              <CoordinateCard
-                label={m.longitude}
-                value={
-                  hasCoordinates
-                    ? Number(locationData.longitude).toFixed(7)
-                    : m.noValue
-                }
-                darkMode={darkMode}
-              />
-            </div>
-          </div>
-
-          {/* DMS */}
-
-          <div className="mt-4">
-            <DetailTitle darkMode={darkMode}>{m.dms}</DetailTitle>
-
-            <div className="mt-2 grid grid-cols-2 gap-2.5 sm:gap-3">
-              <CoordinateCard
-                label={m.latitude}
-                value={locationData.latitudeDms || m.noValue}
-                darkMode={darkMode}
-              />
-
-              <CoordinateCard
-                label={m.longitude}
-                value={locationData.longitudeDms || m.noValue}
-                darkMode={darkMode}
-              />
-            </div>
-          </div>
-
-          {/* ELEVATION */}
-
-          <div className="mt-4">
-            <MapInfoCard
+            <CoordinateCard
               label={m.elevation}
               value={
                 locationData.elevation !== null &&
@@ -2318,187 +2050,45 @@ function AutoLocationMap({
                   ? `${Math.round(Number(locationData.elevation))} ${m.meters}`
                   : m.noValue
               }
-              darkMode={darkMode}
             />
-          </div>
+          </dl>
         </div>
       </div>
-    </section>
+    </FormSection>
   );
 }
 
 /* =========================================================
-   LOCATION NORMALIZE
+   LOCATION HELPERS
 ========================================================= */
 
 function normalizeLocationData(value) {
-  const latitude = toFiniteNumberOrNull(value?.latitude);
-
-  const longitude = toFiniteNumberOrNull(value?.longitude);
-
   return {
-    province: value?.province || "",
+    locality: value?.locality || "",
 
-    district: value?.district || "",
+    latitude: toFiniteNumberOrNull(value?.latitude),
 
-    subdistrict: value?.subdistrict || "",
+    longitude: toFiniteNumberOrNull(value?.longitude),
 
-    postcode: value?.postcode || "",
-
-    address: value?.address || "",
-
-    latitude,
-
-    longitude,
-
-    latitudeDms: latitude !== null ? decimalToDms(latitude, true) : "",
-
-    longitudeDms: longitude !== null ? decimalToDms(longitude, false) : "",
-
-    elevation: toApproxNumberOrNull(value?.elevation),
+    elevation: toFiniteNumberOrNull(value?.elevation),
   };
-}
-
-/* =========================================================
-   MAP PARSER
-========================================================= */
-
-function parseMapLocation(data, latitude, longitude, elevation) {
-  const address = data?.address || {};
-
-  const province = firstText(address.state, address.province, address.region);
-
-  const district = firstText(
-    address.county,
-    address.state_district,
-    address.city_district,
-    address.district,
-    address.city,
-    address.town,
-  );
-
-  const subdistrict = firstText(
-    address.municipality,
-    address.suburb,
-    address.quarter,
-    address.village,
-    address.hamlet,
-    address.neighbourhood,
-  );
-
-  const postcode = firstText(address.postcode);
-
-  const locality = firstText(
-    address.house_number && address.road
-      ? `${address.house_number} ${address.road}`
-      : "",
-
-    address.road,
-
-    address.village,
-
-    address.hamlet,
-
-    address.neighbourhood,
-  );
-
-  const formattedAddress = uniqueText([
-    locality,
-    subdistrict,
-    district,
-    province,
-    postcode,
-  ]).join(" ");
-
-  return {
-    province,
-
-    district,
-
-    subdistrict,
-
-    postcode,
-
-    address: formattedAddress || data?.display_name || "",
-
-    latitude,
-
-    longitude,
-
-    latitudeDms: decimalToDms(latitude, true),
-
-    longitudeDms: decimalToDms(longitude, false),
-
-    elevation,
-  };
-}
-
-/* =========================================================
-   LEGACY SUPPORT
-========================================================= */
-
-function extractLegacyCoordinates(location) {
-  const match = String(location || "").match(
-    /Coordinates:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/i,
-  );
-
-  if (!match) {
-    return {
-      latitude: null,
-
-      longitude: null,
-    };
-  }
-
-  return {
-    latitude: toFiniteNumberOrNull(match[1]),
-
-    longitude: toFiniteNumberOrNull(match[2]),
-  };
-}
-
-function cleanLegacyLocation(location) {
-  return String(location || "")
-    .split(/\s*\|\s*Coordinates:/i)[0]
-    .split(/\s*\|\s*DMS:/i)[0]
-    .trim();
-}
-
-/* =========================================================
-   DMS
-========================================================= */
-
-function decimalToDms(value, isLatitude) {
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
-    return "";
-  }
-
-  const absolute = Math.abs(number);
-
-  const degrees = Math.floor(absolute);
-
-  const minutesFloat = (absolute - degrees) * 60;
-
-  const minutes = Math.floor(minutesFloat);
-
-  const seconds = ((minutesFloat - minutes) * 60).toFixed(1);
-
-  const direction = isLatitude
-    ? number >= 0
-      ? "N"
-      : "S"
-    : number >= 0
-      ? "E"
-      : "W";
-
-  return `${degrees}°${minutes}'${seconds}"${direction}`;
 }
 
 /* =========================================================
    HELPERS
 ========================================================= */
+
+function normalizePositiveInteger(value) {
+  const text = String(value ?? "").trim();
+
+  if (!text || !/^\d+$/.test(text)) {
+    return null;
+  }
+
+  const number = Number(text);
+
+  return Number.isSafeInteger(number) && number >= 1 ? number : null;
+}
 
 function toFiniteNumberOrNull(value) {
   if (value === null || value === undefined || value === "") {
@@ -2510,24 +2100,6 @@ function toFiniteNumberOrNull(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-function toApproxNumberOrNull(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const match = String(value)
-    .replace(/,/g, "")
-    .match(/-?\d+(?:\.\d+)?/);
-
-  if (!match) {
-    return null;
-  }
-
-  const number = Number(match[0]);
-
-  return Number.isFinite(number) ? number : null;
-}
-
 function hasValidCoordinates(latitude, longitude) {
   return (
     toFiniteNumberOrNull(latitude) !== null &&
@@ -2535,121 +2107,43 @@ function hasValidCoordinates(latitude, longitude) {
   );
 }
 
-function firstText(...values) {
-  for (const value of values) {
-    const text = String(value || "").trim();
-
-    if (text) {
-      return text;
-    }
-  }
-
-  return "";
-}
-
-function uniqueText(values) {
-  const result = [];
-
-  for (const raw of values) {
-    const value = String(raw || "").trim();
-
-    if (!value) {
-      continue;
-    }
-
-    const normalized = value.toLocaleLowerCase();
-
-    const exists = result.some(
-      (item) => item.toLocaleLowerCase() === normalized,
-    );
-
-    if (!exists) {
-      result.push(value);
-    }
-  }
-
-  return result;
-}
-
-function wait(ms) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
 /* =========================================================
    PAGE SHELL
 ========================================================= */
 
-function PageShell({ children, darkMode }) {
+function PageShell({ children }) {
   return (
-    <main
-      className={`page min-h-screen overflow-x-hidden transition-colors duration-300 ${
-        darkMode ? "bg-[#07100c] text-white" : "bg-[#f3f8f3] text-slate-900"
-      }`}
-    >
+    <main className="page min-h-screen overflow-x-clip text-ink">
       {children}
     </main>
   );
 }
 
 /* =========================================================
-   CARD
+   FORM SECTION — numbered like a herbarium accession form
 ========================================================= */
 
-function FormCard({ children, darkMode, compact = false }) {
+function FormSection({ number, title, description, flush = false, children }) {
   return (
-    <section
-      className={`rounded-[18px] border shadow-sm sm:rounded-[20px] ${
-        compact ? "p-4 sm:p-5" : "p-4 sm:p-5 lg:p-6"
-      } ${
-        darkMode
-          ? "border-white/[0.08] bg-[#0a1710]"
-          : "border-emerald-950/[0.07] bg-white"
-      }`}
-    >
-      {children}
+    <section className="vh-panel">
+      <header className="flex items-start gap-4 border-b border-dashed border-rule-strong px-4 py-4 sm:px-6 sm:py-5">
+        <span className="pt-1.5 font-mono text-[13px] text-ochre">{number}</span>
+
+        <div className="min-w-0">
+          <h2 className="font-serif text-[1.35rem] leading-snug text-ink sm:text-[1.5rem]">
+            {title}
+          </h2>
+
+          {description && (
+            <p className="mt-1.5 max-w-2xl text-[13px] leading-6 text-muted">
+              {description}
+            </p>
+          )}
+        </div>
+      </header>
+
+      <div className={flush ? "" : "px-4 py-5 sm:px-6 sm:py-6"}>{children}</div>
     </section>
-  );
-}
-
-/* =========================================================
-   SECTION HEADER
-========================================================= */
-
-function SectionHeader({ icon, title, description, darkMode }) {
-  return (
-    <div className="flex items-start gap-3.5">
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] sm:h-11 sm:w-11 ${
-          darkMode
-            ? "bg-emerald-400/10 text-emerald-300"
-            : "bg-emerald-800/[0.08] text-emerald-700"
-        }`}
-      >
-        {icon}
-      </div>
-
-      <div className="min-w-0 pt-0.5">
-        <h2
-          className={`text-[17px] font-black leading-[1.45] sm:text-[18px] ${
-            darkMode ? "text-white" : "text-[#14271a]"
-          }`}
-        >
-          {title}
-        </h2>
-
-        {description && (
-          <p
-            className={`mt-1.5 max-w-2xl text-[11px] leading-[1.75] sm:text-[12px] ${
-              darkMode ? "text-gray-400" : "text-slate-500"
-            }`}
-          >
-            {description}
-          </p>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -2666,97 +2160,58 @@ function Field({
   placeholder = "",
   required = false,
   requiredText = "Required",
-  darkMode,
   disabled,
   min,
   step,
   inputMode,
-  italic = false,
+  binomial = false,
+  mono = false,
+  error = "",
+  className = "",
 }) {
+  const errorId = error ? `${name}-error` : undefined;
+
   return (
-    <div className="min-w-0">
-      <div className="mb-2.5 flex min-h-5 items-center gap-2">
-        <label
-          htmlFor={name}
-          className={`text-[11px] font-bold leading-5 sm:text-xs ${
-            darkMode ? "text-gray-200" : "text-slate-700"
-          }`}
-        >
-          {label}
-        </label>
+    <div className={`min-w-0 ${className}`}>
+      <label htmlFor={name} className="vh-field-label">
+        {label}
 
         {required && (
-          <span
-            className={`rounded-full px-1.5 py-0.5 text-[8px] font-black ${
-              darkMode ? "bg-red-400/10 text-red-300" : "bg-red-50 text-red-600"
-            }`}
-          >
-            {requiredText}
-          </span>
+          <>
+            <span aria-hidden="true" className="ml-1 text-clay">
+              *
+            </span>
+
+            <span className="sr-only"> ({requiredText})</span>
+          </>
         )}
-      </div>
+      </label>
 
       <input
         id={name}
         type={type}
         value={value ?? ""}
-        onChange={(event) => onChange(name, event.target.value)}
         placeholder={placeholder}
         required={required}
         disabled={disabled}
         min={min}
         step={step}
         inputMode={inputMode}
-        className={`h-[46px] w-full rounded-[12px] border px-3.5 text-[12px] leading-normal outline-none transition focus:border-emerald-600/50 focus:ring-4 focus:ring-emerald-600/[0.06] disabled:cursor-not-allowed disabled:opacity-60 sm:h-[48px] sm:px-4 sm:text-[13px] ${
-          italic ? "italic" : ""
-        } ${
-          darkMode
-            ? "border-white/10 bg-black/20 text-white placeholder:text-gray-500"
-            : "border-emerald-950/10 bg-[#f8faf7] text-slate-900 placeholder:text-slate-400 focus:bg-white"
-        }`}
-      />
-    </div>
-  );
-}
-
-/* =========================================================
-   TEXT AREA
-========================================================= */
-
-function TextArea({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder = "",
-  rows = 4,
-  darkMode,
-  disabled,
-}) {
-  return (
-    <div className="min-w-0">
-      <label
-        htmlFor={name}
-        className={`mb-2.5 block text-[11px] font-bold leading-5 sm:text-xs ${
-          darkMode ? "text-gray-200" : "text-slate-700"
-        }`}
-      >
-        {label}
-      </label>
-
-      <textarea
-        id={name}
-        value={value ?? ""}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={errorId}
         onChange={(event) => onChange(name, event.target.value)}
-        rows={rows}
-        placeholder={placeholder}
-        disabled={disabled}
-        className={`w-full resize-y rounded-[12px] border px-3.5 py-3 text-[12px] leading-[1.7] outline-none transition focus:border-emerald-600/50 focus:ring-4 focus:ring-emerald-600/[0.06] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:text-[13px] ${
-          darkMode
-            ? "border-white/10 bg-black/20 text-white placeholder:text-gray-500"
-            : "border-emerald-950/10 bg-[#f8faf7] text-slate-900 placeholder:text-slate-400 focus:bg-white"
+        className={`vh-input ${
+          binomial ? "font-serif text-[17px] italic" : ""
+        } ${mono ? "font-mono tabular-nums" : ""} ${
+          error ? "border-clay/60" : ""
         }`}
       />
+
+      {error && (
+        <p id={errorId} className="mt-1.5 text-[12px] leading-5 text-clay">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -2765,26 +2220,22 @@ function TextArea({
    ALERT
 ========================================================= */
 
-function AlertBox({ darkMode, type, children }) {
+function AlertBox({ type, children }) {
   const isSuccess = type === "success";
 
   return (
     <div
       role={isSuccess ? "status" : "alert"}
-      className={`flex items-start gap-3 rounded-[16px] border px-4 py-3.5 text-[12px] leading-5 sm:px-5 ${
+      className={`flex items-start gap-3 rounded-[6px] border px-4 py-3.5 text-[14px] leading-6 ${
         isSuccess
-          ? darkMode
-            ? "border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-200"
-            : "border-emerald-200 bg-emerald-50 text-emerald-800"
-          : darkMode
-            ? "border-red-400/15 bg-red-400/[0.06] text-red-200"
-            : "border-red-200 bg-red-50 text-red-700"
+          ? "border-moss/30 bg-moss-soft text-moss"
+          : "border-clay/40 bg-clay-soft text-clay"
       }`}
     >
       {isSuccess ? (
-        <CheckIcon className="mt-0.5 h-4 w-4 shrink-0" />
+        <CheckIcon className="mt-1 h-4 w-4 shrink-0" />
       ) : (
-        <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+        <AlertIcon className="mt-1 h-4 w-4 shrink-0" />
       )}
 
       <span>{children}</span>
@@ -2793,105 +2244,21 @@ function AlertBox({ darkMode, type, children }) {
 }
 
 /* =========================================================
-   MAP INFO CARD
-========================================================= */
-
-function MapInfoCard({ label, value, darkMode }) {
-  return (
-    <div
-      className={`min-w-0 rounded-[13px] border px-3 py-2.5 sm:px-3.5 sm:py-3 ${
-        darkMode
-          ? "border-white/[0.08] bg-white/[0.025]"
-          : "border-emerald-950/[0.07] bg-[#f8faf7]"
-      }`}
-    >
-      <p
-        className={`text-[8px] font-bold leading-4 tracking-[0.04em] ${
-          darkMode ? "text-gray-500" : "text-slate-400"
-        }`}
-      >
-        {label}
-      </p>
-
-      <p
-        className={`mt-1 truncate text-[12px] font-black leading-5 sm:text-[13px] ${
-          darkMode ? "text-white" : "text-[#173321]"
-        }`}
-        title={String(value)}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
    COORDINATE CARD
 ========================================================= */
 
-function CoordinateCard({ label, value, darkMode }) {
+function CoordinateCard({ label, value }) {
   return (
-    <div
-      className={`min-w-0 rounded-[13px] border px-3 py-2.5 ${
-        darkMode
-          ? "border-white/[0.08] bg-black/15"
-          : "border-emerald-950/[0.07] bg-white"
-      }`}
-    >
-      <p
-        className={`text-[8px] font-bold leading-4 ${
-          darkMode ? "text-gray-500" : "text-slate-400"
-        }`}
-      >
-        {label}
-      </p>
+    <div className="min-w-0 border-t border-dashed border-rule-strong pt-3 first:border-t-0 first:pt-0 sm:border-t-0 sm:pt-0">
+      <dt className="text-[12px] leading-5 text-faint">{label}</dt>
 
-      <p
-        className={`mt-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[10px] font-bold leading-5 sm:text-[11px] ${
-          darkMode ? "text-gray-200" : "text-slate-700"
-        }`}
+      <dd
+        className="mt-0.5 truncate font-mono text-[13px] tabular-nums text-ink-soft"
         title={String(value)}
       >
         {value}
-      </p>
+      </dd>
     </div>
-  );
-}
-
-/* =========================================================
-   DETAIL TITLE
-========================================================= */
-
-function DetailTitle({ children, darkMode }) {
-  return (
-    <p
-      className={`text-[9px] font-black uppercase tracking-[0.15em] ${
-        darkMode ? "text-emerald-400" : "text-emerald-700"
-      }`}
-    >
-      {children}
-    </p>
-  );
-}
-
-/* =========================================================
-   ICON BASE
-========================================================= */
-
-function Icon({ className = "", children, viewBox = "0 0 24 24" }) {
-  return (
-    <svg
-      className={className}
-      viewBox={viewBox}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
   );
 }
 
@@ -2901,141 +2268,205 @@ function Icon({ className = "", children, viewBox = "0 0 24 24" }) {
 
 function CameraIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M4 7h3l1.5-2h7L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z" />
 
       <circle cx="12" cy="13" r="4" />
-    </Icon>
+    </svg>
   );
 }
 
 function UploadIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M12 16V4" />
 
       <path d="m7 9 5-5 5 5" />
 
       <path d="M5 20h14" />
-    </Icon>
+    </svg>
   );
 }
 
 function ImageIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <rect x="3" y="4" width="18" height="16" rx="2" />
 
       <circle cx="8.5" cy="9" r="1.5" />
 
       <path d="m21 15-5-5L5 20" />
-    </Icon>
-  );
-}
-
-function LeafIcon({ className = "" }) {
-  return (
-    <Icon className={className}>
-      <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
-
-      <path d="M4 20c4-5 7-7 13-10" />
-    </Icon>
-  );
-}
-
-function MapPinIcon({ className = "" }) {
-  return (
-    <Icon className={className}>
-      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-
-      <circle cx="12" cy="10" r="2.5" />
-    </Icon>
+    </svg>
   );
 }
 
 function CurrentLocationIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="3" />
 
       <circle cx="12" cy="12" r="7" />
 
-      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-    </Icon>
-  );
-}
+      <path d="M12 2v3" />
 
-function DocumentIcon({ className = "" }) {
-  return (
-    <Icon className={className}>
-      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M12 19v3" />
 
-      <path d="M14 3v5h5M9 13h6M9 17h6" />
-    </Icon>
-  );
-}
+      <path d="M2 12h3" />
 
-function UndoIcon({ className = "" }) {
-  return (
-    <Icon className={className}>
-      <path d="M9 7 4 12l5 5" />
-
-      <path d="M5 12h8a6 6 0 0 1 6 6" />
-    </Icon>
+      <path d="M19 12h3" />
+    </svg>
   );
 }
 
 function SaveIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M5 4h12l2 2v14H5z" />
 
-      <path d="M8 4v6h8V4M8 20v-6h8v6" />
-    </Icon>
+      <path d="M8 4v6h8V4" />
+
+      <path d="M8 20v-6h8v6" />
+    </svg>
   );
 }
 
 function ArrowLeftIcon({ className = "" }) {
   return (
-    <Icon className={className}>
-      <path d="m15 18-6-6 6-6M9 12h10" />
-    </Icon>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m15 18-6-6 6-6" />
+
+      <path d="M9 12h10" />
+    </svg>
   );
 }
 
 function AlertIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="9" />
 
-      <path d="M12 8v5M12 16.5h.01" />
-    </Icon>
+      <path d="M12 8v5" />
+
+      <path d="M12 16.5h.01" />
+    </svg>
   );
 }
 
 function InfoIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="9" />
 
-      <path d="M12 11v5M12 8h.01" />
-    </Icon>
+      <path d="M12 11v5" />
+
+      <path d="M12 8h.01" />
+    </svg>
   );
 }
 
 function CheckIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="9" />
 
       <path d="m8 12 2.6 2.6L16.5 9" />
-    </Icon>
+    </svg>
   );
 }
 
 function HandIcon({ className = "" }) {
   return (
-    <Icon className={className}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M8 11V5a1.5 1.5 0 0 1 3 0v5" />
 
       <path d="M11 10V4a1.5 1.5 0 0 1 3 0v6" />
@@ -3043,7 +2474,26 @@ function HandIcon({ className = "" }) {
       <path d="M14 10V6a1.5 1.5 0 0 1 3 0v6" />
 
       <path d="M17 11v-1a1.5 1.5 0 0 1 3 0v5c0 4-2.5 6-6 6h-2.5a6 6 0 0 1-5-2.7L3.8 14a1.7 1.7 0 0 1 2.5-2.2L8 13" />
-    </Icon>
+    </svg>
+  );
+}
+
+function UndoIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9 7 5 11l4 4" />
+
+      <path d="M5 11h8a6 6 0 1 1 0 12" />
+    </svg>
   );
 }
 
