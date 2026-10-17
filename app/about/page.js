@@ -1,5 +1,6 @@
 "use client";
 
+import BioHeroLazy from "@/components/BioHeroLazy";
 import Navbar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
@@ -278,23 +279,30 @@ export default function AboutPage() {
         />
 
         <div className="vh-container relative py-14 md:py-20 lg:py-24">
-          <div className="page-enter max-w-[860px]">
-            <p className="vh-eyebrow flex items-center gap-3">
-              <span className="h-px w-8 bg-ochre" />
-              {t.heroEyebrow}
-            </p>
+          <div className="relative">
+            {/* 3D leaf – right of the title, kept above the rule below it */}
+            <div className="pointer-events-none absolute -bottom-12 -top-24 left-[max(60%,780px)] right-0 hidden xl:block">
+              <BioHeroLazy variant="leaf" minWidth={1280} />
+            </div>
 
-            <p className="mt-6 font-serif text-[1.15rem] italic text-muted md:text-[1.3rem]">
-              {t.heroMini}
-            </p>
+            <div className="page-enter relative z-10 max-w-[860px]">
+              <p className="vh-eyebrow flex items-center gap-3">
+                <span className="h-px w-8 bg-ochre" />
+                {t.heroEyebrow}
+              </p>
 
-            <h1
-              className={`vh-display mt-4 text-[2.6rem] min-[390px]:text-[3rem] md:text-[4.2rem] xl:text-[5rem] ${displayLeading}`}
-            >
-              <span className="block">{t.heroTitle1}</span>
+              <p className="mt-6 font-serif text-[1.15rem] italic text-muted md:text-[1.3rem]">
+                {t.heroMini}
+              </p>
 
-              <span className="block italic text-moss">{t.heroTitle2}</span>
-            </h1>
+              <h1
+                className={`vh-display mt-4 text-[2.6rem] min-[390px]:text-[3rem] md:text-[4.2rem] xl:text-[5rem] ${displayLeading}`}
+              >
+                <span className="block">{t.heroTitle1}</span>
+
+                <span className="block italic text-moss">{t.heroTitle2}</span>
+              </h1>
+            </div>
           </div>
 
           <div className="mt-10 grid gap-8 border-t border-rule pt-8 md:mt-14 md:grid-cols-[180px_1fr] md:gap-12">
