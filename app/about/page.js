@@ -67,19 +67,19 @@ export default function AboutPage() {
 
         record1Title: "Plant information",
 
-        record1Text: "Common name, scientific name, and family",
+        record1Text: "Scientific name, family, and plant group",
 
         record2Title: "Collection location",
 
-        record2Text: "Province, district, and collection site details",
+        record2Text: "Locality, latitude, and longitude",
 
         record3Title: "Field information",
 
-        record3Text: "Date, elevation, and habitat details",
+        record3Text: "Elevation, map location, and specimen photo",
 
         record4Title: "Specimen information",
 
-        record4Text: "Collector, specimen number, duplicates, and notes",
+        record4Text: "Collector, collector number, and PNU number",
 
         benefitEyebrow: "SYSTEM BENEFITS",
 
@@ -133,7 +133,7 @@ export default function AboutPage() {
     : {
         heroEyebrow: "ABOUT VIRTUAL HERBARIUM",
 
-        heroMini: "เรื่องราวของคลังพรรณไม้ดิจิม่อน",
+        heroMini: "เรื่องราวของคลังพรรณไม้ดิจิทัล",
 
         heroTitle1: "จากตัวอย่างพรรณไม้",
 
@@ -168,19 +168,19 @@ export default function AboutPage() {
 
         record1Title: "ข้อมูลพรรณไม้",
 
-        record1Text: "ชื่อพรรณไม้ ชื่อวิทยาศาสตร์ และวงศ์",
+        record1Text: "ชื่อวิทยาศาสตร์ วงศ์ และกลุ่มพืช",
 
         record2Title: "พื้นที่เก็บตัวอย่าง",
 
-        record2Text: "จังหวัด อำเภอ และรายละเอียดของสถานที่",
+        record2Text: "สถานที่ ละติจูด และลองจิจูด",
 
         record3Title: "ข้อมูลภาคสนาม",
 
-        record3Text: "วันที่เก็บ ระดับความสูง และลักษณะถิ่นอาศัย",
+        record3Text: "ระดับความสูง ตำแหน่งบนแผนที่ และภาพถ่ายตัวอย่าง",
 
         record4Title: "ข้อมูลตัวอย่าง",
 
-        record4Text: "ผู้เก็บ หมายเลขตัวอย่าง จำนวนสำเนา และบันทึกเพิ่มเติม",
+        record4Text: "ผู้เก็บ หมายเลขผู้เก็บ และหมายเลข PNU",
 
         benefitEyebrow: "SYSTEM BENEFITS",
 
