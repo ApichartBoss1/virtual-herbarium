@@ -1514,54 +1514,6 @@ function AutoLocationMap({
   }, [initialLocation]);
 
   /* =====================================================
-     AUTO SEARCH LOCALITY
-  ===================================================== */
-
-  useEffect(() => {
-    if (!mapReady) {
-      return;
-    }
-
-    const keyword = String(initialLocation?.locality || "").trim();
-
-    /*
-     * ถ้ามี Coordinates เดิมอยู่แล้ว
-     * รอบแรกไม่ต้อง Search ใหม่
-     */
-    if (!didHandleInitialSearchRef.current) {
-      didHandleInitialSearchRef.current = true;
-
-      if (firstCoordinatesRef.current && keyword === firstLocalityRef.current) {
-        return;
-      }
-    }
-
-    if (forwardTimerRef.current) {
-      window.clearTimeout(forwardTimerRef.current);
-    }
-
-    forwardAbortRef.current?.abort();
-
-    if (keyword.length < 3) {
-      setSearchingLocation(false);
-
-      setMapError("");
-
-      return;
-    }
-
-    forwardTimerRef.current = window.setTimeout(() => {
-      searchLocality(keyword);
-    }, 1000);
-
-    return () => {
-      if (forwardTimerRef.current) {
-        window.clearTimeout(forwardTimerRef.current);
-      }
-    };
-  }, [initialLocation?.locality, mapReady]);
-
-  /* =====================================================
      CLEANUP SEARCH ON UNMOUNT
   ===================================================== */
 
@@ -1824,6 +1776,55 @@ function AutoLocationMap({
       }
     }
   }
+
+  /* =====================================================
+     AUTO SEARCH LOCALITY
+     (อยู่หลัง searchLocality เพื่อให้ประกาศฟังก์ชันก่อนใช้)
+  ===================================================== */
+
+  useEffect(() => {
+    if (!mapReady) {
+      return;
+    }
+
+    const keyword = String(initialLocation?.locality || "").trim();
+
+    /*
+     * ถ้ามี Coordinates เดิมอยู่แล้ว
+     * รอบแรกไม่ต้อง Search ใหม่
+     */
+    if (!didHandleInitialSearchRef.current) {
+      didHandleInitialSearchRef.current = true;
+
+      if (firstCoordinatesRef.current && keyword === firstLocalityRef.current) {
+        return;
+      }
+    }
+
+    if (forwardTimerRef.current) {
+      window.clearTimeout(forwardTimerRef.current);
+    }
+
+    forwardAbortRef.current?.abort();
+
+    if (keyword.length < 3) {
+      setSearchingLocation(false);
+
+      setMapError("");
+
+      return;
+    }
+
+    forwardTimerRef.current = window.setTimeout(() => {
+      searchLocality(keyword);
+    }, 1000);
+
+    return () => {
+      if (forwardTimerRef.current) {
+        window.clearTimeout(forwardTimerRef.current);
+      }
+    };
+  }, [initialLocation?.locality, mapReady]);
 
   /* =====================================================
      CURRENT LOCATION
