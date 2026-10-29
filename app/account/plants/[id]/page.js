@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 import "leaflet/dist/leaflet.css";
@@ -23,6 +24,8 @@ const UUID_PATTERN =
 
 export default function AccountPlantDetailPage() {
   const params = useParams();
+
+  const router = useRouter();
   const plantId = params?.id;
 
   const { language } = useSiteSettings();
@@ -202,38 +205,38 @@ export default function AccountPlantDetailPage() {
       return;
     }
 
+    /* กำลัง redirect ไปหน้า login: ห้ามปิด loading เพื่อไม่ให้หน้าและแผนที่ render */
+    let redirecting = false;
+
     try {
       /* ================================================
-         CHECK LOGGED IN USER
+         CHECK ADMIN USER
       ================================================ */
 
       const { data: authData, error: authError } =
         await supabase.auth.getUser();
 
-      if (authError || !authData?.user) {
-        setPlant(null);
-        setError("loginRequired");
+      if (
+        authError ||
+        !authData?.user ||
+        authData.user.app_metadata?.role !== "admin"
+      ) {
+        redirecting = true;
+
+        router.replace("/login");
+
         return;
       }
 
-      const currentUser = authData.user;
-
       /* ================================================
-         FETCH ONLY USER'S OWN PLANT
+         FETCH PLANT (ADMIN เห็นได้ทุกรายการ)
       ================================================ */
 
-      let query = supabase.from("plants").select("*").eq("id", plantId);
-
-      // ถ้าไม่ใช่ admin ให้เห็นเฉพาะข้อมูลตัวเอง
-      if (currentUser.app_metadata?.role !== "admin") {
-        query = query.eq("user_id", currentUser.id);
-      }
-
-      const { data, error: fetchError } = await query.maybeSingle();
-
-      if (currentUser.app_metadata?.role !== "admin") {
-        query = query.eq("user_id", currentUser.id);
-      }
+      const { data, error: fetchError } = await supabase
+        .from("plants")
+        .select("*")
+        .eq("id", plantId)
+        .maybeSingle();
 
       if (fetchError) {
         console.log("PLANT ID =", plantId);
@@ -258,7 +261,9 @@ export default function AccountPlantDetailPage() {
       setPlant(null);
       setError("loadFailed");
     } finally {
-      setLoading(false);
+      if (!redirecting) {
+        setLoading(false);
+      }
     }
   }
 
@@ -924,112 +929,97 @@ function SectionHeading({ eyebrow, title }) {
 
 function ReadOnlyLocationMap({ plant, t }) {
   const mapContainerRef = useRef(null);
-  const mapRef = useRef(null);
 
   const latitude = toCoordinateNumber(plant?.latitude);
   const longitude = toCoordinateNumber(plant?.longitude);
 
   const hasCoordinates = latitude !== null && longitude !== null;
 
+  const markerRef = useRef(null);
+
+  const { map } = useLeafletMap(mapContainerRef, {
+    enabled: hasCoordinates,
+
+    options: {
+      zoomControl: true,
+      attributionControl: true,
+      scrollWheelZoom: false,
+      doubleClickZoom: true,
+      dragging: true,
+      touchZoom: true,
+      boxZoom: false,
+      keyboard: false,
+      preferCanvas: true,
+    },
+
+    setup: (L, createdMap) => {
+      createdMap.setView([latitude, longitude], 16);
+
+      L.tileLayer(
+        process.env.NEXT_PUBLIC_MAP_TILE_URL ||
+          "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution:
+            '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+        },
+      ).addTo(createdMap);
+
+      /* =============================================
+         MINIMAL MARKER (uses design tokens)
+      ============================================= */
+
+      const markerIcon = L.divIcon({
+        className: "",
+
+        html: `
+          <div style="
+            width:18px;
+            height:18px;
+            border-radius:999px;
+            background:var(--moss);
+            border:3px solid var(--sheet-raised);
+            box-shadow:
+              0 3px 10px rgba(0,0,0,.24),
+              0 0 0 4px var(--moss-soft);
+          "></div>
+        `,
+
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+        popupAnchor: [0, -12],
+      });
+
+      const marker = L.marker([latitude, longitude], {
+        draggable: false,
+        keyboard: false,
+        icon: markerIcon,
+      }).addTo(createdMap);
+
+      marker.bindTooltip(t.mapPinLabel, {
+        direction: "top",
+        offset: [0, -10],
+        opacity: 0.95,
+      });
+
+      markerRef.current = marker;
+    },
+  });
+
+  /* เปลี่ยนพิกัดหรือภาษาโดยไม่ต้องสร้างแผนที่ใหม่ */
   useEffect(() => {
-    let active = true;
+    const marker = markerRef.current;
 
-    async function createMap() {
-      if (!hasCoordinates || !mapContainerRef.current || mapRef.current) {
-        return;
-      }
-
-      try {
-        const leafletModule = await import("leaflet");
-
-        if (!active || !mapContainerRef.current) {
-          return;
-        }
-
-        const L = leafletModule.default || leafletModule;
-
-        const map = L.map(mapContainerRef.current, {
-          zoomControl: true,
-          attributionControl: true,
-          scrollWheelZoom: false,
-          doubleClickZoom: true,
-          dragging: true,
-          touchZoom: true,
-          boxZoom: false,
-          keyboard: false,
-          preferCanvas: true,
-        }).setView([latitude, longitude], 16);
-
-        L.tileLayer(
-          process.env.NEXT_PUBLIC_MAP_TILE_URL ||
-            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          {
-            maxZoom: 19,
-            attribution:
-              '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-          },
-        ).addTo(map);
-
-        /* =============================================
-           MINIMAL MARKER (uses design tokens)
-        ============================================= */
-
-        const markerIcon = L.divIcon({
-          className: "",
-
-          html: `
-            <div style="
-              width:18px;
-              height:18px;
-              border-radius:999px;
-              background:var(--moss);
-              border:3px solid var(--sheet-raised);
-              box-shadow:
-                0 3px 10px rgba(0,0,0,.24),
-                0 0 0 4px var(--moss-soft);
-            "></div>
-          `,
-
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
-          popupAnchor: [0, -12],
-        });
-
-        const marker = L.marker([latitude, longitude], {
-          draggable: false,
-          keyboard: false,
-          icon: markerIcon,
-        }).addTo(map);
-
-        marker.bindTooltip(t.mapPinLabel, {
-          direction: "top",
-          offset: [0, -10],
-          opacity: 0.95,
-        });
-
-        mapRef.current = map;
-
-        window.setTimeout(() => {
-          if (mapRef.current) {
-            mapRef.current.invalidateSize();
-          }
-        }, 120);
-      } catch (error) {
-        console.error("Read-only map error:", error);
-      }
+    if (!map || !marker || !hasCoordinates) {
+      return;
     }
 
-    createMap();
+    marker.setLatLng([latitude, longitude]);
 
-    return () => {
-      active = false;
+    marker.setTooltipContent(t.mapPinLabel);
 
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [hasCoordinates, latitude, longitude, t.mapPinLabel]);
+    map.setView([latitude, longitude], map.getZoom(), { animate: false });
+  }, [map, hasCoordinates, latitude, longitude, t.mapPinLabel]);
 
   const latitudeDms = hasCoordinates ? decimalToDms(latitude, true) : "";
 

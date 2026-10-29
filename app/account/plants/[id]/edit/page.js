@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 import {
   IMAGE_INPUT_ACCEPT,
@@ -377,6 +378,9 @@ export default function EditPlantPage() {
     let mounted = true;
 
     async function loadPlant() {
+      /* กำลัง redirect ไปหน้า login: ห้ามปิด loading เพื่อไม่ให้ฟอร์มและแผนที่ render */
+      let redirecting = false;
+
       setLoading(true);
 
       setFatalError("");
@@ -392,14 +396,16 @@ export default function EditPlantPage() {
           return;
         }
 
-        if (userError || !currentUser) {
+        if (
+          userError ||
+          !currentUser ||
+          currentUser.app_metadata?.role !== "admin"
+        ) {
+          redirecting = true;
+
           router.replace("/login");
 
           return;
-        }
-
-        if (currentUser.app_metadata?.role !== "admin") {
-          throw new Error(t.denied);
         }
 
         setUser(currentUser);
@@ -493,7 +499,7 @@ export default function EditPlantPage() {
           setFatalError(err?.message || t.notFound);
         }
       } finally {
-        if (mounted) {
+        if (mounted && !redirecting) {
           setLoading(false);
         }
       }
@@ -504,7 +510,7 @@ export default function EditPlantPage() {
     return () => {
       mounted = false;
     };
-  }, [plantId, router, t.notFound, t.denied]);
+  }, [plantId, router, t.notFound]);
 
   /* =====================================================
      CLEAN PREVIEW
@@ -1344,11 +1350,7 @@ function AutoLocationMap({
 
   const mapContainerRef = useRef(null);
 
-  const mapRef = useRef(null);
-
   const markerRef = useRef(null);
-
-  const leafletRef = useRef(null);
 
   const forwardTimerRef = useRef(null);
 
@@ -1379,8 +1381,6 @@ function AutoLocationMap({
 
   const didHandleInitialSearchRef = useRef(false);
 
-  const [mapReady, setMapReady] = useState(false);
-
   const [locating, setLocating] = useState(false);
 
   const [searchingLocation, setSearchingLocation] = useState(false);
@@ -1392,6 +1392,73 @@ function AutoLocationMap({
   const [locationData, setLocationData] = useState(() =>
     normalizeLocationData(initialLocation),
   );
+
+  /* =====================================================
+     MAP (lib/useLeafletMap จัดการสร้าง/ลบแผนที่)
+  ===================================================== */
+
+  const {
+    map: leafletMap,
+    error: mapLoadError,
+    mapRef,
+    leafletRef,
+  } = useLeafletMap(mapContainerRef, {
+    options: {
+      zoomControl: true,
+
+      attributionControl: true,
+
+      preferCanvas: true,
+
+      center: [DEFAULT_MAP_CENTER.latitude, DEFAULT_MAP_CENTER.longitude],
+
+      zoom: DEFAULT_MAP_ZOOM,
+    },
+
+    setup: (L, map) => {
+      /* แผนที่ใหม่ ต้องสร้าง marker ใหม่ */
+      markerRef.current = null;
+
+      L.tileLayer(MAP_TILE_URL, {
+        maxZoom: 19,
+
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      map.on("click", (event) => {
+        selectLocation(
+          event.latlng.lat,
+
+          event.latlng.lng,
+
+          true,
+        );
+      });
+
+      const initial = normalizeLocationData(initialLocationRef.current);
+
+      setLocationData(initial);
+
+      if (hasValidCoordinates(initial.latitude, initial.longitude)) {
+        placeMarker(initial.latitude, initial.longitude);
+
+        map.setView([initial.latitude, initial.longitude], 16, {
+          animate: false,
+        });
+      }
+    },
+  });
+
+  const mapReady = Boolean(leafletMap);
+
+  const shownMapError =
+    mapError ||
+    (mapLoadError
+      ? isEnglish
+        ? "Unable to load the map."
+        : "ไม่สามารถโหลดแผนที่ได้"
+      : "");
 
   /* =====================================================
      MAP COPY
@@ -1540,102 +1607,20 @@ function AutoLocationMap({
   }, [initialLocation?.locality, mapReady]);
 
   /* =====================================================
-     INITIALIZE MAP
+     CLEANUP SEARCH ON UNMOUNT
   ===================================================== */
 
   useEffect(() => {
-    let mounted = true;
+    const forwardTimer = forwardTimerRef;
 
-    async function initMap() {
-      try {
-        const leafletModule = await import("leaflet");
-
-        if (!mounted || !mapContainerRef.current) {
-          return;
-        }
-
-        const L = leafletModule.default || leafletModule;
-
-        leafletRef.current = L;
-
-        const map = L.map(mapContainerRef.current, {
-          zoomControl: true,
-
-          attributionControl: true,
-
-          preferCanvas: true,
-        }).setView(
-          [DEFAULT_MAP_CENTER.latitude, DEFAULT_MAP_CENTER.longitude],
-          DEFAULT_MAP_ZOOM,
-        );
-
-        L.tileLayer(MAP_TILE_URL, {
-          maxZoom: 19,
-
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-        }).addTo(map);
-
-        map.on("click", (event) => {
-          selectLocation(
-            event.latlng.lat,
-
-            event.latlng.lng,
-
-            true,
-          );
-        });
-
-        mapRef.current = map;
-
-        const initial = normalizeLocationData(initialLocationRef.current);
-
-        setLocationData(initial);
-
-        if (hasValidCoordinates(initial.latitude, initial.longitude)) {
-          placeMarker(initial.latitude, initial.longitude);
-
-          map.setView([initial.latitude, initial.longitude], 16, {
-            animate: false,
-          });
-        }
-
-        setMapReady(true);
-
-        window.setTimeout(() => {
-          map.invalidateSize();
-        }, 150);
-      } catch (err) {
-        console.error("Initialize map error:", err);
-
-        if (mounted) {
-          setMapError(
-            isEnglish ? "Unable to load the map." : "ไม่สามารถโหลดแผนที่ได้",
-          );
-        }
-      }
-    }
-
-    initMap();
+    const forwardAbort = forwardAbortRef;
 
     return () => {
-      mounted = false;
-
-      if (forwardTimerRef.current) {
-        window.clearTimeout(forwardTimerRef.current);
+      if (forwardTimer.current) {
+        window.clearTimeout(forwardTimer.current);
       }
 
-      forwardAbortRef.current?.abort();
-
-      if (mapRef.current) {
-        mapRef.current.remove();
-
-        mapRef.current = null;
-      }
-
-      markerRef.current = null;
-
-      leafletRef.current = null;
+      forwardAbort.current?.abort();
     };
   }, []);
 
@@ -2021,7 +2006,7 @@ function AutoLocationMap({
             className="h-[240px] w-full sm:h-[290px] lg:h-[340px] dark:brightness-[0.78] dark:contrast-[1.05]"
           />
 
-          {!mapReady && !mapError && (
+          {!mapReady && !shownMapError && (
             <div className="vh-skeleton absolute inset-0 flex items-center justify-center">
               <LoadingIcon className="h-6 w-6 animate-spin text-moss" />
             </div>
@@ -2065,11 +2050,11 @@ function AutoLocationMap({
           )}
         </div>
 
-        {mapError && (
+        {shownMapError && (
           <div className="mt-3 flex items-start gap-2 rounded-[4px] border border-ochre/30 bg-ochre-soft px-3 py-2.5 text-[13px] leading-5 text-ink-soft">
             <InfoIcon className="mt-0.5 h-4 w-4 shrink-0 text-ochre" />
 
-            <span>{mapError}</span>
+            <span>{shownMapError}</span>
           </div>
         )}
 
