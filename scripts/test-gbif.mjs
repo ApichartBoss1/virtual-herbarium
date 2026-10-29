@@ -17,15 +17,38 @@ const CASES = [
   { botanical_name: "asdfgh" },
 ];
 
+const startsWith = (value, prefix) =>
+  String(value || "").startsWith(prefix);
+
 const CHECKS = [
   {
-    /*
-     * GBIF ถือว่าตัวสะกด "thomsonae" เป็นชื่อพ้องของ C. thomsoniae
-     * ข้อนี้ตรวจว่าตัดช่องว่างซ้อนแล้วพบชื่อ จึงรับทั้ง ok และ synonym
-     */
-    label: '"Clerodendrum  thomsonae" → result "ok" หรือ "synonym"',
+    /* GBIF ถือว่าตัวสะกด "thomsonae" เป็นชื่อพ้องของ C. thomsoniae */
+    label: '"Clerodendrum  thomsonae" → "synonym" และชื่อที่ยอมรับขึ้นต้นด้วย "Clerodendrum thomsoniae"',
     name: "Clerodendrum  thomsonae Balf.",
-    test: (r) => ["ok", "synonym"].includes(r.result),
+    test: (r) =>
+      r.result === "synonym" &&
+      startsWith(r.gbif?.acceptedName, "Clerodendrum thomsoniae"),
+  },
+  {
+    label: '"Michelia alba DC." → "synonym" และมีชื่อที่ยอมรับ',
+    name: "Michelia alba DC.",
+    test: (r) => r.result === "synonym" && Boolean(r.gbif?.acceptedName),
+  },
+  {
+    label: '"Samanea saman" (Fabaceae-Mimosoideae) → "ok" และ familyCheck "match"',
+    name: "Samanea saman (Jacq.) Merr.",
+    test: (r) => r.result === "ok" && r.familyCheck === "match",
+  },
+  {
+    label: '"Dipterocarp alatus" → มีคำแนะนำที่ขึ้นต้นด้วย "Dipterocarpus alatus"',
+    name: "Dipterocarp alatus Roxb. ex G. Don",
+    test: (r) =>
+      r.suggestions.some((s) => startsWith(s.scientificName, "Dipterocarpus alatus")),
+  },
+  {
+    label: '"Grewia eriocarpa" (Tiliaceae) → familyCheck "differs" และวงศ์ GBIF เป็น "Malvaceae"',
+    name: "Grewia eriocarpa Juss.",
+    test: (r) => r.familyCheck === "differs" && r.gbif?.family === "Malvaceae",
   },
   {
     label: '"Zingiber sp." → result "genus_only"',
@@ -78,7 +101,11 @@ for (const check of CHECKS) {
   report(
     Boolean(r) && check.test(r),
     check.label,
-    r ? `ได้ result="${r.result}", suggestions=${r.suggestions.length}` : "ไม่พบผล",
+    r
+      ? `ได้ result="${r.result}", accepted="${r.gbif?.acceptedName || "—"}", ` +
+          `familyCheck="${r.familyCheck}", gbifFamily="${r.gbif?.family || "—"}", ` +
+          `suggestions=${r.suggestions.length}`
+      : "ไม่พบผล",
   );
 }
 
