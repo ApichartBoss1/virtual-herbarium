@@ -10,6 +10,7 @@ const CASES = [
   { botanical_name: "Michelia alba DC.", family: "Magnoliaceae" },
   { botanical_name: "Dipterocarp alatus Roxb. ex G. Don", family: "Dipterocarpaceae" },
   { botanical_name: "Hydrophila erecta (Burm. f.) Hochr.", family: "Acanthaceae" },
+  { botanical_name: "Hygrophila erecta (Burm. f.) Hochr.", family: "Acanthaceae" },
   { botanical_name: "Clerodendrum  thomsonae Balf.", family: "Lamiaceae" },
   { botanical_name: "Zingiber sp.", family: "Zingiberaceae" },
   { botanical_name: "Samanea saman (Jacq.) Merr.", family: "Fabaceae-Mimosoideae" },
@@ -30,6 +31,7 @@ const CHECKS = [
       startsWith(r.gbif?.acceptedName, "Clerodendrum thomsoniae"),
   },
   {
+    /* เครื่องหมาย × ในชื่อของ GBIF ต้องไม่ทำให้กลายเป็น spelling */
     label: '"Michelia alba DC." → "synonym" และมีชื่อที่ยอมรับ',
     name: "Michelia alba DC.",
     test: (r) => r.result === "synonym" && Boolean(r.gbif?.acceptedName),
@@ -40,10 +42,24 @@ const CHECKS = [
     test: (r) => r.result === "ok" && r.familyCheck === "match",
   },
   {
-    label: '"Dipterocarp alatus" → มีคำแนะนำที่ขึ้นต้นด้วย "Dipterocarpus alatus"',
+    label: '"Hydrophila erecta" → "spelling" และคำแนะนำแรกขึ้นต้นด้วย "Hygrophila erecta"',
+    name: "Hydrophila erecta (Burm. f.) Hochr.",
+    test: (r) =>
+      r.result === "spelling" &&
+      startsWith(r.suggestions[0]?.scientificName, "Hygrophila erecta"),
+  },
+  {
+    label: '"Dipterocarp alatus" → "spelling" และคำแนะนำแรกขึ้นต้นด้วย "Dipterocarpus alatus"',
     name: "Dipterocarp alatus Roxb. ex G. Don",
     test: (r) =>
-      r.suggestions.some((s) => startsWith(s.scientificName, "Dipterocarpus alatus")),
+      r.result === "spelling" &&
+      startsWith(r.suggestions[0]?.scientificName, "Dipterocarpus alatus"),
+  },
+  {
+    /* ชื่อพืชถูก ต่างแค่การเขียนชื่อผู้ตั้ง ต้องไม่ถูกนับเป็น spelling */
+    label: '"Hygrophila erecta (Burm. f.) Hochr." → "ok"',
+    name: "Hygrophila erecta (Burm. f.) Hochr.",
+    test: (r) => r.result === "ok",
   },
   {
     label: '"Grewia eriocarpa" (Tiliaceae) → familyCheck "differs" และวงศ์ GBIF เป็น "Malvaceae"',
@@ -81,6 +97,7 @@ console.table(
     "ชื่อที่ GBIF จับคู่": r.gbif?.scientificName
       ? `${r.gbif.scientificName} (${r.gbif.matchType} ${r.gbif.confidence})`
       : "—",
+    ชื่อพืชล้วน: r.plainName || "—",
     ชื่อที่ยอมรับ: r.gbif?.acceptedName || "—",
     คำแนะนำ: r.suggestions.map((s) => s.scientificName).join("; ") || "—",
     familyCheck: r.familyCheck,

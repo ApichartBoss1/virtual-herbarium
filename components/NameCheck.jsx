@@ -39,6 +39,7 @@ const COPY = {
 const TONES = {
   ok: "border-moss/30 bg-moss-soft text-moss",
   synonym: "border-ochre/35 bg-ochre-soft text-ochre",
+  spelling: "border-ochre/35 bg-ochre-soft text-ochre",
   genus_only:
     "border-sky-700/25 bg-sky-500/10 text-sky-800 dark:border-sky-300/25 dark:text-sky-300",
   not_found: "border-clay/40 bg-clay-soft text-clay",
@@ -178,6 +179,76 @@ export default function NameCheck({
 ========================================================= */
 
 function ResultBody({ data, gbif, g, t, disabled, onUseName }) {
+  if (data.result === "spelling") {
+    /* ชื่อที่ GBIF จับคู่คือคำแนะนำแรก (ผ่านการตรวจ EXACT แล้ว) */
+    const [matched, ...others] = data.suggestions;
+
+    const matchedName = matched?.scientificName || gbif.scientificName;
+
+    return (
+      <>
+        <p className="font-medium">
+          {g.result.spelling}{" "}
+          <span className="italic">{matchedName}</span>
+        </p>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <UseButton
+            label={t.useName}
+            disabled={disabled}
+            onClick={() => onUseName?.(matchedName)}
+          />
+
+          <GbifLink href={matched?.gbifUrl || gbif.gbifUrl} g={g} t={t} />
+        </div>
+
+        {matched?.acceptedName && (
+          <>
+            <p className="mt-3">
+              {g.spellingSynonymOf}{" "}
+              <span className="italic">{matched.acceptedName}</span>
+            </p>
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <UseButton
+                label={t.useName}
+                disabled={disabled}
+                onClick={() => onUseName?.(matched.acceptedName)}
+              />
+
+              <GbifLink href={matched.acceptedGbifUrl} g={g} t={t} />
+            </div>
+          </>
+        )}
+
+        {others.length > 0 && (
+          <>
+            <p className="mt-3">{g.suggestions}</p>
+
+            <ul className="mt-1.5 space-y-2">
+              {others.map((item) => (
+                <li
+                  key={item.gbifUrl}
+                  className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
+                >
+                  <span className="italic text-ink">{item.scientificName}</span>
+
+                  <UseButton
+                    label={t.useName}
+                    disabled={disabled}
+                    onClick={() => onUseName?.(item.scientificName)}
+                  />
+
+                  <GbifLink href={item.gbifUrl} g={g} t={t} />
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </>
+    );
+  }
+
   if (data.result === "synonym") {
     return (
       <>
