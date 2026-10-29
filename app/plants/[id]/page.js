@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 
 import Navbar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
-import { supabase } from "@/lib/supabase";
+import { useSignedInAdmin } from "@/components/AdminContext";
+import { fetchPublicPlant } from "@/lib/plantQueries";
 import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
@@ -26,6 +27,9 @@ const UUID_PATTERN =
 export default function PlantDetailPage() {
   const params = useParams();
   const plantId = params?.id;
+
+  /* admin ที่ล็อกอินอยู่เห็นปุ่มแก้ไข (ไม่กระทบการโหลดข้อมูล) */
+  const signedInAdmin = useSignedInAdmin();
 
   const { language } = useSiteSettings();
   const isEnglish = language === "EN";
@@ -47,6 +51,7 @@ export default function PlantDetailPage() {
   const text = {
     TH: {
       back: "กลับไปยังคลังพรรณไม้",
+      edit: "แก้ไข",
       loading: "กำลังเปิดข้อมูลตัวอย่างพรรณไม้",
       errorTitle: "ไม่สามารถเปิดข้อมูลพรรณไม้ได้",
       invalidId: "รหัสตัวอย่างพรรณไม้ไม่ถูกต้อง",
@@ -111,6 +116,7 @@ export default function PlantDetailPage() {
 
     EN: {
       back: "Back to Plant Collection",
+      edit: "Edit",
       loading: "Opening specimen record",
       errorTitle: "Unable to open plant information",
       invalidId: "The specimen identifier is invalid.",
@@ -195,30 +201,8 @@ export default function PlantDetailPage() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("plants")
-        .select(
-          `
-          pnu_no,
-          artificial_group,
-          family,
-          botanical_name,
-          collected_by,
-          collector_no,
-          locality,
-          latitude,
-          longitude,
-          elevation,
-          image_url
-        `,
-        )
-        .eq("id", plantId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Fetch plant error:", error);
-        throw error;
-      }
+      /* ข้อมูลเหมือนกันทุกคน ไม่ขึ้นกับการล็อกอิน */
+      const data = await fetchPublicPlant(plantId);
 
       if (!data) {
         setPlant(null);
@@ -428,6 +412,16 @@ export default function PlantDetailPage() {
 
               <span className="vh-catalog">{plantNo}</span>
             </>
+          )}
+
+          {signedInAdmin && plant && (
+            <Link
+              href={`/account/plants/${plantId}/edit`}
+              className="vh-btn vh-btn-outline vh-btn-sm ml-auto"
+            >
+              <EditIcon className="h-4 w-4" />
+              {t.edit}
+            </Link>
           )}
         </nav>
 
@@ -1341,6 +1335,24 @@ function ExpandIcon({ className = "" }) {
       <path d="m3 21 6-6" />
       <path d="M16 21h5v-5" />
       <path d="m21 21-6-6" />
+    </svg>
+  );
+}
+
+function EditIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
+      <path d="m13.5 6.5 4 4" />
     </svg>
   );
 }

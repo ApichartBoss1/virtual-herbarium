@@ -19,14 +19,14 @@ export default function SiteFooter() {
         tagline: "Nature is the greatest classroom.",
         collection: "Collection",
         about: "About",
-        login: "Staff login",
+        admin: "For administrators",
         rights: "All rights reserved.",
       }
     : {
         tagline: "ธรรมชาติ...คือห้องเรียนที่ดีที่สุด",
         collection: "คลังพรรณไม้",
         about: "เกี่ยวกับเรา",
-        login: "เข้าสู่ระบบเจ้าหน้าที่",
+        admin: "สำหรับผู้ดูแลระบบ",
         rights: "สงวนลิขสิทธิ์",
       };
 
@@ -52,14 +52,15 @@ export default function SiteFooter() {
             <Link href="/about" className="transition hover:text-moss">
               {t.about}
             </Link>
-
-            <Link href="/login" className="transition hover:text-moss">
-              {t.login}
-            </Link>
           </nav>
 
           <p className="vh-catalog">
             © {new Date().getFullYear()} Virtual Herbarium · {t.rights}
+            {" · "}
+            {/* ผู้ใช้ทั่วไปไม่ต้องล็อกอิน มีเพียงลิงก์เล็กสำหรับผู้ดูแลระบบ */}
+            <Link href="/login" className="underline-offset-2 transition hover:text-moss hover:underline">
+              {t.admin}
+            </Link>
           </p>
         </div>
       </div>

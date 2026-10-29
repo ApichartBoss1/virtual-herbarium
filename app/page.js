@@ -6,7 +6,13 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
-import { supabase } from "@/lib/supabase";
+import {
+  EMPTY_FACETS,
+  PLANT_CARD_COLUMNS,
+  fetchFeaturedPlants,
+  fetchPlantFacets,
+  fetchPlantsPage,
+} from "@/lib/plantQueries";
 
 /* =========================================================
    IMAGES
@@ -25,6 +31,9 @@ const RECENT_COUNT = 4;
 
 const FAMILY_COUNT = 12;
 
+/* จำนวนพรรณไม้ที่มีรูป (ล่าสุด) ที่นำมาสุ่มเป็นภาพเด่น */
+const FEATURED_POOL_SIZE = 24;
+
 /* =========================================================
    HOME
 ========================================================= */
@@ -34,7 +43,9 @@ export default function HomePage() {
 
   const isEnglish = language === "EN";
 
-  const [plants, setPlants] = useState([]);
+  const [featuredPool, setFeaturedPool] = useState([]);
+  const [recentPlants, setRecentPlants] = useState([]);
+  const [facets, setFacets] = useState(EMPTY_FACETS);
   const [plantLoading, setPlantLoading] = useState(true);
   const [activePlantIndex, setActivePlantIndex] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -159,41 +170,44 @@ export default function HomePage() {
   useEffect(() => {
     let mounted = true;
 
+    /*
+     * ดึงเฉพาะที่หน้าแรกใช้: ภาพเด่น, รายการล่าสุด และสถิติจาก get_plant_facets()
+     * แสดงเหมือนกันทุกคน ไม่ขึ้นกับการล็อกอิน
+     */
     async function loadPlants() {
-      setPlantLoading(true);
+      const [featuredResult, recentResult, facetsResult] =
+        await Promise.allSettled([
+          fetchFeaturedPlants(FEATURED_POOL_SIZE),
+          fetchPlantsPage({
+            sort: "newest",
+            pageSize: RECENT_COUNT,
+            columns: PLANT_CARD_COLUMNS,
+          }),
+          fetchPlantFacets(),
+        ]);
 
-      try {
-        const { data, error } = await supabase
-          .from("plants")
-          .select("*")
-          .order("created_at", {
-            ascending: false,
-          });
+      if (!mounted) return;
 
-        if (!mounted) return;
-
-        if (error) {
-          console.error("Load featured plants error:", error);
-
-          setPlants([]);
-
-          return;
-        }
-
-        setPlants((data || []).filter((plant) => Boolean(plant?.id)));
-
-        setActivePlantIndex(0);
-      } catch (error) {
-        console.error("Load featured plants failed:", error);
-
-        if (mounted) {
-          setPlants([]);
-        }
-      } finally {
-        if (mounted) {
-          setPlantLoading(false);
-        }
+      if (featuredResult.status === "fulfilled") {
+        setFeaturedPool(featuredResult.value.filter((plant) => Boolean(plant?.id)));
+      } else {
+        console.error("Load featured plants error:", featuredResult.reason);
       }
+
+      if (recentResult.status === "fulfilled") {
+        setRecentPlants(recentResult.value.rows);
+      } else {
+        console.error("Load recent plants error:", recentResult.reason);
+      }
+
+      if (facetsResult.status === "fulfilled") {
+        setFacets(facetsResult.value);
+      } else {
+        console.error("Load plant facets error:", facetsResult.reason);
+      }
+
+      setActivePlantIndex(0);
+      setPlantLoading(false);
     }
 
     loadPlants();
@@ -209,8 +223,8 @@ export default function HomePage() {
   ===================================================== */
 
   const featuredPlants = useMemo(
-    () => shufflePlants(plants.filter((plant) => hasText(plant.image_url))),
-    [plants],
+    () => shufflePlants(featuredPool.filter((plant) => hasText(plant.image_url))),
+    [featuredPool],
   );
 
   useEffect(() => {
@@ -237,44 +251,28 @@ export default function HomePage() {
   }
 
   const activePlant =
-    featuredPlants[activePlantIndex] || featuredPlants[0] || plants[0] || null;
+    featuredPlants[activePlantIndex] ||
+    featuredPlants[0] ||
+    recentPlants[0] ||
+    null;
 
   /* =====================================================
      DERIVED DATA
   ===================================================== */
 
-  const recentPlants = plants.slice(0, RECENT_COUNT);
-
-  const families = useMemo(() => {
-    const counts = new Map();
-
-    plants.forEach((plant) => {
-      const family = plant.family?.trim();
-
-      if (!family) return;
-
-      counts.set(family, (counts.get(family) || 0) + 1);
-    });
-
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([name, count]) => ({ name, count }));
-  }, [plants]);
-
-  const collectorCount = useMemo(
+  /* วงศ์ที่มีพรรณไม้มากที่สุดก่อน */
+  const families = useMemo(
     () =>
-      new Set(
-        plants
-          .map((plant) => getCollector(plant, isEnglish).toLowerCase())
-          .filter(Boolean),
-      ).size,
-    [plants, isEnglish],
+      [...facets.families].sort(
+        (a, b) => b.count - a.count || a.name.localeCompare(b.name),
+      ),
+    [facets],
   );
 
   const stats = [
-    { value: plants.length, label: t.statSpecimens },
-    { value: families.length, label: t.statFamilies },
-    { value: collectorCount, label: t.statCollectors },
+    { value: facets.total, label: t.statSpecimens },
+    { value: facets.family_count, label: t.statFamilies },
+    { value: facets.collectors.length, label: t.statCollectors },
   ];
 
   const pillars = [

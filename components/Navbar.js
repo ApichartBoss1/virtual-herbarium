@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+import { useSignedInAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
@@ -14,8 +15,8 @@ export default function Navbar() {
   const { language, darkMode, changeLanguage, toggleDarkMode } =
     useSiteSettings();
 
-  const [user, setUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  /* แสดงลิงก์จัดการข้อมูลเฉพาะ admin ที่ล็อกอินอยู่ ผู้ใช้ทั่วไปไม่ต้องล็อกอิน */
+  const user = useSignedInAdmin();
   const [languageOpen, setLanguageOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -40,10 +41,8 @@ export default function Navbar() {
       plants: "พรรณไม้",
       about: "เกี่ยวกับเรา",
 
-      login: "เข้าสู่ระบบ",
-
-      account: "จัดการระบบ",
-      accountShort: "จัดการระบบ",
+      account: "จัดการข้อมูล",
+      accountShort: "จัดการข้อมูล",
 
       logout: "ออกจากระบบ",
 
@@ -70,10 +69,8 @@ export default function Navbar() {
       plants: "Plants",
       about: "About",
 
-      login: "Login",
-
-      account: "System Management",
-      accountShort: "System",
+      account: "Manage Data",
+      accountShort: "Manage",
 
       logout: "Logout",
 
@@ -97,77 +94,6 @@ export default function Navbar() {
   };
 
   const t = isEnglish ? text.EN : text.TH;
-
-  /* =========================================================
-     USER
-  ========================================================= */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function getUser() {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!mounted) return;
-
-        setUser(user || null);
-      } catch (error) {
-        console.error("Navbar get user error:", error);
-      } finally {
-        if (mounted) {
-          setLoadingUser(false);
-        }
-      }
-    }
-
-    getUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-
-      setUser(session?.user || null);
-      setLoadingUser(false);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  /* =========================================================
-     ROUTE CHANGE
-  ========================================================= */
-
-  useEffect(() => {
-    setLanguageOpen(false);
-  }, [pathname]);
-
-  /* =========================================================
-     LANGUAGE MENU OUTSIDE CLICK
-  ========================================================= */
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        languageMenuRef.current &&
-        !languageMenuRef.current.contains(event.target)
-      ) {
-        setLanguageOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   /* =========================================================
      MOBILE APP SHELL
@@ -217,10 +143,10 @@ export default function Navbar() {
         return;
       }
 
-      setUser(null);
-
-      router.push("/");
-      router.refresh();
+      /* ใน /account ให้ app/account/layout.js พาไป /login, หน้า public อยู่หน้าเดิม */
+      if (!pathname.startsWith("/account")) {
+        router.refresh();
+      }
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
@@ -297,9 +223,6 @@ export default function Navbar() {
      MOBILE BOTTOM NAV
   ========================================================= */
 
-  const accountHref = user ? "/account" : "/login";
-
-  const addHref = user ? "/account/plants/new" : "/login";
 
   function isBottomActive(type) {
     if (type === "home") {
@@ -452,53 +375,48 @@ export default function Navbar() {
                 )}
               </button>
 
-              <span aria-hidden="true" className="mx-1 h-6 w-px bg-rule" />
+              {/* ADMIN (เฉพาะ admin ที่ล็อกอินอยู่) */}
 
-              {/* AUTH */}
+              {user && !isAuthRoute && (
+                <>
+                  <span aria-hidden="true" className="mx-1 h-6 w-px bg-rule" />
 
-              {!loadingUser &&
-                (user && !isAuthRoute ? (
-                  <>
-                    <Link
-                      href="/account"
-                      aria-label={t.account}
-                      className="vh-btn vh-btn-primary !px-1.5 lg:!pl-1.5 lg:!pr-5"
-                    >
-                      <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-on-moss/15">
-                        {avatarUrl ? (
-                          <img
-                            src={avatarUrl}
-                            alt={username || t.account}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <UserIcon className="h-4 w-4" />
-                        )}
-                      </span>
-
-                      <span className="hidden lg:inline">{t.account}</span>
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      disabled={loggingOut}
-                      aria-label={t.logout}
-                      title={t.logout}
-                      className="vh-icon-btn hover:!border-clay/40 hover:!bg-clay-soft hover:!text-clay"
-                    >
-                      {loggingOut ? (
-                        <span className="font-mono text-xs">…</span>
+                  <Link
+                    href="/account"
+                    aria-label={t.account}
+                    className="vh-btn vh-btn-primary !px-1.5 lg:!pl-1.5 lg:!pr-5"
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-on-moss/15">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={username || t.account}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
-                        <LogoutIcon className="h-4 w-4" />
+                        <UserIcon className="h-4 w-4" />
                       )}
-                    </button>
-                  </>
-                ) : (
-                  <Link href="/login" className="vh-btn vh-btn-outline">
-                    {t.login}
+                    </span>
+
+                    <span className="hidden lg:inline">{t.account}</span>
                   </Link>
-                ))}
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    aria-label={t.logout}
+                    title={t.logout}
+                    className="vh-icon-btn hover:!border-clay/40 hover:!bg-clay-soft hover:!text-clay"
+                  >
+                    {loggingOut ? (
+                      <span className="font-mono text-xs">…</span>
+                    ) : (
+                      <LogoutIcon className="h-4 w-4" />
+                    )}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -573,6 +491,23 @@ export default function Navbar() {
                 <MoonIcon className="h-[17px] w-[17px]" />
               )}
             </button>
+
+            {user && !isAuthRoute && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                aria-label={t.logout}
+                title={t.logout}
+                className="vh-icon-btn !h-9 !w-9 hover:!border-clay/40 hover:!bg-clay-soft hover:!text-clay"
+              >
+                {loggingOut ? (
+                  <span className="font-mono text-xs">…</span>
+                ) : (
+                  <LogoutIcon className="h-4 w-4" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -583,7 +518,9 @@ export default function Navbar() {
 
       {!hideMobileBottomNav && (
         <nav className="mobile-bottom-nav md:hidden">
-          <div className="mobile-bottom-nav-inner">
+          <div
+            className={`mobile-bottom-nav-inner ${user ? "" : "!grid-cols-3"}`}
+          >
             <MobileBottomItem
               href="/"
               label={t.home}
@@ -598,23 +535,25 @@ export default function Navbar() {
               icon={<CollectionIcon className="h-5 w-5" />}
             />
 
-            <Link
-              href={addHref}
-              aria-label={t.addPlant}
-              className="relative flex min-w-0 flex-col items-center justify-end"
-            >
-              <span className="mobile-add-button">
-                <PlusIcon className="h-5 w-5" />
-              </span>
-
-              <span
-                className={`mt-1 truncate text-[10px] ${
-                  isBottomActive("add") ? "font-medium text-moss" : "text-muted"
-                }`}
+            {user && (
+              <Link
+                href="/account/plants/new"
+                aria-label={t.addPlant}
+                className="relative flex min-w-0 flex-col items-center justify-end"
               >
-                {t.add}
-              </span>
-            </Link>
+                <span className="mobile-add-button">
+                  <PlusIcon className="h-5 w-5" />
+                </span>
+
+                <span
+                  className={`mt-1 truncate text-[10px] ${
+                    isBottomActive("add") ? "font-medium text-moss" : "text-muted"
+                  }`}
+                >
+                  {t.add}
+                </span>
+              </Link>
+            )}
 
             <MobileBottomItem
               href="/about"
@@ -623,22 +562,24 @@ export default function Navbar() {
               icon={<InfoIcon className="h-5 w-5" />}
             />
 
-            <MobileBottomItem
-              href={accountHref}
-              label={user ? t.accountShort : t.login}
-              active={isBottomActive("account")}
-              icon={
-                user && avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={username || t.account}
-                    className="h-6 w-6 rounded-full object-cover"
-                  />
-                ) : (
-                  <UserIcon className="h-5 w-5" />
-                )
-              }
-            />
+            {user && (
+              <MobileBottomItem
+                href="/account"
+                label={t.accountShort}
+                active={isBottomActive("account")}
+                icon={
+                  avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={username || t.account}
+                      className="h-6 w-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="h-5 w-5" />
+                  )
+                }
+              />
+            )}
           </div>
         </nav>
       )}
