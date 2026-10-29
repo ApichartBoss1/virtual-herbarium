@@ -1,17 +1,28 @@
 "use client";
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { QR_OPTIONS } from "@/components/PlantQR";
 import { getPlantUrl } from "@/lib/siteUrl";
 
 /* =========================================================
    HERBARIUM LABEL (พิมพ์ติดตัวอย่างจริง)
-   - ขนาดจริง 91 × 133 มม. ดำบนขาวเสมอ แม้เปิดในโหมดมืด
-   - เส้นประรอบป้ายคือเส้นตัด
-   - QR มุมขวาล่าง 20 มม. สร้างแบบเดียวกับ PlantQR
-   - ฟิลด์ที่ว่างจะไม่แสดงทั้งบรรทัด
+   - ป้ายแนวนอนขนาดจริงตาม LABEL_WIDTH_MM × LABEL_HEIGHT_MM
+   - ดำบนขาวเสมอ แม้เปิดในโหมดมืด, เส้นประรอบป้ายคือเส้นตัด
+   - ข้อความซ้าย, QR คอลัมน์ขวาชิดล่าง (สร้างแบบเดียวกับ PlantQR)
+   - ฟิลด์ที่ว่างจะไม่แสดงทั้งบรรทัด, ไม่ตัดข้อความทิ้ง
+   - ข้อความล้น: ลดตัวอักษร locality ก่อน ถ้ายังล้นแจ้งผ่าน onFitChange
 ========================================================= */
+
+/* ขนาดป้าย แก้ที่นี่ที่เดียว (หน้า labels ใช้ค่านี้จัดหน้า A4) */
+export const LABEL_WIDTH_MM = 90;
+export const LABEL_HEIGHT_MM = 60;
+
+/* QR ห้ามเล็กกว่า 18 มม. เพื่อให้สแกนได้ */
+const QR_SIZE_MM = 20;
+
+/* locality ยาว ลดได้ถึง 6.5pt (ฟิลด์ปกติ 7.5pt) */
+const LOCALITY_COMPACT_PT = 6.5;
 
 const COPY = {
   TH: {
@@ -39,11 +50,21 @@ const COPY = {
   },
 };
 
-function HerbariumLabel({ plant, language, onQrDone }) {
+function HerbariumLabel({
+  plant,
+  language,
+  overflowing = false,
+  onQrDone,
+  onFitChange,
+}) {
   const t = language === "EN" ? COPY.EN : COPY.TH;
 
   /* { url, svg } หรือ { failed: true } */
   const [qr, setQr] = useState(null);
+
+  const headerRef = useRef(null);
+  const textRef = useRef(null);
+  const localityRef = useRef(null);
 
   const plantId = plant.id;
 
@@ -81,6 +102,42 @@ function HerbariumLabel({ plant, language, onQrDone }) {
     };
   }, [plantId, onQrDone]);
 
+  /* วัดหลัง render: ล้น → ลด locality → ยังล้น → แจ้งหน้า labels
+     วัดซ้ำเมื่อฟอนต์โหลดเสร็จ เพราะความกว้างตัวอักษรเปลี่ยน */
+  useLayoutEffect(() => {
+    let active = true;
+
+    function measure() {
+      const text = textRef.current;
+      const header = headerRef.current;
+      const locality = localityRef.current;
+
+      if (!active || !text || !header) return;
+
+      const isOverflowing = () =>
+        text.scrollHeight > text.clientHeight + 1 ||
+        header.scrollWidth > header.clientWidth + 1;
+
+      if (locality) {
+        locality.style.fontSize = "";
+
+        if (isOverflowing()) {
+          locality.style.fontSize = `${LOCALITY_COMPACT_PT}pt`;
+        }
+      }
+
+      onFitChange?.(plantId, isOverflowing());
+    }
+
+    measure();
+
+    document.fonts?.ready.then(measure);
+
+    return () => {
+      active = false;
+    };
+  }, [plant, language, plantId, onFitChange]);
+
   const pnuNo = textOf(plant.pnu_no);
   const botanicalName = textOf(plant.botanical_name);
   const family = textOf(plant.family);
@@ -97,60 +154,85 @@ function HerbariumLabel({ plant, language, onQrDone }) {
   return (
     <article
       data-label-id={plantId}
-      className="herbarium-print-label flex h-[133mm] w-[91mm] flex-col overflow-hidden border border-dashed border-black bg-white p-[5mm] font-sans text-black [break-inside:avoid]"
+      data-overflow={overflowing ? "true" : undefined}
+      style={{ width: `${LABEL_WIDTH_MM}mm`, height: `${LABEL_HEIGHT_MM}mm` }}
+      className={`herbarium-print-label flex flex-col overflow-hidden border border-dashed border-black bg-white px-[3.5mm] py-[3mm] font-sans text-black [break-inside:avoid] ${
+        overflowing
+          ? "outline-[3px] outline-offset-2 outline-red-600 outline-solid print:outline-none"
+          : ""
+      }`}
     >
-      <p className="border-b border-black pb-[2mm] text-center text-[8pt] font-semibold uppercase leading-snug tracking-[0.06em]">
+      <p
+        ref={headerRef}
+        className="shrink-0 overflow-hidden whitespace-nowrap border-b border-black pb-[1.2mm] text-center text-[7pt] font-semibold leading-tight"
+      >
         {t.institution}
       </p>
 
-      {pnuNo && (
-        <p className="mt-[3mm] font-mono text-[20pt] font-medium leading-none tracking-[0.02em]">
-          PNU {pnuNo}
-        </p>
-      )}
-
-      {botanicalName && (
-        <p className="mt-[3mm] break-words font-serif text-[13pt] italic leading-tight">
-          {botanicalName}
-        </p>
-      )}
-
-      <dl className="mt-[3mm] space-y-[1.5mm] text-[9pt] leading-snug">
-        {family && <LabelLine label={t.family} value={family} />}
-
-        {locality && <LabelLine label={t.locality} value={locality} />}
-
-        {coordinates && (
-          <LabelLine label={t.coordinates} value={coordinates} mono />
-        )}
-
-        {elevation && <LabelLine label={t.elevation} value={elevation} />}
-      </dl>
-
-      <div className="mt-auto flex items-end justify-between gap-[3mm] border-t border-black pt-[2.5mm]">
-        <div className="min-w-0 text-[9pt] leading-snug">
-          {collector && (
-            <dl>
-              <LabelLine label={t.collector} value={collector} />
-            </dl>
+      <div className="mt-[1.8mm] flex min-h-0 flex-1 gap-[3mm]">
+        <div ref={textRef} className="min-w-0 flex-1 overflow-hidden">
+          {pnuNo && (
+            <p className="font-mono text-[9pt] font-medium leading-none tracking-[0.02em]">
+              PNU {pnuNo}
+            </p>
           )}
+
+          {botanicalName && (
+            <p className="mt-[1.2mm] break-words font-serif text-[10.5pt] italic leading-[1.15]">
+              {botanicalName}
+            </p>
+          )}
+
+          <dl className="mt-[1.2mm] space-y-[0.4mm] text-[7.5pt] leading-[1.3]">
+            {family && <LabelLine label={t.family} value={family} />}
+
+            {locality && (
+              <LabelLine label={t.locality} value={locality} lineRef={localityRef} />
+            )}
+
+            {coordinates && (
+              <LabelLine
+                label={t.coordinates}
+                value={coordinates}
+                valueClassName="font-mono text-[7pt]"
+              />
+            )}
+
+            {elevation && <LabelLine label={t.elevation} value={elevation} />}
+
+            {collector && <LabelLine label={t.collector} value={collector} />}
+          </dl>
         </div>
 
-        <div className="h-[20mm] w-[20mm] shrink-0 bg-white">
-          {qr?.svg ? (
-            <div
-              role="img"
-              aria-label={t.qrLabel(qr.url)}
-              data-qr-url={qr.url}
-              className="h-full w-full [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
-              dangerouslySetInnerHTML={{ __html: qr.svg }}
-            />
-          ) : qr?.failed ? (
-            <p className="flex h-full w-full items-center justify-center border border-black text-center text-[7pt] leading-tight">
-              {t.qrError}
+        <div
+          style={{ width: `${QR_SIZE_MM}mm` }}
+          className="flex shrink-0 flex-col items-center justify-end"
+        >
+          <div
+            style={{ width: `${QR_SIZE_MM}mm`, height: `${QR_SIZE_MM}mm` }}
+            className="bg-white"
+          >
+            {qr?.svg ? (
+              <div
+                role="img"
+                aria-label={t.qrLabel(qr.url)}
+                data-qr-url={qr.url}
+                className="h-full w-full [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
+                dangerouslySetInnerHTML={{ __html: qr.svg }}
+              />
+            ) : qr?.failed ? (
+              <p className="flex h-full w-full items-center justify-center border border-black text-center text-[7pt] leading-tight">
+                {t.qrError}
+              </p>
+            ) : (
+              <div aria-hidden="true" className="h-full w-full animate-pulse bg-neutral-200" />
+            )}
+          </div>
+
+          {pnuNo && (
+            <p className="mt-[0.8mm] font-mono text-[7pt] leading-none">
+              PNU {pnuNo}
             </p>
-          ) : (
-            <div aria-hidden="true" className="h-full w-full animate-pulse bg-neutral-200" />
           )}
         </div>
       </div>
@@ -160,13 +242,11 @@ function HerbariumLabel({ plant, language, onQrDone }) {
 
 export default memo(HerbariumLabel);
 
-function LabelLine({ label, value, mono = false }) {
+function LabelLine({ label, value, valueClassName = "", lineRef }) {
   return (
-    <div className="flex min-w-0 gap-[2mm]">
-      <dt className="shrink-0 font-semibold">{label}:</dt>
-      <dd className={`min-w-0 break-words ${mono ? "font-mono text-[8.5pt]" : ""}`}>
-        {value}
-      </dd>
+    <div ref={lineRef} className="break-words">
+      <dt className="inline font-semibold">{label}:</dt>{" "}
+      <dd className={`inline ${valueClassName}`}>{value}</dd>
     </div>
   );
 }

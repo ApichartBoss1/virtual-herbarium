@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import HerbariumLabel from "@/components/HerbariumLabel";
+import HerbariumLabel, {
+  LABEL_HEIGHT_MM,
+  LABEL_WIDTH_MM,
+} from "@/components/HerbariumLabel";
 import Navbar from "@/components/Navbar";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 import { readLabelSelection } from "@/lib/labelSelection";
@@ -16,17 +19,37 @@ import {
 /* =========================================================
    PRINTABLE LABELS
    เลือกตามช่วง PNU หรือรายการที่เลือกในหน้า /account/plants
-   พิมพ์ด้วย CSS @media print (A4, 4 ป้ายหรือ 1 ป้ายต่อหน้า)
+   พิมพ์ด้วย CSS @media print (A4, 8 ป้ายหรือ 1 ป้ายต่อหน้า)
 ========================================================= */
 
+/* 8 ป้าย = 2 คอลัมน์ × 4 แถว */
 const LAYOUTS = {
-  four: 4,
+  eight: 8,
   one: 1,
 };
 
-/* ซ่อนทุกอย่างนอกพื้นที่ป้ายตอนพิมพ์ (navbar, footer, พื้นหลัง 3D, แถบล่างมือถือ, ปุ่ม) */
+/* ช่องว่างระหว่างป้าย (มม.) */
+const LABEL_GAP_MM = 5;
+
+/* ขนาดป้ายมาจาก HerbariumLabel ที่เดียว
+   ตอนพิมพ์ซ่อนทุกอย่างนอกพื้นที่ป้าย (navbar, footer, พื้นหลัง 3D, แถบล่างมือถือ, ปุ่ม) */
 const PRINT_CSS = `
 @page { size: A4; margin: 10mm; }
+
+.vh-label-page {
+  grid-template-columns: ${LABEL_WIDTH_MM}mm;
+  gap: ${LABEL_GAP_MM}mm;
+}
+
+@media (min-width: 1024px) {
+  .vh-label-page[data-layout="eight"] {
+    grid-template-columns: repeat(2, ${LABEL_WIDTH_MM}mm);
+  }
+
+  .vh-label-page[data-layout="eight"] > [data-print-hide] {
+    grid-column: 1 / -1;
+  }
+}
 
 @media print {
   html, body {
@@ -62,9 +85,9 @@ const PRINT_CSS = `
 
   .vh-label-page {
     display: grid !important;
-    grid-template-columns: repeat(2, 91mm) !important;
-    grid-auto-rows: 133mm;
-    gap: 6mm !important;
+    grid-template-columns: repeat(2, ${LABEL_WIDTH_MM}mm) !important;
+    grid-auto-rows: ${LABEL_HEIGHT_MM}mm;
+    gap: ${LABEL_GAP_MM}mm !important;
     justify-content: center;
     margin: 0 !important;
     padding: 0 !important;
@@ -75,7 +98,7 @@ const PRINT_CSS = `
   }
 
   .vh-label-page[data-layout="one"] {
-    grid-template-columns: 91mm !important;
+    grid-template-columns: ${LABEL_WIDTH_MM}mm !important;
   }
 
   .vh-label-page:last-child {
@@ -84,6 +107,7 @@ const PRINT_CSS = `
 
   .herbarium-print-label {
     break-inside: avoid;
+    outline: none !important;
   }
 }
 `;
@@ -115,7 +139,7 @@ const text = {
     goSelect: "ไปเลือกรายการ",
 
     layout: "รูปแบบ",
-    layoutFour: "4 ป้ายต่อหน้า A4 (2×2)",
+    layoutEight: "8 ป้ายต่อหน้า A4 (2×4)",
     layoutOne: "1 ป้ายต่อหน้า",
 
     loading: "กำลังดึงข้อมูล...",
@@ -133,6 +157,10 @@ const text = {
     qrReady: "QR พร้อมทุกป้าย",
     qrFailed: (count) =>
       `สร้าง QR ไม่สำเร็จ ${count} ป้าย โหลดหน้าใหม่แล้วลองอีกครั้ง`,
+
+    overflow: (list) => `ป้ายต่อไปนี้ข้อความล้น: ${list}`,
+    overflowHint:
+      "ข้อความส่วนที่ล้นจะไม่ปรากฏบนป้าย (ขอบแดงแสดงเฉพาะบนหน้าจอ) ยังพิมพ์ได้ตามปกติ",
 
     print: "พิมพ์",
     page: "หน้า",
@@ -165,7 +193,7 @@ const text = {
     goSelect: "Select records",
 
     layout: "Layout",
-    layoutFour: "4 labels per A4 page (2×2)",
+    layoutEight: "8 labels per A4 page (2×4)",
     layoutOne: "1 label per page",
 
     loading: "Loading records...",
@@ -184,6 +212,10 @@ const text = {
     qrReady: "All QR codes are ready",
     qrFailed: (count) =>
       `${count} QR ${count === 1 ? "code" : "codes"} failed. Reload the page and try again.`,
+
+    overflow: (list) => `These labels have overflowing text: ${list}`,
+    overflowHint:
+      "Overflowing text will not appear on the label (the red outline shows on screen only). You can still print.",
 
     print: "Print",
     page: "Page",
@@ -210,7 +242,7 @@ export default function PrintLabelsPage() {
 
   const [selectionIds, setSelectionIds] = useState(initial.ids);
 
-  const [layout, setLayout] = useState("four");
+  const [layout, setLayout] = useState("eight");
 
   /* null = ยังไม่ได้ดึง */
   const [plants, setPlants] = useState(null);
@@ -231,6 +263,9 @@ export default function PrintLabelsPage() {
   const qrResultsRef = useRef(new Map());
   const [qrCounts, setQrCounts] = useState({ ready: 0, failed: 0 });
 
+  /* id ของป้ายที่ข้อความล้น (วัดหลัง render ใน HerbariumLabel) */
+  const [overflowIds, setOverflowIds] = useState(() => new Set());
+
   const requestIdRef = useRef(0);
 
   /* =====================================================
@@ -242,6 +277,7 @@ export default function PrintLabelsPage() {
 
     qrResultsRef.current = new Map();
     setQrCounts({ ready: 0, failed: 0 });
+    setOverflowIds(new Set());
 
     setPlants(null);
     setMissingPnu([]);
@@ -395,7 +431,24 @@ export default function PrintLabelsPage() {
     setQrCounts({ ready, failed });
   }, []);
 
+  const handleFitChange = useCallback((id, overflowing) => {
+    setOverflowIds((current) => {
+      if (current.has(id) === overflowing) return current;
+
+      const next = new Set(current);
+
+      if (overflowing) next.add(id);
+      else next.delete(id);
+
+      return next;
+    });
+  }, []);
+
   const labelCount = plants?.length || 0;
+
+  const overflowPnus = (plants || [])
+    .filter((plant) => overflowIds.has(plant.id))
+    .map((plant) => (plant.pnu_no != null ? `PNU ${plant.pnu_no}` : plant.id));
 
   const qrDone = qrCounts.ready + qrCounts.failed;
 
@@ -530,7 +583,7 @@ export default function PrintLabelsPage() {
 
               <div className="clear-both flex flex-col gap-2 sm:flex-row sm:gap-6">
                 {[
-                  ["four", t.layoutFour],
+                  ["eight", t.layoutEight],
                   ["one", t.layoutOne],
                 ].map(([value, label]) => (
                   <label
@@ -610,74 +663,94 @@ export default function PrintLabelsPage() {
           {plants && !loading && (
             <section
               aria-live="polite"
-              className="vh-panel mt-5 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+              className="vh-panel mt-5 p-4 sm:p-5"
             >
-              <div className="min-w-0 space-y-1.5">
-                <p className="text-[15px] text-ink">
-                  <span className="font-mono tabular-nums">
-                    {t.labelCount(labelCount)}
-                  </span>
-                  {labelCount > 0 && (
-                    <span className="text-muted">
-                      {" "}
-                      · {t.pageCount(pages.length)}
-                    </span>
-                  )}
-                </p>
+              {overflowPnus.length > 0 && (
+                <div
+                  role="alert"
+                  data-overflow-warning
+                  className="mb-4 flex items-start gap-3 rounded-[6px] border border-clay/40 bg-clay-soft px-3.5 py-3"
+                >
+                  <AlertIcon className="mt-0.5 h-4 w-4 shrink-0 text-clay" />
 
-                {labelCount === 0 && (
-                  <p className="text-[13px] text-muted">{t.noLabels}</p>
-                )}
+                  <div className="min-w-0 text-[13px] leading-6 text-clay">
+                    <p className="font-medium">
+                      {t.overflow(overflowPnus.join(", "))}
+                    </p>
 
-                {missingPnu.length > 0 && (
-                  <p className="text-[13px] leading-6 text-ochre">
-                    {t.missingPnu(missingPnu.length)}{" "}
+                    <p>{t.overflowHint}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 space-y-1.5">
+                  <p className="text-[15px] text-ink">
                     <span className="font-mono tabular-nums">
-                      {formatNumberRanges(missingPnu)}
+                      {t.labelCount(labelCount)}
                     </span>
+                    {labelCount > 0 && (
+                      <span className="text-muted">
+                        {" "}
+                        · {t.pageCount(pages.length)}
+                      </span>
+                    )}
                   </p>
-                )}
 
-                {missingIdCount > 0 && (
-                  <p className="text-[13px] leading-6 text-ochre">
-                    {t.missingIds(missingIdCount)}
-                  </p>
-                )}
+                  {labelCount === 0 && (
+                    <p className="text-[13px] text-muted">{t.noLabels}</p>
+                  )}
 
-                {labelCount > 0 && (
-                  <p
-                    data-qr-status={allQrReady ? "ready" : "pending"}
-                    className={`text-[13px] ${
-                      qrCounts.failed > 0
-                        ? "text-clay"
+                  {missingPnu.length > 0 && (
+                    <p className="text-[13px] leading-6 text-ochre">
+                      {t.missingPnu(missingPnu.length)}{" "}
+                      <span className="font-mono tabular-nums">
+                        {formatNumberRanges(missingPnu)}
+                      </span>
+                    </p>
+                  )}
+
+                  {missingIdCount > 0 && (
+                    <p className="text-[13px] leading-6 text-ochre">
+                      {t.missingIds(missingIdCount)}
+                    </p>
+                  )}
+
+                  {labelCount > 0 && (
+                    <p
+                      data-qr-status={allQrReady ? "ready" : "pending"}
+                      className={`text-[13px] ${
+                        qrCounts.failed > 0
+                          ? "text-clay"
+                          : allQrReady
+                            ? "text-moss"
+                            : "text-muted"
+                      }`}
+                    >
+                      {qrCounts.failed > 0
+                        ? t.qrFailed(qrCounts.failed)
                         : allQrReady
-                          ? "text-moss"
-                          : "text-muted"
-                    }`}
-                  >
-                    {qrCounts.failed > 0
-                      ? t.qrFailed(qrCounts.failed)
-                      : allQrReady
-                        ? t.qrReady
-                        : t.qrProgress(qrDone, labelCount)}
-                  </p>
-                )}
+                          ? t.qrReady
+                          : t.qrProgress(qrDone, labelCount)}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  disabled={!allQrReady}
+                  className="vh-btn vh-btn-primary w-full shrink-0 sm:w-auto"
+                >
+                  {allQrReady ? (
+                    <PrintIcon className="h-4 w-4" />
+                  ) : (
+                    <LoadingIcon className="h-4 w-4 animate-spin" />
+                  )}
+
+                  {t.print}
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => window.print()}
-                disabled={!allQrReady}
-                className="vh-btn vh-btn-primary w-full shrink-0 sm:w-auto"
-              >
-                {allQrReady ? (
-                  <PrintIcon className="h-4 w-4" />
-                ) : (
-                  <LoadingIcon className="h-4 w-4 animate-spin" />
-                )}
-
-                {t.print}
-              </button>
             </section>
           )}
         </div>
@@ -693,16 +766,9 @@ export default function PrintLabelsPage() {
                 key={pagePlants[0].id}
                 data-layout={layout}
                 aria-label={`${t.page} ${index + 1}`}
-                className={`vh-label-page vh-panel grid justify-center gap-[6mm] p-4 sm:p-6 ${
-                  layout === "four" ? "lg:grid-cols-[repeat(2,91mm)]" : ""
-                }`}
+                className="vh-label-page vh-panel grid justify-center p-4 sm:p-6"
               >
-                <p
-                  data-print-hide
-                  className={`vh-eyebrow !text-[10px] ${
-                    layout === "four" ? "lg:col-span-2" : ""
-                  }`}
-                >
+                <p data-print-hide className="vh-eyebrow !text-[10px]">
                   {t.page} {index + 1} / {pages.length}
                 </p>
 
@@ -711,7 +777,9 @@ export default function PrintLabelsPage() {
                     key={plant.id}
                     plant={plant}
                     language={language}
+                    overflowing={overflowIds.has(plant.id)}
                     onQrDone={handleQrDone}
+                    onFitChange={handleFitChange}
                   />
                 ))}
               </section>
