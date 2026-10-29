@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import {
+  EMPTY_FACETS,
+  fetchPlantFacets,
+  fetchPlantsPage,
+} from "@/lib/plantQueries";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
+
+/* รอให้หยุดพิมพ์ก่อนค่อยค้นหาที่ฐานข้อมูล */
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function MyPlantsPage() {
   const { language } = useSiteSettings();
@@ -17,18 +25,28 @@ export default function MyPlantsPage() {
   ===================================================== */
 
   const [user, setUser] = useState(null);
+
+  /* rows of the current page only */
   const [plants, setPlants] = useState([]);
+  const [totalResults, setTotalResults] = useState(0);
+  const [facets, setFacets] = useState(EMPTY_FACETS);
 
   const [loading, setLoading] = useState(true);
+  const [listLoading, setListLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const [search, setSearch] = useState("");
-  const [familyFilter, setFamilyFilter] = useState("");
-  const [localityFilter, setLocalityFilter] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearchValue] = useState("");
+  const [familyFilter, setFamilyFilterValue] = useState("");
+  const [localityFilter, setLocalityFilterValue] = useState("");
+  const [sort, setSortValue] = useState("newest");
 
   const [isMobile, setIsMobile] = useState(false);
+  const [viewportReady, setViewportReady] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const requestIdRef = useRef(0);
 
   const [deletingPlantId, setDeletingPlantId] = useState("");
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -235,6 +253,8 @@ export default function MyPlantsPage() {
 
     const updateViewport = () => {
       setIsMobile(media.matches);
+      setViewportReady(true);
+      setCurrentPage(1);
     };
 
     updateViewport();
@@ -247,35 +267,137 @@ export default function MyPlantsPage() {
   }, []);
 
   /* =====================================================
-     FETCH PLANTS
+     FILTER SETTERS
+     Any filter change goes back to page 1
   ===================================================== */
 
-  async function fetchPlants(userId) {
+  function setSearch(value) {
+    setSearchInput(value);
+    setSearchValue(String(value || "").trim());
+    setCurrentPage(1);
+  }
+
+  function setFamilyFilter(value) {
+    setFamilyFilterValue(value);
+    setCurrentPage(1);
+  }
+
+  function setLocalityFilter(value) {
+    setLocalityFilterValue(value);
+    setCurrentPage(1);
+  }
+
+  function setSort(value) {
+    setSortValue(value);
+    setCurrentPage(1);
+  }
+
+  /* SEARCH INPUT (DEBOUNCED) */
+
+  useEffect(() => {
+    const next = searchInput.trim();
+
+    if (next === search) return;
+
+    const timer = window.setTimeout(() => {
+      setSearchValue(next);
+      setCurrentPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [searchInput, search]);
+
+  /* =====================================================
+     FETCH PLANTS
+     facets = totals + filter options
+     page   = rows of the current page
+  ===================================================== */
+
+  function refreshData() {
+    setReloadKey((key) => key + 1);
+  }
+
+  const userId = user?.id || "";
+
+  useEffect(() => {
     if (!userId) return;
 
+    let active = true;
+
+    fetchPlantFacets()
+      .then((data) => {
+        if (active) setFacets(data);
+      })
+      .catch((err) => {
+        console.error("Fetch plant facets error:", err);
+
+        if (active) {
+          setFacets(EMPTY_FACETS);
+          setError(err?.message || t.loadError);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [userId, reloadKey]);
+
+  const itemsPerPage = isMobile ? 10 : 12;
+
+  useEffect(() => {
+    if (!userId || !viewportReady) return;
+
+    /* ignore responses that arrive after a newer request */
+    const requestId = ++requestIdRef.current;
+
+    setListLoading(true);
     setError("");
 
-    try {
-      const { data, error: fetchError } = await supabase
-        .from("plants")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
+    fetchPlantsPage({
+      search,
+      family: familyFilter,
+      locality: localityFilter,
+      sort,
+      page: currentPage,
+      pageSize: itemsPerPage,
+    })
+      .then(({ rows, total }) => {
+        if (requestId !== requestIdRef.current) return;
 
-      if (fetchError) {
-        throw fetchError;
-      }
+        /* page is past the last page (e.g. after deleting its last row) */
+        if (total === null) {
+          setCurrentPage((page) => Math.max(1, page - 1));
+          return;
+        }
 
-      setPlants(data || []);
-    } catch (err) {
-      console.error("Fetch my plants error:", err);
+        setPlants(rows);
+        setTotalResults(total);
+      })
+      .catch((err) => {
+        if (requestId !== requestIdRef.current) return;
 
-      setPlants([]);
+        console.error("Fetch my plants error:", err);
 
-      setError(err?.message || t.loadError);
-    }
-  }
+        setPlants([]);
+        setTotalResults(0);
+        setError(err?.message || t.loadError);
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) {
+          setListLoading(false);
+        }
+      });
+  }, [
+    userId,
+    viewportReady,
+    search,
+    familyFilter,
+    localityFilter,
+    sort,
+    currentPage,
+    itemsPerPage,
+    reloadKey,
+  ]);
 
   /* Opens the confirmation sheet (replaces window.confirm) */
   function requestDelete(plant) {
@@ -315,7 +437,7 @@ export default function MyPlantsPage() {
         throw new Error(t.deleteError);
       }
 
-      setPlants((prev) => prev.filter((item) => item.id !== plantId));
+      refreshData();
 
       const imagePath = getPlantImageStoragePath(plant.image_url);
 
@@ -385,8 +507,6 @@ export default function MyPlantsPage() {
         }
 
         setUser(currentUser);
-
-        await fetchPlants(currentUser.id);
       } catch (err) {
         console.error("Load collection error:", err);
 
@@ -404,7 +524,7 @@ export default function MyPlantsPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
 
       const sessionUser = session?.user || null;
@@ -414,9 +534,7 @@ export default function MyPlantsPage() {
 
       setUser(currentUser);
 
-      if (currentUser) {
-        await fetchPlants(currentUser.id);
-      } else {
+      if (!currentUser) {
         setPlants([]);
       }
     });
@@ -426,136 +544,36 @@ export default function MyPlantsPage() {
 
       subscription.unsubscribe();
     };
-  }, [isEnglish]);
+  }, []);
 
   /* =====================================================
      FILTER OPTIONS
   ===================================================== */
 
-  const families = useMemo(() => {
-    return [
-      ...new Set(plants.map((plant) => plant.family).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, isEnglish ? "en" : "th"));
-  }, [plants, isEnglish]);
+  const families = useMemo(
+    () => facets.families.map((family) => family.name),
+    [facets],
+  );
 
-  const localityCounts = useMemo(() => {
-    const counts = new Map();
-
-    plants.forEach((plant) => {
-      const locality = plant.locality?.trim();
-
-      if (!locality) return;
-
-      counts.set(locality, (counts.get(locality) || 0) + 1);
-    });
-
-    return counts;
-  }, [plants]);
-
-  const localities = useMemo(() => {
-    return [...localityCounts.keys()].sort((a, b) =>
-      a.localeCompare(b, isEnglish ? "en" : "th"),
-    );
-  }, [localityCounts, isEnglish]);
+  const localities = useMemo(
+    () => facets.localities.map((locality) => locality.name),
+    [facets],
+  );
 
   const localityLabels = useMemo(() => {
     return Object.fromEntries(
-      [...localityCounts].map(([locality, count]) => [
-        locality,
-        `${locality} (${count})`,
+      facets.localities.map((locality) => [
+        locality.name,
+        `${locality.name} (${locality.count})`,
       ]),
     );
-  }, [localityCounts]);
-
-  /* =====================================================
-     FILTER + SORT
-  ===================================================== */
-
-  const filteredPlants = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
-    const result = plants.filter((plant) => {
-      const searchable = [
-        plant.common_name,
-        plant.common_name_th,
-        plant.common_name_en,
-        plant.botanical_name,
-        plant.family,
-        plant.artificial_group,
-        plant.province,
-        plant.district,
-        plant.location,
-        plant.locality,
-        plant.habitat,
-        plant.collected_by,
-        plant.collected_by_th,
-        plant.collected_by_en,
-        plant.pnu_no,
-        plant.collector_no,
-        plant.specimen_number,
-        plant.notes,
-      ]
-        .filter((value) => value != null && value !== "")
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch = !keyword || searchable.includes(keyword);
-
-      const matchesFamily = !familyFilter || plant.family === familyFilter;
-
-      const matchesLocality =
-        !localityFilter || plant.locality?.trim() === localityFilter;
-
-      return matchesSearch && matchesFamily && matchesLocality;
-    });
-
-    result.sort((a, b) => {
-      const aName = a.common_name || a.botanical_name || "";
-
-      const bName = b.common_name || b.botanical_name || "";
-
-      if (sort === "nameAZ") {
-        return aName.localeCompare(bName, isEnglish ? "en" : "th");
-      }
-
-      if (sort === "nameZA") {
-        return bName.localeCompare(aName, isEnglish ? "en" : "th");
-      }
-
-      if (sort === "oldest") {
-        return new Date(a.created_at || 0) - new Date(b.created_at || 0);
-      }
-
-      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-    });
-
-    return result;
-  }, [plants, search, familyFilter, localityFilter, sort, isEnglish]);
+  }, [facets]);
 
   /* =====================================================
      PAGINATION
   ===================================================== */
 
-  const itemsPerPage = isMobile ? 10 : 12;
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredPlants.length / itemsPerPage),
-  );
-
-  const paginatedPlants = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-
-    return filteredPlants.slice(start, start + itemsPerPage);
-  }, [filteredPlants, currentPage, itemsPerPage]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, familyFilter, localityFilter, sort, isMobile]);
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
+  const totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
 
   function goToPage(page) {
     if (page < 1 || page > totalPages || page === currentPage) {
@@ -576,9 +594,9 @@ export default function MyPlantsPage() {
      FILTER HELPERS
   ===================================================== */
 
-  const hasFilters = Boolean(
-    search.trim() || familyFilter || localityFilter || sort !== "newest",
-  );
+  const hasFilterValues = Boolean(search || familyFilter || localityFilter);
+
+  const hasFilters = Boolean(hasFilterValues || sort !== "newest");
 
   function clearFilters() {
     setSearch("");
@@ -588,8 +606,6 @@ export default function MyPlantsPage() {
     setLocalityFilter("");
 
     setSort("newest");
-
-    setCurrentPage(1);
   }
 
   const sortOptions = ["newest", "oldest", "nameAZ", "nameZA"];
@@ -670,11 +686,9 @@ export default function MyPlantsPage() {
      PAGE
   ===================================================== */
 
-  const pageStart = filteredPlants.length
-    ? (currentPage - 1) * itemsPerPage + 1
-    : 0;
+  const pageStart = totalResults ? (currentPage - 1) * itemsPerPage + 1 : 0;
 
-  const pageEnd = Math.min(currentPage * itemsPerPage, filteredPlants.length);
+  const pageEnd = Math.min(currentPage * itemsPerPage, totalResults);
 
   return (
     <main className="page min-h-screen overflow-x-hidden text-ink">
@@ -712,7 +726,7 @@ export default function MyPlantsPage() {
             <p className="mt-4 font-mono text-[12px] tabular-nums text-faint">
               <span className="text-ochre">{t.total}</span>{" "}
               <span className="text-ink">
-                {String(plants.length).padStart(3, "0")}
+                {String(facets.total).padStart(3, "0")}
               </span>{" "}
               {t.result}
             </p>
@@ -745,14 +759,14 @@ export default function MyPlantsPage() {
 
             <input
               type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder={t.searchPlaceholder}
               aria-label={t.searchTitle}
               className="vh-input h-12 truncate pl-11 pr-11 [&::-webkit-search-cancel-button]:appearance-none"
             />
 
-            {search && (
+            {searchInput && (
               <button
                 type="button"
                 onClick={() => setSearch("")}
@@ -838,10 +852,10 @@ export default function MyPlantsPage() {
           <p className="mt-4 border-t border-rule pt-3 text-[13px] text-muted">
             {t.found}{" "}
             <span className="font-mono tabular-nums text-ink">
-              {filteredPlants.length}
+              {totalResults}
             </span>{" "}
             {t.of}{" "}
-            <span className="font-mono tabular-nums">{plants.length}</span>{" "}
+            <span className="font-mono tabular-nums">{facets.total}</span>{" "}
             {t.result}
           </p>
         </section>
@@ -861,12 +875,12 @@ export default function MyPlantsPage() {
             </div>
 
             <p className="font-mono text-[12px] tabular-nums text-faint">
-              {filteredPlants.length > 0 && (
+              {totalResults > 0 && (
                 <>
                   {pageStart}–{pageEnd} / {" "}
                 </>
               )}
-              <span className="text-ink">{filteredPlants.length}</span>{" "}
+              <span className="text-ink">{totalResults}</span>{" "}
               {t.result}
             </p>
           </div>
@@ -887,7 +901,7 @@ export default function MyPlantsPage() {
 
                 <button
                   type="button"
-                  onClick={() => fetchPlants(user.id)}
+                  onClick={refreshData}
                   className="vh-btn vh-btn-danger vh-btn-sm mt-3"
                 >
                   {t.retry}
@@ -920,10 +934,24 @@ export default function MyPlantsPage() {
           )}
 
           {/* =================================================
+              FIRST LOAD
+          ================================================= */}
+
+          {!error && listLoading && plants.length === 0 && (
+            <div className="vh-panel mt-6 flex items-center justify-center gap-3 px-6 py-12">
+              <LoadingIcon className="h-5 w-5 animate-spin text-moss" />
+
+              <p className="font-serif text-[15px] italic text-muted">
+                {t.loading}
+              </p>
+            </div>
+          )}
+
+          {/* =================================================
               EMPTY
           ================================================= */}
 
-          {!error && plants.length === 0 && (
+          {!error && !listLoading && totalResults === 0 && !hasFilterValues && (
             <div className="vh-panel mt-6 px-6 py-12 text-center sm:py-16">
               <LeafIcon className="mx-auto h-7 w-7 text-faint" />
 
@@ -949,7 +977,7 @@ export default function MyPlantsPage() {
               NO RESULTS
           ================================================= */}
 
-          {!error && plants.length > 0 && filteredPlants.length === 0 && (
+          {!error && !listLoading && totalResults === 0 && hasFilterValues && (
             <div className="vh-panel mt-6 px-6 py-12 text-center">
               <SearchIcon className="mx-auto h-6 w-6 text-faint" />
 
@@ -977,8 +1005,11 @@ export default function MyPlantsPage() {
               MOBILE / TABLET = STACKED ROWS
           ================================================= */}
 
-          {!error && paginatedPlants.length > 0 && (
-            <>
+          {!error && plants.length > 0 && (
+            <div
+              aria-busy={listLoading}
+              className={`transition-opacity ${listLoading ? "opacity-60" : ""}`}
+            >
               {/* DESKTOP TABLE */}
 
               <div className="vh-panel mt-5 hidden overflow-x-auto lg:block">
@@ -1000,7 +1031,7 @@ export default function MyPlantsPage() {
                   </thead>
 
                   <tbody>
-                    {paginatedPlants.map((plant) => (
+                    {plants.map((plant) => (
                       <PlantTableRow
                         key={plant.id || plant.plant_id}
                         plant={plant}
@@ -1019,7 +1050,7 @@ export default function MyPlantsPage() {
               {/* MOBILE / TABLET ROWS */}
 
               <ul className="vh-panel mt-5 divide-y divide-rule lg:hidden">
-                {paginatedPlants.map((plant) => (
+                {plants.map((plant) => (
                   <PlantMobileRow
                     key={plant.id || plant.plant_id}
                     plant={plant}
@@ -1039,7 +1070,7 @@ export default function MyPlantsPage() {
                   t={t}
                 />
               )}
-            </>
+            </div>
           )}
         </section>
       </div>

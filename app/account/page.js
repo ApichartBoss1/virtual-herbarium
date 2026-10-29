@@ -7,6 +7,11 @@ import { useRouter } from "next/navigation";
 import BioHeroLazy from "@/components/BioHeroLazy";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import {
+  EMPTY_FACETS,
+  fetchPlantFacets,
+  fetchPlantsPage,
+} from "@/lib/plantQueries";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 /* =========================================================
@@ -27,7 +32,9 @@ export default function AccountPage() {
   const [accessDenied, setAccessDenied] = useState(false);
 
   const [profile, setProfile] = useState(null);
+  /* latest plants for the preview (max 6) */
   const [plants, setPlants] = useState([]);
+  const [facets, setFacets] = useState(EMPTY_FACETS);
 
   const [loading, setLoading] = useState(true);
   const [plantsLoading, setPlantsLoading] = useState(false);
@@ -228,10 +235,11 @@ export default function AccountPage() {
   }
 
   /* =====================================================
-     FETCH ALL PLANTS
+     FETCH DASHBOARD PLANTS
 
      Admin จัดการพรรณไม้ทั้งหมด
      ไม่กรองด้วย user_id อีกแล้ว
+     ดึงเฉพาะ 6 รายการล่าสุด + สถิติจาก get_plant_facets()
   ===================================================== */
 
   async function fetchAllPlants() {
@@ -239,22 +247,18 @@ export default function AccountPage() {
     setError("");
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from("plants")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
+      const [latest, facetData] = await Promise.all([
+        fetchPlantsPage({ sort: "newest", page: 1, pageSize: 6 }),
+        fetchPlantFacets(),
+      ]);
 
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      setPlants(data || []);
+      setPlants(latest.rows);
+      setFacets(facetData);
     } catch (err) {
       console.error("Fetch admin plants failed:", err);
 
       setPlants([]);
+      setFacets(EMPTY_FACETS);
       setError(err?.message || t.loadError);
     } finally {
       setPlantsLoading(false);
@@ -444,9 +448,7 @@ export default function AccountPage() {
          REMOVE FROM UI
       ============================================= */
 
-      setPlants((previous) =>
-        previous.filter((item) => item.id !== plantId),
-      );
+      await fetchAllPlants();
 
       /* =============================================
          REMOVE ASSOCIATED STORAGE IMAGE
@@ -509,21 +511,11 @@ export default function AccountPage() {
      STATS
   ===================================================== */
 
-  const stats = useMemo(() => {
-    const families = new Set(
-      plants.map((plant) => plant.family).filter(Boolean),
-    ).size;
-
-    const groups = new Set(
-      plants.map((plant) => plant.artificial_group).filter(Boolean),
-    ).size;
-
-    return {
-      plants: plants.length,
-      families,
-      groups,
-    };
-  }, [plants]);
+  const stats = {
+    plants: facets.total,
+    families: facets.family_count,
+    groups: facets.group_count,
+  };
 
   /* =====================================================
      MOBILE PREVIEW
@@ -533,18 +525,18 @@ export default function AccountPage() {
   ===================================================== */
 
   const mobilePreview = useMemo(() => {
-    if (plants.length <= 4) {
+    if (facets.total <= 4) {
       return {
-        items: plants,
+        items: plants.slice(0, 4),
         remaining: 0,
       };
     }
 
     return {
       items: plants.slice(0, 3),
-      remaining: plants.length - 3,
+      remaining: facets.total - 3,
     };
-  }, [plants]);
+  }, [plants, facets]);
 
   /* =====================================================
      DESKTOP PREVIEW
@@ -554,7 +546,7 @@ export default function AccountPage() {
   ===================================================== */
 
   const desktopPreview = useMemo(() => {
-    if (plants.length <= 6) {
+    if (facets.total <= 6) {
       return {
         items: plants,
         remaining: 0,
@@ -563,9 +555,9 @@ export default function AccountPage() {
 
     return {
       items: plants.slice(0, 5),
-      remaining: plants.length - 5,
+      remaining: facets.total - 5,
     };
-  }, [plants]);
+  }, [plants, facets]);
 
   /* =====================================================
      LOADING
