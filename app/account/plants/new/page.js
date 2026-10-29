@@ -192,6 +192,10 @@ export default function NewPlantPage() {
 
       botanicalRequired: "กรุณากรอกชื่อวิทยาศาสตร์",
 
+      pnuDuplicate: "หมายเลข PNU นี้มีอยู่ในระบบแล้ว",
+
+      denied: "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ",
+
       identification: "การระบุชนิด",
 
       collectionShort: "การเก็บตัวอย่าง",
@@ -308,6 +312,10 @@ export default function NewPlantPage() {
 
       botanicalRequired: "Please enter the Botanical Name",
 
+      pnuDuplicate: "This PNU No. already exists in the system.",
+
+      denied: "This account does not have administrator access.",
+
       identification: "Identification",
 
       collectionShort: "Collection",
@@ -369,6 +377,12 @@ export default function NewPlantPage() {
           return;
         }
 
+        if (currentUser.app_metadata?.role !== "admin") {
+          setError(t.denied);
+
+          return;
+        }
+
         setUser(currentUser);
       } catch (err) {
         console.error("Load user error:", err);
@@ -388,7 +402,7 @@ export default function NewPlantPage() {
     return () => {
       mounted = false;
     };
-  }, [router, t.loginRequired]);
+  }, [router, t.loginRequired, t.denied]);
 
   /* =====================================================
      FORM
@@ -711,7 +725,8 @@ export default function NewPlantPage() {
 
         longitude: toFiniteNumberOrNull(form.longitude),
 
-        elevation: toFiniteNumberOrNull(form.elevation),
+        /* elevation เป็น text ในฐานข้อมูล และอาจเป็นช่วง เช่น "800–900 m" */
+        elevation: String(form.elevation ?? "").trim() || null,
 
         image_url: imageUrl,
       };
@@ -721,6 +736,10 @@ export default function NewPlantPage() {
 
         error: insertError,
       } = await supabase.from("plants").insert(plantData).select().single();
+
+      if (insertError?.code === "23505") {
+        throw new Error(t.pnuDuplicate);
+      }
 
       if (insertError || !insertedPlant) {
         throw new Error(insertError?.message || t.saveError);
@@ -773,7 +792,12 @@ export default function NewPlantPage() {
   }
 
   const pnuFieldError =
-    error && (error === t.pnuRequired || error === t.pnuError) ? error : "";
+    error &&
+    (error === t.pnuRequired ||
+      error === t.pnuError ||
+      error === t.pnuDuplicate)
+      ? error
+      : "";
 
   const botanicalFieldError =
     error && error === t.botanicalRequired ? error : "";

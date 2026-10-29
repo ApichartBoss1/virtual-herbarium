@@ -11,6 +11,7 @@ import { useSiteSettings } from "@/components/SiteSettingsContext";
 import {
   IMAGE_INPUT_ACCEPT,
   getImageExtension,
+  getPlantImageStoragePath,
   preparePlantImage,
 } from "@/lib/plantImage";
 
@@ -163,6 +164,10 @@ const COPY = {
 
     notFound: "ไม่พบข้อมูลพรรณไม้ หรือคุณไม่มีสิทธิ์แก้ไขรายการนี้",
 
+    denied: "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ",
+
+    pnuDuplicate: "หมายเลข PNU นี้มีอยู่ในระบบแล้ว",
+
     cancel: "ยกเลิก",
 
     save: "บันทึกการแก้ไข",
@@ -273,6 +278,10 @@ const COPY = {
 
     notFound:
       "Plant record not found or you do not have permission to edit it.",
+
+    denied: "This account does not have administrator access.",
+
+    pnuDuplicate: "This PNU No. already exists in the system.",
 
     cancel: "Cancel",
 
@@ -389,6 +398,10 @@ export default function EditPlantPage() {
           return;
         }
 
+        if (currentUser.app_metadata?.role !== "admin") {
+          throw new Error(t.denied);
+        }
+
         setUser(currentUser);
 
         if (!plantId || !UUID_PATTERN.test(plantId)) {
@@ -419,7 +432,6 @@ export default function EditPlantPage() {
               `,
           )
           .eq("id", plantId)
-          .eq("user_id", currentUser.id)
           .maybeSingle();
 
         if (!mounted) {
@@ -492,7 +504,7 @@ export default function EditPlantPage() {
     return () => {
       mounted = false;
     };
-  }, [plantId, router, t.notFound]);
+  }, [plantId, router, t.notFound, t.denied]);
 
   /* =====================================================
      CLEAN PREVIEW
@@ -752,6 +764,18 @@ export default function EditPlantPage() {
     let uploadedImagePath = null;
 
     try {
+      /* ตรวจสิทธิ์ admin อีกครั้งก่อนบันทึก */
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+      if (
+        authError ||
+        authData?.user?.id !== user.id ||
+        authData.user.app_metadata?.role !== "admin"
+      ) {
+        throw new Error(t.denied);
+      }
+
       let imageUrl = oldImageUrl || null;
 
       if (imageFile) {
@@ -798,13 +822,38 @@ export default function EditPlantPage() {
         .from("plants")
         .update(updateData)
         .eq("id", plantId)
-        .eq("user_id", user.id)
         .select()
         .maybeSingle();
+
+      if (updateError?.code === "23505") {
+        throw new Error(t.pnuDuplicate);
+      }
 
       if (updateError || !data) {
         throw new Error(updateError?.message || t.updateError);
       }
+
+      /*
+       * เปลี่ยนรูปสำเร็จแล้ว ลบไฟล์รูปเดิมใน bucket plant-images
+       * (ลบเฉพาะไฟล์ใน bucket นี้ ถ้าลบไม่สำเร็จให้ log ไว้เท่านั้น)
+       */
+      const oldImagePath = getPlantImageStoragePath(oldImageUrl);
+
+      if (uploadedImagePath && oldImagePath && oldImagePath !== uploadedImagePath) {
+        try {
+          const { error: removeOldError } = await supabase.storage
+            .from(IMAGE_BUCKET)
+            .remove([oldImagePath]);
+
+          if (removeOldError) {
+            console.error("Remove old image failed:", removeOldError);
+          }
+        } catch (removeOldError) {
+          console.error("Remove old image failed:", removeOldError);
+        }
+      }
+
+      setOldImageUrl(imageUrl || "");
 
       setSuccess(t.success);
 
@@ -899,7 +948,12 @@ export default function EditPlantPage() {
   ===================================================== */
 
   const pnuFieldError =
-    error && (error === t.pnuRequired || error === t.pnuError) ? error : "";
+    error &&
+    (error === t.pnuRequired ||
+      error === t.pnuError ||
+      error === t.pnuDuplicate)
+      ? error
+      : "";
 
   const botanicalFieldError = error === t.botanicalRequired ? error : "";
 
@@ -1214,7 +1268,7 @@ export default function EditPlantPage() {
 
                   longitude: form.longitude,
 
-                  elevation: toFiniteNumberOrNull(form.elevation),
+                  elevation: form.elevation,
                 }}
                 onLocationResolved={handleLocationResolved}
                 onLocationFieldChange={handleLocationFieldChange}
@@ -2043,13 +2097,7 @@ function AutoLocationMap({
 
             <CoordinateCard
               label={m.elevation}
-              value={
-                locationData.elevation !== null &&
-                locationData.elevation !== undefined &&
-                Number.isFinite(Number(locationData.elevation))
-                  ? `${Math.round(Number(locationData.elevation))} ${m.meters}`
-                  : m.noValue
-              }
+              value={formatElevation(locationData.elevation, m)}
             />
           </dl>
         </div>
@@ -2070,8 +2118,36 @@ function normalizeLocationData(value) {
 
     longitude: toFiniteNumberOrNull(value?.longitude),
 
-    elevation: toFiniteNumberOrNull(value?.elevation),
+    elevation: normalizeElevationText(value?.elevation),
   };
+}
+
+/*
+ * elevation เป็น text ในฐานข้อมูล และอาจเป็นช่วง เช่น "800–900 m"
+ * ถ้าเป็นตัวเลขให้คงเป็นตัวเลข ถ้าไม่ใช่ให้คงข้อความเดิมไว้แสดงผล
+ */
+function normalizeElevationText(value) {
+  const number = toFiniteNumberOrNull(value);
+
+  if (number !== null) {
+    return number;
+  }
+
+  const text = String(value ?? "").trim();
+
+  return text || null;
+}
+
+function formatElevation(value, m) {
+  if (value === null || value === undefined || value === "") {
+    return m.noValue;
+  }
+
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? `${Math.round(number)} ${m.meters}`
+    : String(value);
 }
 
 /* =========================================================
