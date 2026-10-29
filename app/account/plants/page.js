@@ -78,6 +78,7 @@ export default function MyPlantsPage() {
 
       addPlant: "เพิ่มข้อมูลพรรณไม้",
       addMobile: "เพิ่มพรรณไม้",
+      importData: "นำเข้าข้อมูล",
 
       total: "ทั้งหมด",
       result: "รายการ",
@@ -169,6 +170,7 @@ export default function MyPlantsPage() {
 
       addPlant: "Add Plant Record",
       addMobile: "Add Plant",
+      importData: "Import Data",
 
       total: "Total",
       result: "records",
@@ -732,17 +734,28 @@ export default function MyPlantsPage() {
             </p>
           </div>
 
-          <Link
-            href="/account/plants/new"
-            aria-label={t.addPlant}
-            className="vh-btn vh-btn-primary w-full shrink-0 sm:w-auto"
-          >
-            <PlusIcon className="h-4 w-4" />
+          <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+            <Link
+              href="/account/plants/import"
+              className="vh-btn vh-btn-outline w-full sm:w-auto"
+            >
+              <ImportIcon className="h-4 w-4" />
 
-            <span className="sm:hidden">{t.addMobile}</span>
+              {t.importData}
+            </Link>
 
-            <span className="hidden sm:inline">{t.addPlant}</span>
-          </Link>
+            <Link
+              href="/account/plants/new"
+              aria-label={t.addPlant}
+              className="vh-btn vh-btn-primary w-full sm:w-auto"
+            >
+              <PlusIcon className="h-4 w-4" />
+
+              <span className="sm:hidden">{t.addMobile}</span>
+
+              <span className="hidden sm:inline">{t.addPlant}</span>
+            </Link>
+          </div>
         </header>
 
         {/* =================================================
@@ -1730,6 +1743,27 @@ function CollectionIcon({ className = "" }) {
       <path d="M8 11h8" />
 
       <path d="M8 15h5" />
+    </svg>
+  );
+}
+
+function ImportIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 15V4" />
+
+      <path d="m7 9 5-5 5 5" />
+
+      <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
     </svg>
   );
 }
