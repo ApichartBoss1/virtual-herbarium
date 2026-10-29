@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 import Navbar from "@/components/Navbar";
+import PlantQR from "@/components/PlantQR";
 import SiteFooter from "@/components/SiteFooter";
 import { useSignedInAdmin } from "@/components/AdminContext";
 import { fetchPublicPlant } from "@/lib/plantQueries";
@@ -489,7 +490,13 @@ export default function PlantDetailPage() {
             displayName={displayName}
             plantNo={plantNo}
             displayValue={displayValue}
-            actions={null}
+            actions={
+              <PlantQR
+                plantId={plantId}
+                pnuNo={plant.pnu_no}
+                language={language}
+              />
+            }
           />
         </div>
 
