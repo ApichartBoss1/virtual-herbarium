@@ -11,7 +11,7 @@ import { getPlantUrl } from "@/lib/siteUrl";
    - โหลด qrcode เฉพาะเมื่อแสดงคอมโพเนนต์นี้
 ========================================================= */
 
-const QR_OPTIONS = {
+export const QR_OPTIONS = {
   errorCorrectionLevel: "M",
   margin: 1,
   color: { dark: "#000000", light: "#ffffff" },

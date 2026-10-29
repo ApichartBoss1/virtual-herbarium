@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import Navbar from "@/components/Navbar";
 import { useAdmin } from "@/components/AdminContext";
+import { readLabelSelection, writeLabelSelection } from "@/lib/labelSelection";
 import { supabase } from "@/lib/supabase";
 import {
   EMPTY_FACETS,
+  MAX_LABELS,
   fetchPlantFacets,
   fetchPlantsPage,
 } from "@/lib/plantQueries";
@@ -18,6 +21,8 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export default function MyPlantsPage() {
   const { language } = useSiteSettings();
+
+  const router = useRouter();
 
   const isEnglish = language === "EN";
 
@@ -52,6 +57,11 @@ export default function MyPlantsPage() {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [actionError, setActionError] = useState("");
 
+  /* id ที่เลือกไว้พิมพ์ป้าย คงอยู่เมื่อเปลี่ยนหน้า/ตัวกรอง (เก็บใน sessionStorage) */
+  const [selectedIds, setSelectedIds] = useState(() =>
+    typeof window === "undefined" ? [] : readLabelSelection(),
+  );
+
   /* =====================================================
      TEXT
   ===================================================== */
@@ -79,6 +89,14 @@ export default function MyPlantsPage() {
       addPlant: "เพิ่มข้อมูลพรรณไม้",
       addMobile: "เพิ่มพรรณไม้",
       importData: "นำเข้าข้อมูล",
+      printLabels: "พิมพ์ป้าย",
+
+      selectRow: "เลือกรายการนี้",
+      selectPage: "เลือกทั้งหน้า",
+      selectedCount: (count) => `เลือกไว้ ${count} รายการ`,
+      clearSelection: "ล้างที่เลือก",
+      printSelected: (count) => `พิมพ์ป้ายที่เลือก (${count})`,
+      selectionLimit: `พิมพ์ได้ครั้งละไม่เกิน ${MAX_LABELS} ป้าย`,
 
       total: "ทั้งหมด",
       result: "รายการ",
@@ -166,6 +184,14 @@ export default function MyPlantsPage() {
       addPlant: "Add Plant Record",
       addMobile: "Add Plant",
       importData: "Import Data",
+      printLabels: "Print Labels",
+
+      selectRow: "Select this record",
+      selectPage: "Select this page",
+      selectedCount: (count) => `${count} selected`,
+      clearSelection: "Clear selection",
+      printSelected: (count) => `Print selected labels (${count})`,
+      selectionLimit: `Up to ${MAX_LABELS} labels per print`,
 
       total: "Total",
       result: "records",
@@ -431,6 +457,8 @@ export default function MyPlantsPage() {
 
       refreshData();
 
+      updateSelection((ids) => ids.filter((id) => id !== plantId));
+
       const imagePath = getPlantImageStoragePath(plant.image_url);
 
       if (imagePath) {
@@ -468,6 +496,59 @@ export default function MyPlantsPage() {
 
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [pendingDelete, deletingPlantId]);
+
+  /* =====================================================
+     LABEL SELECTION
+  ===================================================== */
+
+  function updateSelection(update) {
+    setSelectedIds((current) => {
+      const next = update(current);
+
+      writeLabelSelection(next);
+
+      return next;
+    });
+  }
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  const pageIds = plants.map((plant) => plant.id).filter(Boolean);
+
+  const pageSelectedCount = pageIds.filter((id) => selectedSet.has(id)).length;
+
+  const allPageSelected =
+    pageIds.length > 0 && pageSelectedCount === pageIds.length;
+
+  function toggleSelected(id) {
+    if (!id) return;
+
+    updateSelection((ids) =>
+      ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id],
+    );
+  }
+
+  function togglePageSelected() {
+    updateSelection((ids) => {
+      if (allPageSelected) {
+        const onPage = new Set(pageIds);
+
+        return ids.filter((id) => !onPage.has(id));
+      }
+
+      const current = new Set(ids);
+
+      return [...ids, ...pageIds.filter((id) => !current.has(id))];
+    });
+  }
+
+  function printSelected() {
+    if (selectedIds.length === 0) return;
+
+    writeLabelSelection(selectedIds);
+
+    router.push("/account/plants/labels?source=selection");
+  }
 
   /* =====================================================
      FILTER OPTIONS
@@ -591,6 +672,15 @@ export default function MyPlantsPage() {
           </div>
 
           <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+            <Link
+              href="/account/plants/labels"
+              className="vh-btn vh-btn-outline w-full sm:w-auto"
+            >
+              <PrintIcon className="h-4 w-4" />
+
+              {t.printLabels}
+            </Link>
+
             <Link
               href="/account/plants/import"
               className="vh-btn vh-btn-outline w-full sm:w-auto"
@@ -803,6 +893,61 @@ export default function MyPlantsPage() {
           )}
 
           {/* =================================================
+              LABEL SELECTION
+          ================================================= */}
+
+          {(plants.length > 0 || selectedIds.length > 0) && (
+            <div className="vh-panel mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 p-3 sm:px-4">
+              <label
+                className={`flex items-center gap-2.5 text-[13px] text-ink-soft ${
+                  pageIds.length > 0 ? "cursor-pointer" : "opacity-50"
+                }`}
+              >
+                <Checkbox
+                  checked={allPageSelected}
+                  indeterminate={pageSelectedCount > 0 && !allPageSelected}
+                  disabled={pageIds.length === 0}
+                  onChange={togglePageSelected}
+                />
+
+                {t.selectPage}
+              </label>
+
+              <p aria-live="polite" className="text-[13px] text-muted">
+                <span className="font-mono tabular-nums text-ink">
+                  {t.selectedCount(selectedIds.length)}
+                </span>
+
+                {selectedIds.length > MAX_LABELS && (
+                  <span className="ml-2 text-ochre">{t.selectionLimit}</span>
+                )}
+              </p>
+
+              <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => updateSelection(() => [])}
+                  disabled={selectedIds.length === 0}
+                  className="vh-btn vh-btn-ghost vh-btn-sm flex-1 sm:flex-none"
+                >
+                  <CloseIcon className="h-3.5 w-3.5" />
+                  {t.clearSelection}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={printSelected}
+                  disabled={selectedIds.length === 0}
+                  className="vh-btn vh-btn-primary vh-btn-sm flex-1 sm:flex-none"
+                >
+                  <PrintIcon className="h-4 w-4" />
+                  {t.printSelected(selectedIds.length)}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =================================================
               FIRST LOAD
           ================================================= */}
 
@@ -885,6 +1030,9 @@ export default function MyPlantsPage() {
                 <table className="vh-table">
                   <thead>
                     <tr>
+                      <th className="w-[44px] pr-0">
+                        <span className="sr-only">{t.selectRow}</span>
+                      </th>
                       <th className="w-[76px]">
                         <span className="sr-only">{t.colImage}</span>
                       </th>
@@ -910,6 +1058,8 @@ export default function MyPlantsPage() {
                         deleting={
                           deletingPlantId === (plant.id || plant.plant_id)
                         }
+                        selected={selectedSet.has(plant.id)}
+                        onToggleSelected={toggleSelected}
                       />
                     ))}
                   </tbody>
@@ -927,6 +1077,8 @@ export default function MyPlantsPage() {
                     isEnglish={isEnglish}
                     onDelete={requestDelete}
                     deleting={deletingPlantId === (plant.id || plant.plant_id)}
+                    selected={selectedSet.has(plant.id)}
+                    onToggleSelected={toggleSelected}
                   />
                 ))}
               </ul>
@@ -1078,11 +1230,29 @@ function PlantName({ view, t, className = "" }) {
    TABLE ROW (DESKTOP)
 ========================================================= */
 
-function PlantTableRow({ plant, t, isEnglish, onDelete, deleting }) {
+function PlantTableRow({
+  plant,
+  t,
+  isEnglish,
+  onDelete,
+  deleting,
+  selected,
+  onToggleSelected,
+}) {
   const view = getPlantView(plant, t, isEnglish);
 
   return (
     <tr className="align-middle">
+      <td className="py-3 pr-0">
+        {view.plantId && (
+          <Checkbox
+            checked={selected}
+            onChange={() => onToggleSelected(view.plantId)}
+            label={`${t.selectRow}: ${view.accession || view.displayName}`}
+          />
+        )}
+      </td>
+
       <td className="py-3 pr-0">
         <Thumb image={view.image} alt={view.displayName} />
       </td>
@@ -1170,12 +1340,30 @@ function PlantTableRow({ plant, t, isEnglish, onDelete, deleting }) {
    STACKED ROW (MOBILE / TABLET)
 ========================================================= */
 
-function PlantMobileRow({ plant, t, isEnglish, onDelete, deleting }) {
+function PlantMobileRow({
+  plant,
+  t,
+  isEnglish,
+  onDelete,
+  deleting,
+  selected,
+  onToggleSelected,
+}) {
   const view = getPlantView(plant, t, isEnglish);
 
   return (
     <li className="p-4">
       <div className="flex min-w-0 gap-3.5">
+        {view.plantId && (
+          <div className="flex shrink-0 items-center">
+            <Checkbox
+              checked={selected}
+              onChange={() => onToggleSelected(view.plantId)}
+              label={`${t.selectRow}: ${view.accession || view.displayName}`}
+            />
+          </div>
+        )}
+
         <Thumb
           image={view.image}
           alt={view.displayName}
@@ -1506,6 +1694,33 @@ function SelectField({ label, value, onChange, options, placeholder, labels = {}
 }
 
 /* =========================================================
+   CHECKBOX
+   indeterminate ตั้งได้ผ่าน DOM เท่านั้น
+========================================================= */
+
+function Checkbox({ checked, indeterminate = false, disabled = false, onChange, label }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      onChange={onChange}
+      aria-label={label}
+      className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-moss disabled:cursor-not-allowed"
+    />
+  );
+}
+
+/* =========================================================
    FILTER CHIP
 ========================================================= */
 
@@ -1597,6 +1812,27 @@ function ImportIcon({ className = "" }) {
       <path d="m7 9 5-5 5 5" />
 
       <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
+    </svg>
+  );
+}
+
+function PrintIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M7 9V4h10v5" />
+
+      <path d="M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
+
+      <path d="M7 14h10v6H7z" />
     </svg>
   );
 }
