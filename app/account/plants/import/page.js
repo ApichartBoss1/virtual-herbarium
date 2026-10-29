@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 import {
@@ -47,11 +48,6 @@ const COPY = {
     subtitle:
       "นำเข้าข้อมูลพรรณไม้จำนวนมากจากไฟล์ Excel (.xlsx) หรือ CSV ระบบจะตรวจทุกแถวก่อนบันทึก และบันทึกเฉพาะแถวที่ถูกต้อง",
     back: "กลับคลังพรรณไม้",
-    loading: "กำลังตรวจสอบสิทธิ์...",
-    loginRequired: "สำหรับผู้ดูแลระบบเท่านั้น",
-    loginDescription: "เข้าสู่ระบบด้วยบัญชี Admin เพื่อนำเข้าข้อมูลพรรณไม้",
-    denied: "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ",
-    login: "เข้าสู่ระบบ Admin",
 
     tabData: "นำเข้าข้อมูล (Excel/CSV)",
     tabImages: "นำเข้ารูปตามหมายเลข PNU",
@@ -110,7 +106,6 @@ const COPY = {
       EMPTY_FILE: "ไม่พบข้อมูลในไฟล์ (แถวแรกต้องเป็นหัวคอลัมน์)",
       READ_FAILED: "ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบรูปแบบไฟล์",
       validateFailed: "ไม่สามารถตรวจสอบข้อมูลกับฐานข้อมูลได้",
-      denied: "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ",
 
       pnuRequired: "ไม่มีหมายเลข PNU",
       pnuInvalid: "หมายเลข PNU ต้องเป็นจำนวนเต็มบวก",
@@ -185,11 +180,6 @@ const COPY = {
     subtitle:
       "Import many plant records from an Excel (.xlsx) or CSV file. Every row is checked before saving, and only valid rows are imported.",
     back: "Back to Collection",
-    loading: "Checking access...",
-    loginRequired: "Administrator access only",
-    loginDescription: "Sign in with an Admin account to import plant records.",
-    denied: "This account does not have administrator access.",
-    login: "Admin Login",
 
     tabData: "Import Data (Excel/CSV)",
     tabImages: "Import Images by PNU",
@@ -248,7 +238,6 @@ const COPY = {
       EMPTY_FILE: "No data found in the file (the first row must be the header)",
       READ_FAILED: "Unable to read the file. Please check the file format.",
       validateFailed: "Unable to check the data against the database",
-      denied: "This account does not have administrator access.",
 
       pnuRequired: "Missing PNU No.",
       pnuInvalid: "PNU No. must be a positive whole number",
@@ -329,128 +318,10 @@ export default function ImportPlantsPage() {
 
   const t = isEnglish ? COPY.EN : COPY.TH;
 
-  const [user, setUser] = useState(null);
-
-  const [loading, setLoading] = useState(true);
-
-  const [accessDenied, setAccessDenied] = useState(false);
+  /* สิทธิ์ admin ตรวจแล้วที่ app/account/layout.js */
+  const { user } = useAdmin();
 
   const [tab, setTab] = useState("data");
-
-  /* =====================================================
-     ADMIN AUTH CHECK
-  ===================================================== */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function init() {
-      setLoading(true);
-
-      try {
-        const {
-          data: { user: currentUser },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (!mounted) return;
-
-        if (userError || !currentUser) {
-          setUser(null);
-          return;
-        }
-
-        if (currentUser.app_metadata?.role !== "admin") {
-          setUser(null);
-          setAccessDenied(true);
-          return;
-        }
-
-        setUser(currentUser);
-      } catch (err) {
-        console.error("Load import page error:", err);
-
-        if (mounted) {
-          setUser(null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    init();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  /* =====================================================
-     LOADING
-  ===================================================== */
-
-  if (loading) {
-    return (
-      <main className="page min-h-screen overflow-x-hidden text-ink">
-        <Navbar />
-
-        <section className="flex min-h-[65dvh] items-center justify-center px-5">
-          <div className="text-center">
-            <LoadingIcon className="mx-auto h-6 w-6 animate-spin text-moss" />
-
-            <p className="mt-4 font-serif text-[15px] italic text-muted">
-              {t.loading}
-            </p>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  /* =====================================================
-     NOT LOGGED IN / NOT ADMIN
-  ===================================================== */
-
-  if (!user) {
-    return (
-      <main className="page min-h-screen overflow-x-hidden text-ink">
-        <Navbar />
-
-        <section className="vh-grid-paper flex min-h-[calc(100dvh-58px)] items-center justify-center px-4 py-10 md:min-h-[calc(100dvh-78px)]">
-          <div className="vh-sheet page-enter w-full max-w-md p-6 sm:p-8">
-            <p className="vh-eyebrow flex items-center gap-3">
-              <span className="h-px w-6 bg-ochre" />
-              {t.eyebrow}
-            </p>
-
-            <div className="mt-5 flex items-start gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-rule bg-moss-soft text-moss">
-                <UploadIcon className="h-5 w-5" />
-              </span>
-
-              <div className="min-w-0">
-                <h1 className="vh-display text-[1.8rem]">{t.loginRequired}</h1>
-
-                <p className="mt-2 text-[14px] leading-6 text-muted">
-                  {accessDenied ? t.denied : t.loginDescription}
-                </p>
-              </div>
-            </div>
-
-            <div className="vh-rule-double mt-6" />
-
-            <div className="mt-6">
-              <Link href="/login" className="vh-btn vh-btn-primary w-full">
-                {t.login}
-              </Link>
-            </div>
-          </div>
-        </section>
-      </main>
-    );
-  }
 
   /* =====================================================
      PAGE
@@ -730,17 +601,6 @@ function DataImportSection({ t, user }) {
     }
 
     setError("");
-
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-
-    if (
-      authError ||
-      authData?.user?.id !== user.id ||
-      authData.user.app_metadata?.role !== "admin"
-    ) {
-      setError(t.errors.denied);
-      return;
-    }
 
     setImporting(true);
     setProgress({ done: 0, total: readyRows.length });
@@ -1392,17 +1252,6 @@ function ImageImportSection({ t, user }) {
     }
 
     setError("");
-
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-
-    if (
-      authError ||
-      authData?.user?.id !== user.id ||
-      authData.user.app_metadata?.role !== "admin"
-    ) {
-      setError(t.errors.denied);
-      return;
-    }
 
     const targetKeys = new Set(targets.map((item) => item.key));
 

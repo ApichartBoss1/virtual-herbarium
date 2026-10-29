@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
@@ -165,8 +166,6 @@ const COPY = {
 
     notFound: "ไม่พบข้อมูลพรรณไม้ หรือคุณไม่มีสิทธิ์แก้ไขรายการนี้",
 
-    denied: "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ",
-
     pnuDuplicate: "หมายเลข PNU นี้มีอยู่ในระบบแล้ว",
 
     cancel: "ยกเลิก",
@@ -280,8 +279,6 @@ const COPY = {
     notFound:
       "Plant record not found or you do not have permission to edit it.",
 
-    denied: "This account does not have administrator access.",
-
     pnuDuplicate: "This PNU No. already exists in the system.",
 
     cancel: "Cancel",
@@ -313,7 +310,7 @@ export default function EditPlantPage() {
      STATE
   ===================================================== */
 
-  const [user, setUser] = useState(null);
+  const { user } = useAdmin();
 
   const [form, setForm] = useState(INITIAL_FORM);
 
@@ -371,45 +368,15 @@ export default function EditPlantPage() {
   }, []);
 
   /* =====================================================
-     LOAD USER + PLANT
+     LOAD PLANT
+     สิทธิ์ admin ตรวจแล้วที่ app/account/layout.js
   ===================================================== */
 
   useEffect(() => {
     let mounted = true;
 
     async function loadPlant() {
-      /* กำลัง redirect ไปหน้า login: ห้ามปิด loading เพื่อไม่ให้ฟอร์มและแผนที่ render */
-      let redirecting = false;
-
-      setLoading(true);
-
-      setFatalError("");
-
       try {
-        const {
-          data: { user: currentUser },
-
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (!mounted) {
-          return;
-        }
-
-        if (
-          userError ||
-          !currentUser ||
-          currentUser.app_metadata?.role !== "admin"
-        ) {
-          redirecting = true;
-
-          router.replace("/login");
-
-          return;
-        }
-
-        setUser(currentUser);
-
         if (!plantId || !UUID_PATTERN.test(plantId)) {
           throw new Error(t.notFound);
         }
@@ -499,7 +466,7 @@ export default function EditPlantPage() {
           setFatalError(err?.message || t.notFound);
         }
       } finally {
-        if (mounted && !redirecting) {
+        if (mounted) {
           setLoading(false);
         }
       }
@@ -510,7 +477,7 @@ export default function EditPlantPage() {
     return () => {
       mounted = false;
     };
-  }, [plantId, router, t.notFound]);
+  }, [plantId, t.notFound]);
 
   /* =====================================================
      CLEAN PREVIEW
@@ -770,18 +737,6 @@ export default function EditPlantPage() {
     let uploadedImagePath = null;
 
     try {
-      /* ตรวจสิทธิ์ admin อีกครั้งก่อนบันทึก */
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
-
-      if (
-        authError ||
-        authData?.user?.id !== user.id ||
-        authData.user.app_metadata?.role !== "admin"
-      ) {
-        throw new Error(t.denied);
-      }
-
       let imageUrl = oldImageUrl || null;
 
       if (imageFile) {

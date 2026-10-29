@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import BioHeroLazy from "@/components/BioHeroLazy";
 import Navbar from "@/components/Navbar";
+import { getSafeAdminPath } from "@/lib/adminRedirect";
 import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
@@ -16,8 +17,13 @@ import { useSiteSettings } from "@/components/SiteSettingsContext";
 const FOREST_IMAGE =
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=90";
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }) {
   const router = useRouter();
+
+  /* ?next= กลับได้เฉพาะหน้าใน /account (กัน open redirect) */
+  const params = use(searchParams);
+
+  const nextPath = getSafeAdminPath(params?.next);
 
   const { language } = useSiteSettings();
   const isEnglish = language === "EN";
@@ -32,6 +38,41 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  /* ?error=not_admin มาจาก app/account/layout.js */
+  const [showNotAdmin, setShowNotAdmin] = useState(
+    params?.error === "not_admin",
+  );
+
+  /* =====================================================
+     ALREADY SIGNED IN
+  ===================================================== */
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkSession() {
+      const { data } = await supabase.auth.getUser();
+
+      if (!active || !data?.user) return;
+
+      if (data.user.app_metadata?.role === "admin") {
+        router.replace(nextPath);
+        return;
+      }
+
+      /* session ของบัญชีที่ไม่ใช่ admin ไม่ควรค้างอยู่ */
+      await supabase.auth.signOut();
+    }
+
+    checkSession().catch((err) => {
+      console.error("Check session error:", err);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [router, nextPath]);
 
   /* =====================================================
      TEXT
@@ -139,6 +180,7 @@ export default function LoginPage() {
 
     setError("");
     setSuccess("");
+    setShowNotAdmin(false);
 
     const cleanEmail = email.trim().toLowerCase();
 
@@ -202,7 +244,7 @@ export default function LoginPage() {
       setSuccess(t.success);
 
       setTimeout(() => {
-        router.replace("/account");
+        router.replace(nextPath);
         router.refresh();
       }, 500);
     } catch (err) {
@@ -416,14 +458,16 @@ export default function LoginPage() {
 
                     {/* ERROR */}
 
-                    {error && (
+                    {(error || showNotAdmin) && (
                       <div
                         role="alert"
                         className="flex items-start gap-3 rounded-[4px] border border-clay/40 bg-clay-soft px-4 py-3 text-clay"
                       >
                         <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
 
-                        <p className="text-[14px] leading-6">{error}</p>
+                        <p className="text-[14px] leading-6">
+                          {error || t.unauthorized}
+                        </p>
                       </div>
                     )}
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
 import {
   EMPTY_FACETS,
@@ -24,14 +25,13 @@ export default function MyPlantsPage() {
      STATE
   ===================================================== */
 
-  const [user, setUser] = useState(null);
+  const { user } = useAdmin();
 
   /* rows of the current page only */
   const [plants, setPlants] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
   const [facets, setFacets] = useState(EMPTY_FACETS);
 
-  const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -134,11 +134,6 @@ export default function MyPlantsPage() {
 
       retry: "ลองอีกครั้ง",
 
-      loginRequired: "กรุณาเข้าสู่ระบบ",
-
-      loginDescription: "เข้าสู่ระบบเพื่อจัดการคลังพรรณไม้ส่วนตัวของคุณ",
-
-      login: "เข้าสู่ระบบ",
 
       unknownPlant: "ไม่ระบุชื่อพรรณไม้",
 
@@ -227,11 +222,6 @@ export default function MyPlantsPage() {
 
       retry: "Try Again",
 
-      loginRequired: "Please sign in",
-
-      loginDescription: "Sign in to manage your personal plant collection.",
-
-      login: "Login",
 
       unknownPlant: "Unnamed Plant",
 
@@ -480,75 +470,6 @@ export default function MyPlantsPage() {
   }, [pendingDelete, deletingPlantId]);
 
   /* =====================================================
-     LOAD USER
-  ===================================================== */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function init() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const {
-          data: { user: currentUser },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (!mounted) return;
-
-        if (userError) {
-          throw userError;
-        }
-
-        if (!currentUser || currentUser.app_metadata?.role !== "admin") {
-          setUser(null);
-          setPlants([]);
-          return;
-        }
-
-        setUser(currentUser);
-      } catch (err) {
-        console.error("Load collection error:", err);
-
-        if (!mounted) return;
-
-        setError(err?.message || t.loadError);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    init();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-
-      const sessionUser = session?.user || null;
-
-      const currentUser =
-        sessionUser?.app_metadata?.role === "admin" ? sessionUser : null;
-
-      setUser(currentUser);
-
-      if (!currentUser) {
-        setPlants([]);
-      }
-    });
-
-    return () => {
-      mounted = false;
-
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  /* =====================================================
      FILTER OPTIONS
   ===================================================== */
 
@@ -618,71 +539,6 @@ export default function MyPlantsPage() {
     nameAZ: t.sortAZ,
     nameZA: t.sortZA,
   };
-
-  /* =====================================================
-     LOADING
-  ===================================================== */
-
-  if (loading) {
-    return (
-      <main className="page min-h-screen overflow-x-hidden text-ink">
-        <Navbar />
-
-        <section className="flex min-h-[65dvh] items-center justify-center px-5">
-          <div className="text-center">
-            <LoadingIcon className="mx-auto h-6 w-6 animate-spin text-moss" />
-
-            <p className="mt-4 font-serif text-[15px] italic text-muted">
-              {t.loading}
-            </p>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  /* =====================================================
-     NOT LOGGED IN
-  ===================================================== */
-
-  if (!user) {
-    return (
-      <main className="page min-h-screen overflow-x-hidden text-ink">
-        <Navbar />
-
-        <section className="vh-grid-paper flex min-h-[calc(100dvh-58px)] items-center justify-center px-4 py-10 md:min-h-[calc(100dvh-78px)]">
-          <div className="vh-sheet page-enter w-full max-w-md p-6 sm:p-8">
-            <p className="vh-eyebrow flex items-center gap-3">
-              <span className="h-px w-6 bg-ochre" />
-              {t.eyebrow}
-            </p>
-
-            <div className="mt-5 flex items-start gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-rule bg-moss-soft text-moss">
-                <CollectionIcon className="h-5 w-5" />
-              </span>
-
-              <div className="min-w-0">
-                <h1 className="vh-display text-[1.8rem]">{t.loginRequired}</h1>
-
-                <p className="mt-2 text-[14px] leading-6 text-muted">
-                  {t.loginDescription}
-                </p>
-              </div>
-            </div>
-
-            <div className="vh-rule-double mt-6" />
-
-            <div className="mt-6">
-              <Link href="/login" className="vh-btn vh-btn-primary w-full">
-                {t.login}
-              </Link>
-            </div>
-          </div>
-        </section>
-      </main>
-    );
-  }
 
   /* =====================================================
      PAGE
@@ -1720,29 +1576,6 @@ function LeafIcon({ className = "" }) {
       <path d="M20 4C10 4 5 8 5 15c0 2.8 2 5 5 5 7 0 10-5 10-16Z" />
 
       <path d="M4 20c4-5 7-7 13-10" />
-    </svg>
-  );
-}
-
-function CollectionIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-
-      <path d="M8 7h8" />
-
-      <path d="M8 11h8" />
-
-      <path d="M8 15h5" />
     </svg>
   );
 }

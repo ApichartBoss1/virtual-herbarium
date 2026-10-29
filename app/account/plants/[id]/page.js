@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
@@ -24,8 +24,6 @@ const UUID_PATTERN =
 
 export default function AccountPlantDetailPage() {
   const params = useParams();
-
-  const router = useRouter();
   const plantId = params?.id;
 
   const { language } = useSiteSettings();
@@ -111,7 +109,6 @@ export default function AccountPlantDetailPage() {
       copied: "คัดลอกแล้ว",
       edit: "แก้ไขข้อมูล",
 
-      loginRequired: "กรุณาเข้าสู่ระบบเพื่อดูพรรณไม้ของคุณ",
       loadFailed: "เกิดข้อผิดพลาดในการโหลดข้อมูลพรรณไม้",
     },
 
@@ -181,7 +178,6 @@ export default function AccountPlantDetailPage() {
       copied: "Copied",
       edit: "Edit record",
 
-      loginRequired: "Please sign in to view your plant collection.",
       loadFailed: "Unable to load this plant record.",
     },
   };
@@ -205,31 +201,10 @@ export default function AccountPlantDetailPage() {
       return;
     }
 
-    /* กำลัง redirect ไปหน้า login: ห้ามปิด loading เพื่อไม่ให้หน้าและแผนที่ render */
-    let redirecting = false;
-
     try {
       /* ================================================
-         CHECK ADMIN USER
-      ================================================ */
-
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
-
-      if (
-        authError ||
-        !authData?.user ||
-        authData.user.app_metadata?.role !== "admin"
-      ) {
-        redirecting = true;
-
-        router.replace("/login");
-
-        return;
-      }
-
-      /* ================================================
          FETCH PLANT (ADMIN เห็นได้ทุกรายการ)
+         สิทธิ์ admin ตรวจแล้วที่ app/account/layout.js
       ================================================ */
 
       const { data, error: fetchError } = await supabase
@@ -261,9 +236,7 @@ export default function AccountPlantDetailPage() {
       setPlant(null);
       setError("loadFailed");
     } finally {
-      if (!redirecting) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }
 

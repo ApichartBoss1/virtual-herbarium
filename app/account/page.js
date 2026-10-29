@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import BioHeroLazy from "@/components/BioHeroLazy";
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
 import {
   EMPTY_FACETS,
@@ -19,7 +19,6 @@ import { useSiteSettings } from "@/components/SiteSettingsContext";
 ========================================================= */
 
 export default function AccountPage() {
-  const router = useRouter();
 
   const { language } = useSiteSettings();
   const isEnglish = language === "EN";
@@ -28,8 +27,7 @@ export default function AccountPage() {
      STATE
   ===================================================== */
 
-  const [user, setUser] = useState(null);
-  const [accessDenied, setAccessDenied] = useState(false);
+  const { user } = useAdmin();
 
   const [profile, setProfile] = useState(null);
   /* latest plants for the preview (max 6) */
@@ -100,13 +98,6 @@ export default function AccountPage() {
       locality: "สถานที่ / อุทยาน / จังหวัด",
       collectorNo: "หมายเลขผู้เก็บ",
 
-      login: "เข้าสู่ระบบ Admin",
-
-      notLoggedIn: "สำหรับผู้ดูแลระบบเท่านั้น",
-
-      notLoggedDescription: "เข้าสู่ระบบด้วยบัญชี Admin เพื่อจัดการคลังพรรณไม้",
-
-      denied: "บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ",
 
       loadError: "ไม่สามารถโหลดข้อมูลพรรณไม้ได้",
       retry: "ลองอีกครั้ง",
@@ -177,14 +168,6 @@ export default function AccountPage() {
       locality: "Locality / NP / Province",
       collectorNo: "Collector No.",
 
-      login: "Admin Login",
-
-      notLoggedIn: "Administrator access only",
-
-      notLoggedDescription:
-        "Sign in with an Admin account to manage the plant collection.",
-
-      denied: "This account does not have administrator access.",
 
       loadError: "Unable to load your plants.",
       retry: "Try Again",
@@ -266,55 +249,16 @@ export default function AccountPage() {
   }
 
   /* =====================================================
-     ADMIN AUTH CHECK
+     LOAD DASHBOARD
+     สิทธิ์ admin ตรวจแล้วที่ app/account/layout.js
   ===================================================== */
 
   useEffect(() => {
     let mounted = true;
 
-    async function init() {
-      setLoading(true);
-      setError("");
-      setAccessDenied(false);
-
+    async function loadDashboard() {
       try {
-        const { data, error: userError } = await supabase.auth.getUser();
-
-        if (!mounted) return;
-
-        if (userError || !data?.user) {
-          setUser(null);
-          setProfile(null);
-          setPlants([]);
-          return;
-        }
-
-        const currentUser = data.user;
-
-        /* =============================================
-           VERIFY ADMIN ROLE
-        ============================================= */
-
-        if (currentUser.app_metadata?.role !== "admin") {
-          await supabase.auth.signOut();
-
-          if (!mounted) return;
-
-          setUser(null);
-          setProfile(null);
-          setPlants([]);
-          setAccessDenied(true);
-
-          return;
-        }
-
-        /* =============================================
-           ADMIN VERIFIED
-        ============================================= */
-
-        setUser(currentUser);
-
-        const profileData = await fetchProfile(currentUser);
+        const profileData = await fetchProfile(user);
 
         if (!mounted) return;
 
@@ -334,29 +278,12 @@ export default function AccountPage() {
       }
     }
 
-    init();
-
-    /* =================================================
-       AUTH LISTENER
-    ================================================= */
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (!mounted) return;
-
-      if (event === "SIGNED_OUT") {
-        setUser(null);
-        setProfile(null);
-        setPlants([]);
-      }
-    });
+    loadDashboard();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
-  }, []);
+  }, [user]);
 
   /* =====================================================
      LOGOUT
@@ -375,12 +302,7 @@ export default function AccountPage() {
         throw logoutError;
       }
 
-      setUser(null);
-      setProfile(null);
-      setPlants([]);
-
-      router.push("/");
-      router.refresh();
+      /* app/account/layout.js พาไปหน้า /login เมื่อ SIGNED_OUT */
     } catch (err) {
       console.error("Logout error:", err);
 
@@ -410,21 +332,6 @@ export default function AccountPage() {
     setError("");
 
     try {
-      /* =============================================
-         VERIFY ADMIN BEFORE DELETE
-      ============================================= */
-
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
-
-      if (
-        authError ||
-        authData?.user?.id !== user.id ||
-        authData.user.app_metadata?.role !== "admin"
-      ) {
-        throw new Error(t.denied);
-      }
-
       /* =============================================
          DELETE PLANT FROM DATABASE
       ============================================= */
@@ -575,52 +482,6 @@ export default function AccountPage() {
             <p className="mt-4 font-serif text-[15px] italic text-muted">
               {t.loading}
             </p>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  /* =====================================================
-     NOT LOGGED IN / NOT ADMIN
-  ===================================================== */
-
-  if (!user) {
-    return (
-      <main className="page overflow-x-hidden">
-        <Navbar />
-
-        <section className="relative isolate flex min-h-[calc(100dvh-58px)] items-center justify-center overflow-hidden px-4 py-12 md:min-h-[calc(100dvh-78px)]">
-          <div
-            aria-hidden="true"
-            className="vh-grid-paper pointer-events-none absolute inset-0 -z-10 opacity-40 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]"
-          />
-
-          <div className="vh-sheet page-enter w-full max-w-md p-7 text-center sm:p-9">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-rule-strong text-moss">
-              <UserIcon className="h-5 w-5" />
-            </div>
-
-            <p className="vh-eyebrow mt-6 flex items-center justify-center gap-3">
-              <span className="h-px w-6 bg-ochre" />
-              {t.eyebrow}
-              <span className="h-px w-6 bg-ochre" />
-            </p>
-
-            <h1 className="vh-display mt-3 text-[1.9rem] leading-tight">
-              {accessDenied ? t.denied : t.notLoggedIn}
-            </h1>
-
-            <p className="mt-3 text-[14px] leading-7 text-muted">
-              {t.notLoggedDescription}
-            </p>
-
-            <div className="vh-rule my-6" />
-
-            <Link href="/login" className="vh-btn vh-btn-primary">
-              {t.login}
-              <ArrowRightIcon className="h-4 w-4" />
-            </Link>
           </div>
         </section>
       </main>
@@ -1452,24 +1313,6 @@ function LeafIcon({ className = "" }) {
     >
       <path d="M20.5 3.5C14 3.8 8.2 6 5.2 10.1c-2.2 3-1.9 6.4.1 8.6 2.2 2.4 6.1 2.4 9-.1 3.8-3.3 5.6-8.9 6.2-15.1Z" />
       <path d="M4 20c3.2-4.9 7.1-8.4 12.7-11.2" />
-    </svg>
-  );
-}
-
-function UserIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   );
 }

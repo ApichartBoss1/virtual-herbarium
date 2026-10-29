@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
@@ -23,7 +24,7 @@ export default function EditAccountPage() {
      STATE
   ===================================================== */
 
-  const [user, setUser] = useState(null);
+  const { user } = useAdmin();
 
   const [loading, setLoading] = useState(true);
 
@@ -161,27 +162,13 @@ export default function EditAccountPage() {
   useEffect(() => {
     let mounted = true;
 
+    /*
+     * ไม่ตั้ง loading ใหม่ เพราะ effect จะรันซ้ำเมื่อบันทึกแล้ว user เปลี่ยน
+     * (USER_UPDATED) ซึ่งไม่ควรให้หน้ากลับไปเป็น loading
+     */
     async function loadUser() {
       try {
-        setLoading(true);
-
-        setError("");
-
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (!mounted) return;
-
-        if (userError || !user) {
-          router.replace("/login");
-
-          return;
-        }
-
-        setUser(user);
-
+        /* สิทธิ์ admin ตรวจแล้วที่ app/account/layout.js */
         const metadata = user.user_metadata || {};
 
         const { data: profile, error: profileError } = await supabase
@@ -228,7 +215,7 @@ export default function EditAccountPage() {
     return () => {
       mounted = false;
     };
-  }, [router, isEnglish]);
+  }, [user, isEnglish]);
 
   /* =====================================================
      CLEAN PREVIEW URL
@@ -363,7 +350,8 @@ export default function EditAccountPage() {
         avatarUrl = await uploadAvatar();
       }
 
-      const { data, error: updateError } = await supabase.auth.updateUser({
+      /* layout รับ USER_UPDATED แล้วส่ง user ใหม่ผ่าน useAdmin() */
+      const { error: updateError } = await supabase.auth.updateUser({
         data: {
           username,
 
@@ -391,10 +379,6 @@ export default function EditAccountPage() {
         console.error("Update profile error:", profileError);
 
         throw new Error(profileError.message || t.profileError);
-      }
-
-      if (data?.user) {
-        setUser(data.user);
       }
 
       setForm((prev) => ({

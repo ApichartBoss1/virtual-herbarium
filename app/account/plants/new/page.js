@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
@@ -60,7 +61,7 @@ export default function NewPlantPage() {
      STATE
   ===================================================== */
 
-  const [user, setUser] = useState(null);
+  const { user } = useAdmin();
 
   const [form, setForm] = useState(INITIAL_FORM);
 
@@ -76,7 +77,6 @@ export default function NewPlantPage() {
 
   const [dragActive, setDragActive] = useState(false);
 
-  const [loading, setLoading] = useState(true);
 
   const [saving, setSaving] = useState(false);
 
@@ -174,8 +174,6 @@ export default function NewPlantPage() {
       saving: "กำลังบันทึก...",
 
       cancel: "ยกเลิก",
-
-      loading: "กำลังเตรียมแบบฟอร์ม...",
 
       loginRequired: "กรุณาเข้าสู่ระบบก่อนเพิ่มข้อมูลพรรณไม้",
 
@@ -293,8 +291,6 @@ export default function NewPlantPage() {
 
       cancel: "Cancel",
 
-      loading: "Preparing form...",
-
       loginRequired: "Please log in before adding a plant",
 
       saveError: "Unable to save plant",
@@ -346,63 +342,6 @@ export default function NewPlantPage() {
 
     setCanUseCamera(mobile || iPadOS);
   }, []);
-
-  /* =====================================================
-     LOAD USER ONLY
-  ===================================================== */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadUser() {
-      /* กำลัง redirect ไปหน้า login: ห้ามปิด loading เพื่อไม่ให้ฟอร์มและแผนที่ render */
-      let redirecting = false;
-
-      setLoading(true);
-      setError("");
-
-      try {
-        const {
-          data: { user: currentUser },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (!mounted) {
-          return;
-        }
-
-        if (
-          userError ||
-          !currentUser ||
-          currentUser.app_metadata?.role !== "admin"
-        ) {
-          redirecting = true;
-
-          router.replace("/login");
-
-          return;
-        }
-
-        setUser(currentUser);
-      } catch (err) {
-        console.error("Load user error:", err);
-
-        if (mounted) {
-          setError(t.loginRequired);
-        }
-      } finally {
-        if (mounted && !redirecting) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadUser();
-
-    return () => {
-      mounted = false;
-    };
-  }, [router, t.loginRequired]);
 
   /* =====================================================
      FORM
@@ -769,27 +708,6 @@ export default function NewPlantPage() {
     }
   }
 
-  /* =====================================================
-     LOADING
-  ===================================================== */
-
-  if (loading) {
-    return (
-      <main className="page min-h-screen text-ink">
-        <Navbar />
-
-        <div className="flex min-h-[65dvh] items-center justify-center px-5">
-          <div className="text-center">
-            <LoadingIcon className="mx-auto h-6 w-6 animate-spin text-moss" />
-
-            <p className="mt-4 font-serif text-[15px] italic text-muted">
-              {t.loading}
-            </p>
-          </div>
-        </div>
-      </main>
-    );
-  }
 
   const pnuFieldError =
     error &&
