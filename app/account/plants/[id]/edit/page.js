@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 
+import NameCheck from "@/components/NameCheck";
 import Navbar from "@/components/Navbar";
 import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
@@ -1161,19 +1162,29 @@ export default function EditPlantPage() {
                     disabled={saving}
                   />
 
-                  <Field
-                    className="sm:col-span-2"
-                    label={t.botanical}
-                    name="botanical_name"
-                    value={form.botanical_name}
-                    onChange={updateField}
-                    placeholder={t.botanicalPh}
-                    binomial
-                    required
-                    requiredText={t.requiredLabel}
-                    disabled={saving}
-                    error={botanicalFieldError}
-                  />
+                  <div className="sm:col-span-2">
+                    <Field
+                      label={t.botanical}
+                      name="botanical_name"
+                      value={form.botanical_name}
+                      onChange={updateField}
+                      placeholder={t.botanicalPh}
+                      binomial
+                      required
+                      requiredText={t.requiredLabel}
+                      disabled={saving}
+                      error={botanicalFieldError}
+                    />
+
+                    <NameCheck
+                      botanicalName={form.botanical_name}
+                      family={form.family}
+                      language={language}
+                      disabled={saving}
+                      onUseName={(name) => updateField("botanical_name", name)}
+                      onUseFamily={(value) => updateField("family", value)}
+                    />
+                  </div>
 
                   <Field
                     label={t.artificialGroup}

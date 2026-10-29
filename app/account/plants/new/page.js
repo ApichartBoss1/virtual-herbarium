@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 
+import NameCheck from "@/components/NameCheck";
 import Navbar from "@/components/Navbar";
 import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
@@ -1028,6 +1029,15 @@ export default function NewPlantPage() {
                     requiredText={t.requiredLabel}
                     error={botanicalFieldError}
                     disabled={saving}
+                  />
+
+                  <NameCheck
+                    botanicalName={form.botanical_name}
+                    family={form.family}
+                    language={language}
+                    disabled={saving}
+                    onUseName={(name) => updateField("botanical_name", name)}
+                    onUseFamily={(value) => updateField("family", value)}
                   />
                 </div>
 
