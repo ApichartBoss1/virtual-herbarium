@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useSiteSettings } from "@/components/SiteSettingsContext";
+import { loadSpeciesInfo } from "@/lib/gbifClient";
 import { getPhotoCreditParts } from "@/lib/photoCredit";
 import { useLeafletMap } from "@/lib/useLeafletMap";
 
@@ -18,8 +19,6 @@ import { useLeafletMap } from "@/lib/useLeafletMap";
    - พื้นหลัง: tile.gbif.org/3857/omt (OpenMapTiles) style gbif-light / gbif-dark
    - ชั้นข้อมูล: api.gbif.org/v2/map/occurrence/density ตาม taxonKey แบบ hexagon
 ========================================================= */
-
-const REQUEST_TIMEOUT_MS = 15000;
 
 const BASEMAP_URL = (dark) =>
   `https://tile.gbif.org/3857/omt/{z}/{x}/{y}@1x.png?style=${dark ? "gbif-dark" : "gbif-light"}`;
@@ -135,31 +134,20 @@ export default function GbifSpeciesPanel({ botanicalName, language }) {
   /* { forName, data } เมื่อโหลดเสร็จ, data = null คือไม่แสดง */
   const [result, setResult] = useState(null);
 
+  /* ใช้ผลร่วมกับรูปตัวอย่างในหน้าเดียวกัน (lib/gbifClient.js) */
   useEffect(() => {
     if (!name) return;
 
-    const controller = new AbortController();
+    let active = true;
 
-    const timer = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-    fetch(`/api/gbif/species?${new URLSearchParams({ name })}`, {
-      signal: controller.signal,
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((body) => {
-        setResult({ forName: name, data: body?.ok ? body.data || null : null });
-      })
-      .catch(() => {
-        /* timeout หรือเครือข่ายล่ม: ซ่อนเงียบๆ (ยกเว้นตอน unmount ที่ไม่ต้องทำอะไร) */
-        if (!controller.signal.aborted || controller.signal.reason !== "unmount") {
-          setResult({ forName: name, data: null });
-        }
-      })
-      .finally(() => window.clearTimeout(timer));
+    loadSpeciesInfo(name).then((data) => {
+      if (active) {
+        setResult({ forName: name, data });
+      }
+    });
 
     return () => {
-      window.clearTimeout(timer);
-      controller.abort("unmount");
+      active = false;
     };
   }, [name]);
 
@@ -477,7 +465,7 @@ function PhotoStrip({ photos, t }) {
   );
 }
 
-function PhotoCredit({ photo }) {
+export function PhotoCredit({ photo }) {
   const { language } = useSiteSettings();
 
   const parts = getPhotoCreditParts(photo, language);

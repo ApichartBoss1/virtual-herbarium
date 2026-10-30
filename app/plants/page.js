@@ -6,6 +6,7 @@ import { Suspense, useEffect, useRef, useState, useSyncExternalStore } from "rea
 import { createPortal } from "react-dom";
 
 import FilterDropdown from "@/components/FilterDropdown";
+import GbifPhotoFallback from "@/components/GbifPhotoFallback";
 import Navbar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
 import {
@@ -1776,22 +1777,38 @@ function PlantCard({
 
   const collector = getCollector(plant);
 
+  const groupBadge = hasTextValue(plant.artificial_group) ? (
+    <span className="block max-w-full truncate rounded-full border border-rule bg-sheet/90 px-2 py-0.5 text-[10px] text-ink-soft md:px-2.5 md:text-[11px]">
+      {plant.artificial_group}
+    </span>
+  ) : null;
+
   return (
     <article className="vh-specimen group min-w-0">
       <Link href={`/plants/${plant.id}`} className="flex flex-1 flex-col">
         <div className="vh-specimen-media aspect-[4/5]">
           {image ? (
-            <img src={image} alt={getPlantName(plant)} loading="lazy" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-paper-deep">
-              <LeafIcon className="h-8 w-8 text-faint md:h-12 md:w-12" />
-            </div>
-          )}
+            <>
+              <img src={image} alt={getPlantName(plant)} loading="lazy" />
 
-          {hasTextValue(plant.artificial_group) && (
-            <span className="absolute left-2 top-2 max-w-[calc(100%-16px)] truncate rounded-full border border-rule bg-sheet/90 px-2 py-0.5 text-[10px] text-ink-soft md:left-3 md:top-3 md:px-2.5 md:text-[11px]">
-              {plant.artificial_group}
-            </span>
+              {groupBadge && (
+                <span className="absolute left-2 top-2 max-w-[calc(100%-16px)] md:left-3 md:top-3 md:max-w-[calc(100%-24px)]">
+                  {groupBadge}
+                </span>
+              )}
+            </>
+          ) : (
+            /* ไม่มีรูปของเรา: รูปตัวอย่างจาก GBIF (ป้ายกลุ่มพืชต่อใต้ป้าย GBIF) */
+            <GbifPhotoFallback
+              botanicalName={botanicalName}
+              variant="card"
+              topLeft={groupBadge}
+              fallback={
+                <div className="flex h-full w-full items-center justify-center bg-paper-deep">
+                  <LeafIcon className="h-8 w-8 text-faint md:h-12 md:w-12" />
+                </div>
+              }
+            />
           )}
         </div>
 

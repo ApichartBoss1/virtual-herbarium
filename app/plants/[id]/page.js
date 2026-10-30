@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
+import GbifPhotoFallback from "@/components/GbifPhotoFallback";
 import GbifSpeciesPanel from "@/components/GbifSpeciesPanel";
 import Navbar from "@/components/Navbar";
 import PlantQR from "@/components/PlantQR";
@@ -484,8 +485,15 @@ export default function PlantDetailPage() {
                       {t.imageHint}
                     </span>
                   </button>
-                ) : (
+                ) : plant.image_url ? (
                   <ImageFallback text={t.noData} />
+                ) : (
+                  /* ไม่มีรูปของเรา: รูปตัวอย่างจาก GBIF (ใช้ผลเดียวกับ GbifSpeciesPanel) */
+                  <GbifPhotoFallback
+                    botanicalName={plant.botanical_name}
+                    variant="detail"
+                    fallback={<ImageFallback text={t.noData} />}
+                  />
                 )}
               </div>
 
