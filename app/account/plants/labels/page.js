@@ -20,6 +20,7 @@ import {
    PRINTABLE LABELS
    เลือกตามช่วง PNU หรือรายการที่เลือกในหน้า /account/plants
    พิมพ์ด้วย CSS @media print (A4, 8 ป้ายหรือ 1 ป้ายต่อหน้า)
+   หรือดาวน์โหลดเป็นไฟล์ PDF (lib/labelPdf.js โหลดเมื่อกดปุ่มเท่านั้น)
 ========================================================= */
 
 /* 8 ป้าย = 2 คอลัมน์ × 4 แถว */
@@ -163,6 +164,12 @@ const text = {
       "ข้อความส่วนที่ล้นจะไม่ปรากฏบนป้าย (ขอบแดงแสดงเฉพาะบนหน้าจอ) ยังพิมพ์ได้ตามปกติ",
 
     print: "พิมพ์",
+    downloadPdf: "ดาวน์โหลด PDF",
+    creatingPdf: "กำลังสร้าง PDF...",
+    pdfDownloaded: (fileName) =>
+      `ดาวน์โหลดแล้ว: ${fileName} (ดูในโฟลเดอร์ Downloads)`,
+    pdfFailed:
+      "สร้างไฟล์ PDF ไม่สำเร็จ ลองอีกครั้ง หรือใช้ปุ่ม \"พิมพ์\" แล้วเลือกบันทึกเป็น PDF แทน",
     page: "หน้า",
   },
 
@@ -218,6 +225,12 @@ const text = {
       "Overflowing text will not appear on the label (the red outline shows on screen only). You can still print.",
 
     print: "Print",
+    downloadPdf: "Download PDF",
+    creatingPdf: "Creating PDF...",
+    pdfDownloaded: (fileName) =>
+      `Downloaded: ${fileName} (check your Downloads folder)`,
+    pdfFailed:
+      "Could not create the PDF file. Try again, or use \"Print\" and save as PDF instead.",
     page: "Page",
   },
 };
@@ -266,6 +279,12 @@ export default function PrintLabelsPage() {
   /* id ของป้ายที่ข้อความล้น (วัดหลัง render ใน PrintLabel) */
   const [overflowIds, setOverflowIds] = useState(() => new Set());
 
+  /* id ของป้ายที่ลดขนาด locality แล้ว ให้ PDF ใช้ขนาดเดียวกัน */
+  const compactIdsRef = useRef(new Set());
+
+  /* { status: "creating" | "done" | "failed", fileName } */
+  const [pdfResult, setPdfResult] = useState(null);
+
   const requestIdRef = useRef(0);
 
   /* =====================================================
@@ -278,6 +297,8 @@ export default function PrintLabelsPage() {
     qrResultsRef.current = new Map();
     setQrCounts({ ready: 0, failed: 0 });
     setOverflowIds(new Set());
+    compactIdsRef.current = new Set();
+    setPdfResult(null);
 
     setPlants(null);
     setMissingPnu([]);
@@ -431,7 +452,10 @@ export default function PrintLabelsPage() {
     setQrCounts({ ready, failed });
   }, []);
 
-  const handleFitChange = useCallback((id, overflowing) => {
+  const handleFitChange = useCallback((id, overflowing, compact) => {
+    if (compact) compactIdsRef.current.add(id);
+    else compactIdsRef.current.delete(id);
+
     setOverflowIds((current) => {
       if (current.has(id) === overflowing) return current;
 
@@ -457,6 +481,64 @@ export default function PrintLabelsPage() {
   const perPage = LAYOUTS[layout];
 
   const pages = chunk(plants || [], perPage);
+
+  const fileName = plants ? labelFileName(plants, layout) : "";
+
+  const creatingPdf = pdfResult?.status === "creating";
+
+  /* =====================================================
+     PRINT / PDF
+  ===================================================== */
+
+  /* ชื่อเอกสารเป็นชื่อไฟล์เริ่มต้นตอนเลือก "บันทึกเป็น PDF" ในหน้าต่างพิมพ์ */
+  function printLabels() {
+    const previousTitle = document.title;
+
+    document.title = fileName.replace(/\.pdf$/, "");
+
+    window.addEventListener(
+      "afterprint",
+      () => {
+        document.title = previousTitle;
+      },
+      { once: true },
+    );
+
+    window.print();
+  }
+
+  async function downloadPdf() {
+    if (creatingPdf || !plants?.length) return;
+
+    const requestId = requestIdRef.current;
+
+    const name = fileName;
+
+    setPdfResult({ status: "creating", fileName: name });
+
+    try {
+      const { createLabelPdf } = await import("@/lib/labelPdf");
+
+      const blob = await createLabelPdf({
+        plants,
+        layout,
+        language,
+        compactIds: new Set(compactIdsRef.current),
+      });
+
+      if (requestId !== requestIdRef.current) return;
+
+      saveBlob(blob, name);
+
+      setPdfResult({ status: "done", fileName: name });
+    } catch (err) {
+      console.error("Create label PDF error:", err);
+
+      if (requestId === requestIdRef.current) {
+        setPdfResult({ status: "failed", fileName: name });
+      }
+    }
+  }
 
   const noticeText = notice
     ? typeof t[notice.key] === "function"
@@ -736,21 +818,66 @@ export default function PrintLabelsPage() {
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  disabled={!allQrReady}
-                  className="vh-btn vh-btn-primary w-full shrink-0 sm:w-auto"
-                >
-                  {allQrReady ? (
-                    <PrintIcon className="h-4 w-4" />
-                  ) : (
-                    <LoadingIcon className="h-4 w-4 animate-spin" />
-                  )}
+                <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+                  <button
+                    type="button"
+                    data-download-pdf
+                    onClick={downloadPdf}
+                    disabled={!allQrReady || creatingPdf}
+                    aria-busy={creatingPdf}
+                    className="vh-btn vh-btn-outline w-full sm:w-auto"
+                  >
+                    {allQrReady && !creatingPdf ? (
+                      <DownloadIcon className="h-4 w-4" />
+                    ) : (
+                      <LoadingIcon className="h-4 w-4 animate-spin" />
+                    )}
 
-                  {t.print}
-                </button>
+                    {creatingPdf ? t.creatingPdf : t.downloadPdf}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={printLabels}
+                    disabled={!allQrReady}
+                    className="vh-btn vh-btn-primary w-full sm:w-auto"
+                  >
+                    {allQrReady ? (
+                      <PrintIcon className="h-4 w-4" />
+                    ) : (
+                      <LoadingIcon className="h-4 w-4 animate-spin" />
+                    )}
+
+                    {t.print}
+                  </button>
+                </div>
               </div>
+
+              {pdfResult?.status === "done" && (
+                <p
+                  role="status"
+                  data-pdf-result="done"
+                  className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-moss/30 bg-moss-soft px-3.5 py-3 text-[13px] leading-6 text-moss"
+                >
+                  <CheckIcon className="mt-1 h-4 w-4 shrink-0" />
+
+                  <span className="min-w-0 break-words">
+                    {t.pdfDownloaded(pdfResult.fileName)}
+                  </span>
+                </p>
+              )}
+
+              {pdfResult?.status === "failed" && (
+                <p
+                  role="alert"
+                  data-pdf-result="failed"
+                  className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-clay/40 bg-clay-soft px-3.5 py-3 text-[13px] leading-6 text-clay"
+                >
+                  <AlertIcon className="mt-1 h-4 w-4 shrink-0" />
+
+                  <span className="min-w-0">{t.pdfFailed}</span>
+                </p>
+              )}
             </section>
           )}
         </div>
@@ -827,6 +954,51 @@ function parsePnu(value) {
   const number = Number(textValue);
 
   return Number.isSafeInteger(number) && number > 0 ? number : null;
+}
+
+/* PNU-3001-3050_labels_8up_2026-10-30.pdf (รายการเดียว: PNU-3036_...)
+   ใช้เฉพาะ A-Z a-z 0-9 - _ . */
+function labelFileName(plants, layout) {
+  const numbers = plants
+    .map((plant) => Number(String(plant.pnu_no ?? "").trim()))
+    .filter((number) => Number.isSafeInteger(number) && number > 0);
+
+  const min = numbers.length ? Math.min(...numbers) : null;
+  const max = numbers.length ? Math.max(...numbers) : null;
+
+  const range = min === null ? "" : min === max ? `-${min}` : `-${min}-${max}`;
+
+  const today = new Date();
+
+  const date = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  const name = `PNU${range}_labels_${layout === "one" ? "1up" : "8up"}_${date}.pdf`;
+
+  return name.replace(/[^A-Za-z0-9._-]/g, "");
+}
+
+/* ดาวน์โหลดแบบปกติ เบราว์เซอร์จึงแจ้งเตือนการดาวน์โหลดเอง */
+function saveBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  link.style.display = "none";
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+
+  /* เก็บ URL ไว้สักพัก บางเบราว์เซอร์ยังอ่านไฟล์อยู่หลัง click */
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 function chunk(items, size) {
@@ -923,6 +1095,44 @@ function PrintIcon({ className = "" }) {
       <path d="M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
 
       <path d="M7 14h10v6H7z" />
+    </svg>
+  );
+}
+
+function DownloadIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 4v11" />
+
+      <path d="m7 10 5 5 5-5" />
+
+      <path d="M5 20h14" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
     </svg>
   );
 }
