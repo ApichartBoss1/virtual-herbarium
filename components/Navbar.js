@@ -529,7 +529,7 @@ export default function Navbar() {
       {!hideMobileBottomNav && (
         <nav className="mobile-bottom-nav md:hidden">
           <div
-            className={`mobile-bottom-nav-inner ${user ? "!grid-cols-6" : "!grid-cols-4"}`}
+            className={`mobile-bottom-nav-inner ${user ? "" : "!grid-cols-4"}`}
           >
             <MobileBottomItem
               href="/"
@@ -543,13 +543,6 @@ export default function Navbar() {
               label={t.plants}
               active={isBottomActive("plants")}
               icon={<CollectionIcon className="h-5 w-5" />}
-            />
-
-            <MobileBottomItem
-              href="/map"
-              label={t.map}
-              active={isBottomActive("map")}
-              icon={<MapIcon className="h-5 w-5" />}
             />
 
             {user && (
@@ -573,11 +566,21 @@ export default function Navbar() {
             )}
 
             <MobileBottomItem
-              href="/about"
-              label={t.about}
-              active={isBottomActive("about")}
-              icon={<InfoIcon className="h-5 w-5" />}
+              href="/map"
+              label={t.map}
+              active={isBottomActive("map")}
+              icon={<MapIcon className="h-5 w-5" />}
             />
+
+            {/* admin ใช้ช่องนี้เป็น "จัดการข้อมูล" (เกี่ยวกับเรายังอยู่ในเมนูเดสก์ท็อปและ footer) */}
+            {!user && (
+              <MobileBottomItem
+                href="/about"
+                label={t.about}
+                active={isBottomActive("about")}
+                icon={<InfoIcon className="h-5 w-5" />}
+              />
+            )}
 
             {user && (
               <MobileBottomItem
