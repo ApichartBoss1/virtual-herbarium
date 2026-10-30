@@ -11,7 +11,7 @@ import SiteFooter from "@/components/SiteFooter";
 import { useSignedInAdmin } from "@/components/AdminContext";
 import { fetchPublicPlant, plantFiltersToSearch } from "@/lib/plantQueries";
 import { useLeafletMap } from "@/lib/useLeafletMap";
-import { isGeocoded } from "@/lib/coordinateSource";
+import { formatUncertaintyKm, isGeocoded } from "@/lib/coordinateSource";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 import "leaflet/dist/leaflet.css";
@@ -808,8 +808,8 @@ function HerbariumLabel({
               <span className="font-mono text-[13px] tabular-nums">
                 {Math.round(elevationNumber).toLocaleString()} {t.meters}
                 {approximate && (
-                  <span className="ml-1.5 font-sans text-[12px] text-ochre">
-                    ({t.approximate})
+                  <span className="font-sans text-[12px] text-ochre">
+                    {" "}({t.approximate})
                   </span>
                 )}
               </span>
@@ -1169,8 +1169,8 @@ function ReadOnlyLocationMap({ plant, t }) {
           <span className="ml-auto font-mono text-[13px] tabular-nums text-ink">
             {Math.round(elevationNumber)} {t.meters}
             {approximate && (
-              <span className="ml-1.5 font-sans text-[12px] text-ochre">
-                ({t.approximate})
+              <span className="font-sans text-[12px] text-ochre">
+                {" "}({t.approximate})
               </span>
             )}
           </span>
@@ -1181,16 +1181,6 @@ function ReadOnlyLocationMap({ plant, t }) {
 }
 
 /* ±5.8 กม. / ±37 กม. */
-function formatUncertaintyKm(meters) {
-  const km = Number(meters) / 1000;
-
-  if (!Number.isFinite(km) || km <= 0) {
-    return "?";
-  }
-
-  return km < 10 ? km.toFixed(1) : Math.round(km).toLocaleString();
-}
-
 /* =========================================================
    COORDINATE DISPLAY
 ========================================================= */

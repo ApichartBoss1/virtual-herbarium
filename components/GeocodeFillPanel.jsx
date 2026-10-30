@@ -5,6 +5,7 @@
    เติมพิกัดโดยประมาณจากชื่อสถานที่ (ใช้ในหน้า /account/plants/import)
    - mode "imported": หลังนำเข้า เติมให้เฉพาะ PNU ที่เพิ่งนำเข้า (autoStart)
    - mode "all": ปุ่มเติมพิกัดให้ทุกรายการที่ยังไม่มี แสดงจำนวนที่รอก่อนกด
+     และปุ่มเติมความสูงให้รายการ geocoded ที่ยังไม่มีความสูง
 ========================================================= */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -25,10 +26,13 @@ import {
 import { COORDINATE_SQL_FILE } from "@/lib/coordinateSource";
 import {
   buildGeocodeReportWorkbook,
+  countGeocodedMissingElevation,
   countPlantsMissingCoordinates,
+  fetchGeocodedMissingElevationGroups,
   fetchPlantsMissingCoordinates,
   groupPlantsByLocality,
   hasCoordinateColumns,
+  runElevationFill,
   runGeocodeFill,
   summarizeGeocodeResults,
 } from "@/lib/geocodeFill";
@@ -96,6 +100,31 @@ const COPY = {
     next: "ถัดไป",
     page: (current, total) => `หน้า ${current} / ${total}`,
     noRows: "ไม่มีรายการ",
+    elevation: {
+      title: "เติมความสูงให้รายการที่ยังไม่มี",
+      description:
+        "วัดความสูงจากพิกัดที่บันทึกไว้ (Open-Meteo บริการเดียวกับหน้าแก้ไข) เฉพาะรายการที่พิกัดมาจากการเติมอัตโนมัติและยังไม่มีความสูง ไม่ค้นชื่อสถานที่ใหม่ และไม่แตะรายการที่ admin ใส่พิกัดเอง",
+      pending: (count) =>
+        `รอเติมความสูง ${count.toLocaleString("th-TH")} รายการ`,
+      start: "เติมความสูงให้รายการที่ยังไม่มี",
+      resume: "ทำต่อ",
+      nothingPending: "ไม่มีรายการที่รอเติมความสูง",
+      running: "กำลังเติมความสูง...",
+      progress: (done, total, filled) =>
+        `วัดแล้ว ${done.toLocaleString("th-TH")} จาก ${total.toLocaleString("th-TH")} จุด • เติมแล้ว ${filled.toLocaleString("th-TH")} รายการ`,
+      stopping: "จะหยุดหลังชุดนี้เสร็จ...",
+      stopped: "หยุดแล้ว กด “ทำต่อ” เพื่อเติมเฉพาะรายการที่ยังไม่มีความสูง",
+      leaveWarning:
+        "กำลังเติมความสูงอยู่ ถ้าออกจากหน้านี้จะหยุด ต้องการออกจากหน้านี้หรือไม่?",
+      summaryTitle: "ผลการเติมความสูง",
+      points: "จุดพิกัดที่วัด",
+      filled: "เติมความสูงแล้ว (รายการ)",
+      unmeasured: "วัดไม่ได้ (รายการ)",
+      unmeasuredHint: (points) =>
+        `วัดไม่ได้ ${points.toLocaleString("th-TH")} จุด (อยู่ในทะเลหรือไม่มีข้อมูลความสูง)`,
+      errors: (count) =>
+        `วัดไม่สำเร็จ ${count.toLocaleString("th-TH")} ชุด (เครือข่ายหรือบริการไม่ตอบ) กดอีกครั้งเพื่อลองใหม่`,
+    },
   },
 
   EN: {
@@ -153,6 +182,31 @@ const COPY = {
     next: "Next",
     page: (current, total) => `Page ${current} / ${total}`,
     noRows: "No rows",
+    elevation: {
+      title: "Fill Elevation for Records Without It",
+      description:
+        "Reads elevation at the saved coordinates (Open-Meteo, the same service as the edit page) for records whose coordinates were filled automatically and that have no elevation yet. Localities are not looked up again, and records with coordinates entered by an admin are never touched.",
+      pending: (count) =>
+        `${count.toLocaleString("en-US")} records waiting for elevation`,
+      start: "Fill Elevation for Records Without It",
+      resume: "Resume",
+      nothingPending: "No records are waiting for elevation",
+      running: "Filling elevation...",
+      progress: (done, total, filled) =>
+        `${done.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} points read • ${filled.toLocaleString("en-US")} records filled`,
+      stopping: "Stopping after this batch...",
+      stopped: "Stopped. Press “Resume” to fill only the records that still have no elevation.",
+      leaveWarning:
+        "Elevation is being filled. If you leave this page, it stops. Leave this page?",
+      summaryTitle: "Elevation Result",
+      points: "Points read",
+      filled: "Elevation filled (records)",
+      unmeasured: "No reading (records)",
+      unmeasuredHint: (points) =>
+        `${points.toLocaleString("en-US")} points had no reading (at sea or no elevation data)`,
+      errors: (count) =>
+        `${count.toLocaleString("en-US")} batches failed (network or service did not respond). Press the button again to retry.`,
+    },
   },
 };
 
@@ -318,7 +372,9 @@ export default function GeocodeFillPanel({
     (result) => result.status !== "found",
   );
 
-  const canStart = mode === "all" ? pending > 0 : true;
+  const [elevationBusy, setElevationBusy] = useState(false);
+
+  const canStart = (mode === "all" ? pending > 0 : true) && !elevationBusy;
 
   return (
     <section
@@ -551,6 +607,249 @@ export default function GeocodeFillPanel({
           )}
         </div>
       )}
+
+      {mode === "all" && (
+        <ElevationFillSection
+          t={t}
+          disabled={busy}
+          refreshKey={outcome}
+          onBusyChange={setElevationBusy}
+        />
+      )}
     </section>
+  );
+}
+
+/* =========================================================
+   ELEVATION FILL
+   ใช้พิกัดที่บันทึกไว้ วัดครั้งเดียวต่อจุด ไม่ค้น Nominatim ใหม่
+========================================================= */
+
+function ElevationFillSection({ t, disabled, refreshKey, onBusyChange }) {
+  const e = t.elevation;
+
+  /* idle | preparing | running | done */
+  const [phase, setPhase] = useState("idle");
+
+  const [pending, setPending] = useState(null);
+
+  const [progress, setProgress] = useState(null);
+
+  const [stopRequested, setStopRequested] = useState(false);
+
+  const [outcome, setOutcome] = useState(null);
+
+  const [error, setError] = useState("");
+
+  const stopRef = useRef(false);
+
+  const abortRef = useRef(null);
+
+  const busy = phase === "preparing" || phase === "running";
+
+  useWarnBeforeLeave(busy, e.leaveWarning);
+
+  useEffect(() => {
+    onBusyChange(busy);
+  }, [busy, onBusyChange]);
+
+  useEffect(
+    () => () => {
+      stopRef.current = true;
+      abortRef.current?.abort();
+    },
+    [],
+  );
+
+  const refreshPending = useCallback(async () => {
+    try {
+      setPending(await countGeocodedMissingElevation());
+    } catch {
+      /* ยังไม่ได้รันไฟล์ 03: ไม่แสดงจำนวน ข้อความจะขึ้นเมื่อกดปุ่ม */
+      setPending(null);
+    }
+  }, []);
+
+  /* นับใหม่ตอนแสดงผล และหลังเติมพิกัดเสร็จ (refreshKey เปลี่ยน) */
+  useEffect(() => {
+    const timer = window.setTimeout(refreshPending, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [refreshKey, refreshPending]);
+
+  async function start() {
+    stopRef.current = false;
+
+    abortRef.current = new AbortController();
+
+    setStopRequested(false);
+    setError("");
+    setOutcome(null);
+    setProgress(null);
+    setPhase("preparing");
+
+    try {
+      if (!(await hasCoordinateColumns())) {
+        setError(t.missingColumns);
+        setPhase("idle");
+        return;
+      }
+
+      const groups = await fetchGeocodedMissingElevationGroups();
+
+      setProgress({ done: 0, total: groups.length, filled: 0 });
+      setPhase("running");
+
+      const result = await runElevationFill({
+        groups,
+        onProgress: setProgress,
+        shouldStop: () => stopRef.current,
+        signal: abortRef.current.signal,
+      });
+
+      setOutcome(result);
+      setPhase("done");
+    } catch (err) {
+      console.error("Elevation fill error:", err);
+
+      setError(t.loadFailed);
+      setPhase("idle");
+    } finally {
+      refreshPending();
+    }
+  }
+
+  function handleStop() {
+    stopRef.current = true;
+
+    setStopRequested(true);
+  }
+
+  return (
+    <div
+      data-testid="elevation-panel"
+      className="mt-8 border-t border-rule pt-6"
+    >
+      <h3 className="font-serif text-[1.15rem] leading-tight text-ink">
+        {e.title}
+      </h3>
+
+      <p className="mt-1.5 max-w-3xl text-[14px] leading-6 text-muted">
+        {e.description}
+      </p>
+
+      {!busy && pending !== null && (
+        <p
+          data-testid="elevation-pending"
+          className="mt-4 font-mono text-[13px] tabular-nums text-ink-soft"
+        >
+          {e.pending(pending)}
+        </p>
+      )}
+
+      {error && (
+        <div className="mt-4">
+          <AlertBox type="error">{error}</AlertBox>
+        </div>
+      )}
+
+      {phase === "preparing" && (
+        <p className="mt-5 flex items-center gap-2 text-[14px] text-muted">
+          <LoadingIcon className="h-4 w-4 animate-spin" />
+          {t.preparing}
+        </p>
+      )}
+
+      {phase === "running" && progress && (
+        <div data-testid="elevation-progress">
+          <ProgressBar
+            label={stopRequested ? e.stopping : e.running}
+            detail={e.progress(progress.done, progress.total, progress.filled)}
+            done={progress.done}
+            total={progress.total}
+          />
+
+          <div className="mt-4">
+            <button
+              type="button"
+              data-elevation-stop
+              onClick={handleStop}
+              disabled={stopRequested}
+              className="vh-btn vh-btn-outline w-full sm:w-auto"
+            >
+              {stopRequested ? (
+                <LoadingIcon className="h-4 w-4 animate-spin" />
+              ) : (
+                <StopIcon className="h-4 w-4" />
+              )}
+
+              {t.stop}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!busy && (
+        <div className="mt-5">
+          <button
+            type="button"
+            data-elevation-start
+            onClick={start}
+            disabled={disabled || pending === 0}
+            className="vh-btn vh-btn-outline w-full sm:w-auto"
+          >
+            <RefreshIcon className="h-4 w-4" />
+
+            {pending === 0
+              ? e.nothingPending
+              : outcome?.stopped
+                ? e.resume
+                : e.start}
+          </button>
+        </div>
+      )}
+
+      {phase === "done" && outcome && (
+        <div data-testid="elevation-summary" className="mt-6">
+          <h4 className="vh-eyebrow">{e.summaryTitle}</h4>
+
+          {outcome.stopped && (
+            <div className="mt-4">
+              <AlertBox type="error">{e.stopped}</AlertBox>
+            </div>
+          )}
+
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatCard id="elevation-points" label={e.points} value={outcome.points} />
+
+            <StatCard
+              id="elevation-filled"
+              label={e.filled}
+              value={outcome.filled}
+              tone={outcome.filled ? "moss" : null}
+            />
+
+            <StatCard
+              id="elevation-unmeasured"
+              label={e.unmeasured}
+              value={outcome.unmeasuredRows}
+              tone={outcome.unmeasuredRows ? "ochre" : null}
+            />
+          </div>
+
+          {outcome.unmeasured > 0 && (
+            <p className="mt-3 text-[13px] text-muted">
+              {e.unmeasuredHint(outcome.unmeasured)}
+            </p>
+          )}
+
+          {outcome.errors.length > 0 && (
+            <div className="mt-4">
+              <AlertBox type="error">{e.errors(outcome.errors.length)}</AlertBox>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

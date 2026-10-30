@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import { formatUncertaintyKm, isGeocoded } from "@/lib/coordinateSource";
 import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
@@ -76,6 +77,9 @@ export default function AccountPlantDetailPage() {
       mapHint: "แผนที่แสดงตำแหน่งจากละติจูดและลองจิจูดที่บันทึกไว้",
       mapPinLabel: "ตำแหน่งนี้",
       meters: "ม.",
+      approximateCoordinates: (km) =>
+        `พิกัดโดยประมาณจากชื่อสถานที่ (±${km} กม.)`,
+      approximate: "โดยประมาณ",
 
       image: "ภาพตัวอย่างพรรณไม้",
       imageHint: "แตะรูปเพื่อดูภาพเต็ม",
@@ -145,6 +149,9 @@ export default function AccountPlantDetailPage() {
         "The map shows the position from the saved latitude and longitude.",
       mapPinLabel: "This location",
       meters: "m",
+      approximateCoordinates: (km) =>
+        `Approximate coordinates from the locality name (±${km} km)`,
+      approximate: "approximate",
 
       image: "Specimen image",
       imageHint: "Tap image to view full size",
@@ -663,6 +670,8 @@ function HerbariumLabel({
 
   const elevationNumber = toApproxNumberOrNull(plant.elevation);
 
+  const approximate = hasCoordinates && isGeocoded(plant);
+
   const recordedDate = formatRecordDate(plant.created_at, isEnglish);
 
   const citation = [
@@ -766,11 +775,24 @@ function HerbariumLabel({
 
           <LabelRow label={t.coordinates}>
             {hasCoordinates ? (
-              <span className="font-mono text-[13px] tabular-nums">
-                {formatHemisphere(latitude, true)}
-                <span className="text-faint">, </span>
-                {formatHemisphere(longitude, false)}
-              </span>
+              <>
+                <span className="font-mono text-[13px] tabular-nums">
+                  {formatHemisphere(latitude, true)}
+                  <span className="text-faint">, </span>
+                  {formatHemisphere(longitude, false)}
+                </span>
+
+                {approximate && (
+                  <span
+                    data-approximate-coordinates
+                    className="mt-1 block text-[12px] text-ochre"
+                  >
+                    {t.approximateCoordinates(
+                      formatUncertaintyKm(plant.coordinate_uncertainty_m),
+                    )}
+                  </span>
+                )}
+              </>
             ) : (
               <EmptyValue text={t.noData} />
             )}
@@ -780,6 +802,11 @@ function HerbariumLabel({
             {elevationNumber !== null ? (
               <span className="font-mono text-[13px] tabular-nums">
                 {Math.round(elevationNumber).toLocaleString()} {t.meters}
+                {approximate && (
+                  <span className="font-sans text-[12px] text-ochre">
+                    {" "}({t.approximate})
+                  </span>
+                )}
               </span>
             ) : (
               <EmptyValue text={t.noData} />
@@ -1006,6 +1033,8 @@ function ReadOnlyLocationMap({ plant, t }) {
 
   const elevationNumber = toApproxNumberOrNull(plant?.elevation);
 
+  const approximate = hasCoordinates && isGeocoded(plant);
+
   if (!hasCoordinates) {
     return (
       <div className="p-5 md:p-6">
@@ -1081,6 +1110,11 @@ function ReadOnlyLocationMap({ plant, t }) {
 
           <span className="ml-auto font-mono text-[13px] tabular-nums text-ink">
             {Math.round(elevationNumber)} {t.meters}
+            {approximate && (
+              <span className="font-sans text-[12px] text-ochre">
+                {" "}({t.approximate})
+              </span>
+            )}
           </span>
         </div>
       )}
