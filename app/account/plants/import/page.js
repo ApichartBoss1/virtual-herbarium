@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import Navbar from "@/components/Navbar";
 import { useAdmin } from "@/components/AdminContext";
@@ -14,11 +15,13 @@ import {
   preparePlantImage,
 } from "@/lib/plantImage";
 import {
+  IMPORT_BATCH_SIZE,
   downloadBlob,
   downloadImportTemplate,
   fetchAllPnuNumbers,
   fetchPlantsByPnu,
   getPnuFromFileName,
+  importPlantRows,
   loadSheetJs,
   runWithConcurrency,
 } from "@/lib/plantImport";
@@ -139,7 +142,43 @@ const COPY = {
     page: (current, total) => `หน้า ${current} / ${total}`,
     previous: "ก่อนหน้า",
     next: "ถัดไป",
-    importLater: "การนำเข้าข้อมูลจริงจะเปิดใช้ในขั้นถัดไป",
+    importButton: (count) => `นำเข้า ${count.toLocaleString("th-TH")} รายการ`,
+    nothingToImport: "ไม่มีรายการที่พร้อมนำเข้า",
+    recheckFirst: "นำเข้าไฟล์นี้แล้ว กด “ตรวจใหม่” เพื่ออ่าน PNU จากฐานข้อมูลก่อนนำเข้าอีกครั้ง",
+    confirmTitle: "ยืนยันการนำเข้า",
+    confirmCount: (count) =>
+      `จะนำเข้า ${count.toLocaleString("th-TH")} รายการลงระบบ`,
+    confirmBatches: (batches, size) =>
+      `ส่งทีละชุด ${size.toLocaleString("th-TH")} รายการ รวม ${batches.toLocaleString("th-TH")} ชุด`,
+    confirmRequired: "ช่องบังคับที่ใช้",
+    confirmReportHint:
+      "แนะนำให้ดาวน์โหลดรายงานเก็บไว้ก่อน เพื่อใช้ตรวจแถวที่ถูกคัดออกภายหลัง",
+    cancel: "ยกเลิก",
+    importing: "กำลังนำเข้าข้อมูล...",
+    importProgress: (batch, total, imported) =>
+      `ชุดที่ ${batch.toLocaleString("th-TH")} จาก ${total.toLocaleString("th-TH")} • นำเข้าแล้ว ${imported.toLocaleString("th-TH")} รายการ`,
+    retryingRows: "ชุดนี้มี PNU ที่ถูกเพิ่มในระบบระหว่างนำเข้า กำลังลองใหม่ทีละรายการ...",
+    stop: "หยุด",
+    stopping: "จะหยุดหลังชุดปัจจุบันเสร็จ...",
+    leaveWarning:
+      "กำลังนำเข้าข้อมูลอยู่ ถ้าออกจากหน้านี้ ระบบจะหยุดหลังชุดปัจจุบันและคุณจะไม่เห็นสรุปผล ต้องการออกจากหน้านี้หรือไม่?",
+    resultTitle: "ผลการนำเข้า",
+    resultStopped: "หยุดก่อนนำเข้าครบทุกชุด",
+    resultElapsed: (seconds) => `ใช้เวลา ${seconds} วินาที`,
+    importStatuses: {
+      success: "สำเร็จ",
+      duplicate: "ข้ามเพราะซ้ำระหว่างนำเข้า",
+      failed: "ล้มเหลว",
+      notImported: "ยังไม่ได้นำเข้า (หยุดก่อน)",
+    },
+    issueRows: "รายการที่ไม่ได้นำเข้า",
+    status: "สถานะ",
+    errorMessage: "ข้อความ error",
+    downloadResultReport: "ดาวน์โหลดรายงานรวมผลการนำเข้า (Excel)",
+    recheck: "ตรวจใหม่",
+    rechecking: "กำลังอ่าน PNU จากฐานข้อมูล...",
+    recheckHint:
+      "อ่านรายการ PNU จากฐานข้อมูลอีกครั้ง แถวที่นำเข้าแล้วจะย้ายไปอยู่ข้อ d",
     downloadReport: "ดาวน์โหลดรายงาน (Excel)",
     creatingReport: "กำลังสร้างรายงาน...",
     reportDownloaded: (fileName) =>
@@ -302,7 +341,43 @@ const COPY = {
     page: (current, total) => `Page ${current} / ${total}`,
     previous: "Previous",
     next: "Next",
-    importLater: "Importing the data will be enabled in the next step.",
+    importButton: (count) => `Import ${count.toLocaleString("en-US")} records`,
+    nothingToImport: "No records are ready to import",
+    recheckFirst: "This file has been imported. Press “Check Again” to reload PNU numbers from the database before importing again.",
+    confirmTitle: "Confirm Import",
+    confirmCount: (count) =>
+      `${count.toLocaleString("en-US")} records will be imported into the system`,
+    confirmBatches: (batches, size) =>
+      `Sent in batches of ${size.toLocaleString("en-US")}, ${batches.toLocaleString("en-US")} batches in total`,
+    confirmRequired: "Required fields used",
+    confirmReportHint:
+      "We recommend downloading the report first so you can review the excluded rows later.",
+    cancel: "Cancel",
+    importing: "Importing data...",
+    importProgress: (batch, total, imported) =>
+      `Batch ${batch.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} • ${imported.toLocaleString("en-US")} records imported`,
+    retryingRows: "Some PNU numbers in this batch were added during the import. Retrying one record at a time...",
+    stop: "Stop",
+    stopping: "Stopping after the current batch...",
+    leaveWarning:
+      "Data is being imported. If you leave this page, the import stops after the current batch and you will not see the summary. Leave this page?",
+    resultTitle: "Import Result",
+    resultStopped: "Stopped before all batches were imported",
+    resultElapsed: (seconds) => `Took ${seconds} s`,
+    importStatuses: {
+      success: "Succeeded",
+      duplicate: "Skipped (added during import)",
+      failed: "Failed",
+      notImported: "Not imported (stopped)",
+    },
+    issueRows: "Records not imported",
+    status: "Status",
+    errorMessage: "Error message",
+    downloadResultReport: "Download Report with Import Result (Excel)",
+    recheck: "Check Again",
+    rechecking: "Reading PNU numbers from the database...",
+    recheckHint:
+      "Reload PNU numbers from the database. Imported rows move to rule d.",
     downloadReport: "Download Report (Excel)",
     creatingReport: "Creating report...",
     reportDownloaded: (fileName) =>
@@ -462,7 +537,7 @@ export default function ImportPlantsPage() {
           aria-labelledby="import-tab-data"
           hidden={tab !== "data"}
         >
-          <DataImportSection t={t} />
+          <DataImportSection t={t} user={user} />
         </div>
 
         <div
@@ -483,7 +558,7 @@ export default function ImportPlantsPage() {
    ขั้นนี้อ่านทุกชีต ทำความสะอาด และคัดแถว ยังไม่บันทึกลงฐานข้อมูล
 ========================================================= */
 
-function DataImportSection({ t }) {
+function DataImportSection({ t, user }) {
   const [fileName, setFileName] = useState("");
 
   const [reading, setReading] = useState(false);
@@ -507,8 +582,39 @@ function DataImportSection({ t }) {
 
   const [inputKey, setInputKey] = useState(0);
 
-  /* { status: "creating" | "done" | "failed", fileName } */
+  /* { kind: "screening" | "result", status: "creating" | "done" | "failed", fileName } */
   const [reportResult, setReportResult] = useState(null);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const [importing, setImporting] = useState(false);
+
+  /* { batch, totalBatches, imported, processed, retrying } */
+  const [importProgress, setImportProgress] = useState(null);
+
+  const [stopRequested, setStopRequested] = useState(false);
+
+  const stopRef = useRef(false);
+
+  /* { results, stopped, elapsedMs, finishedAt, requiredFields } */
+  const [importResult, setImportResult] = useState(null);
+
+  /* นำเข้าแล้วต้องตรวจกับฐานข้อมูลใหม่ก่อน กันการส่งแถวเดิมซ้ำ */
+  const [needsRecheck, setNeedsRecheck] = useState(false);
+
+  const [rechecking, setRechecking] = useState(false);
+
+  const [issuePage, setIssuePage] = useState(1);
+
+  useWarnBeforeLeave(importing, t.leaveWarning);
+
+  /* ออกจากหน้าระหว่างนำเข้า: หยุดหลังชุดปัจจุบัน */
+  useEffect(
+    () => () => {
+      stopRef.current = true;
+    },
+    [],
+  );
 
   /* ข้อ e คำนวณใหม่ทุกครั้งที่เปลี่ยนช่องบังคับ โดยไม่ต้องอ่านไฟล์ใหม่ */
   const summary = useMemo(() => {
@@ -587,6 +693,9 @@ function DataImportSection({ t }) {
     setReadyPage(1);
     setSkippedPage(1);
     setReportResult(null);
+    setImportResult(null);
+    setNeedsRecheck(false);
+    setIssuePage(1);
     setInputKey((key) => key + 1);
   }
 
@@ -679,14 +788,15 @@ function DataImportSection({ t }) {
      REPORT
   ===================================================== */
 
-  async function handleDownloadReport() {
+  /* kind: "screening" = รายงานการคัด, "result" = รวมผลการนำเข้า */
+  async function handleDownloadReport(kind = "screening") {
     if (!summary || reportResult?.status === "creating") {
       return;
     }
 
     const name = getImportReportFileName(fileName);
 
-    setReportResult({ status: "creating", fileName: name });
+    setReportResult({ kind, status: "creating", fileName: name });
 
     try {
       const XLSX = await loadSheetJs();
@@ -697,21 +807,133 @@ function DataImportSection({ t }) {
         requiredFields,
         sheets: parsed.sheets,
         rows: [...summary.ready, ...summary.skipped],
+        importResult: kind === "result" ? importResult : null,
       });
 
       const bytes = writeWorkbookWithFrozenHeader(XLSX, workbook);
 
       downloadBlob(new Blob([bytes], { type: XLSX_MIME_TYPE }), name);
 
-      setReportResult({ status: "done", fileName: name });
+      setReportResult({ kind, status: "done", fileName: name });
     } catch (err) {
       console.error("Create import report error:", err);
 
-      setReportResult({ status: "failed", fileName: name });
+      setReportResult({ kind, status: "failed", fileName: name });
     }
   }
 
   const creatingReport = reportResult?.status === "creating";
+
+  /* =====================================================
+     IMPORT
+  ===================================================== */
+
+  async function handleImport() {
+    setConfirmOpen(false);
+
+    if (importing || needsRecheck || !summary?.ready.length) {
+      return;
+    }
+
+    const rows = summary.ready;
+
+    /* ส่งเฉพาะฟิลด์ที่จับคู่ได้ในไฟล์ */
+    const fields = SHEET_IMPORT_FIELDS.filter((field) =>
+      parsed.sheets.some((sheet) => sheet.mapping[field]),
+    );
+
+    const usedRequiredFields = requiredFields;
+
+    stopRef.current = false;
+
+    setStopRequested(false);
+    setImportResult(null);
+    setReportResult(null);
+    setIssuePage(1);
+    setImporting(true);
+    setImportProgress({
+      batch: 1,
+      totalBatches: Math.ceil(rows.length / IMPORT_BATCH_SIZE),
+      imported: 0,
+      processed: 0,
+      retrying: false,
+    });
+
+    const startedAt = performance.now();
+
+    try {
+      const { results, stopped } = await importPlantRows({
+        rows,
+        fields,
+        userId: user.id,
+        onProgress: setImportProgress,
+        shouldStop: () => stopRef.current,
+      });
+
+      setImportResult({
+        results,
+        stopped,
+        elapsedMs: performance.now() - startedAt,
+        finishedAt: new Date(),
+        requiredFields: usedRequiredFields,
+      });
+    } finally {
+      setImporting(false);
+      setImportProgress(null);
+      setNeedsRecheck(true);
+    }
+  }
+
+  function handleStop() {
+    stopRef.current = true;
+
+    setStopRequested(true);
+  }
+
+  /* อ่าน pnu_no จากฐานข้อมูลใหม่ แล้วคัดข้อ a–d อีกครั้งโดยไม่ต้องอ่านไฟล์ */
+  async function handleRecheck() {
+    setRechecking(true);
+    setError("");
+
+    try {
+      const existing = await fetchAllPnuNumbers();
+
+      setParsed((previous) => ({
+        ...previous,
+        rows: classifyImportRows(previous.rows, existing),
+        checkedAt: new Date(),
+      }));
+
+      setNeedsRecheck(false);
+      setReadyPage(1);
+      setSkippedPage(1);
+      setReportResult(null);
+    } catch (err) {
+      console.error("Recheck existing PNU error:", err);
+
+      setError(t.errors.existingFailed);
+    } finally {
+      setRechecking(false);
+    }
+  }
+
+  const importCounts = useMemo(() => {
+    const counts = { success: 0, duplicate: 0, failed: 0, notImported: 0 };
+
+    (importResult?.results || []).forEach(({ status }) => {
+      counts[status] += 1;
+    });
+
+    return counts;
+  }, [importResult]);
+
+  const issueRows = useMemo(
+    () =>
+      (importResult?.results || [])
+        .filter(({ status }) => status !== "success")
+        .map(({ row, status, message }) => ({ ...row, importStatus: status, message })),
+    [importResult],
+  );
 
   /* =====================================================
      DERIVED
@@ -805,7 +1027,9 @@ function DataImportSection({ t }) {
 
         <label
           className={`mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[6px] border border-dashed border-rule-strong bg-sheet px-4 py-8 text-center transition hover:border-moss hover:bg-moss-soft ${
-            reading ? "pointer-events-none opacity-60" : ""
+            reading || importing || rechecking
+              ? "pointer-events-none opacity-60"
+              : ""
           }`}
         >
           <input
@@ -813,7 +1037,7 @@ function DataImportSection({ t }) {
             type="file"
             accept={SHEET_IMPORT_ACCEPT}
             onChange={handleFileChange}
-            disabled={reading}
+            disabled={reading || importing || rechecking}
             className="sr-only"
           />
 
@@ -948,13 +1172,16 @@ function DataImportSection({ t }) {
               {REQUIRED_FIELD_OPTIONS.map((field) => (
                 <label
                   key={field}
-                  className="flex cursor-pointer items-center gap-2 text-[14px] text-ink-soft"
+                  className={`flex items-center gap-2 text-[14px] text-ink-soft ${
+                    importing ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                  }`}
                 >
                   <input
                     type="checkbox"
                     data-required-field={field}
                     checked={requiredFields.includes(field)}
                     onChange={() => toggleRequired(field)}
+                    disabled={importing}
                     className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-moss"
                   />
 
@@ -1018,48 +1245,241 @@ function DataImportSection({ t }) {
             <button
               type="button"
               data-download-report
-              onClick={handleDownloadReport}
+              onClick={() => handleDownloadReport("screening")}
               disabled={creatingReport}
               aria-busy={creatingReport}
               className="vh-btn vh-btn-outline w-full sm:w-auto"
             >
-              {creatingReport ? (
+              {creatingReport && reportResult?.kind === "screening" ? (
                 <LoadingIcon className="h-4 w-4 animate-spin" />
               ) : (
                 <DownloadIcon className="h-4 w-4" />
               )}
 
-              {creatingReport ? t.creatingReport : t.downloadReport}
+              {creatingReport && reportResult?.kind === "screening"
+                ? t.creatingReport
+                : t.downloadReport}
             </button>
           </div>
 
-          {reportResult?.status === "done" && (
-            <p
-              role="status"
-              data-report-result="done"
-              className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-moss/30 bg-moss-soft px-3.5 py-3 text-[13px] leading-6 text-moss"
-            >
-              <CheckIcon className="mt-1 h-4 w-4 shrink-0" />
-
-              <span className="min-w-0 break-words">
-                {t.reportDownloaded(reportResult.fileName)}
-              </span>
-            </p>
+          {!confirmOpen && (
+            <ReportStatus t={t} result={reportResult} kind="screening" />
           )}
 
-          {reportResult?.status === "failed" && (
-            <p
-              role="alert"
-              data-report-result="failed"
-              className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-clay/40 bg-clay-soft px-3.5 py-3 text-[13px] leading-6 text-clay"
-            >
-              <AlertIcon className="mt-1 h-4 w-4 shrink-0" />
+          <div className="vh-rule mt-6" />
 
-              <span className="min-w-0">{t.reportFailed}</span>
-            </p>
+          {/* IMPORT */}
+
+          {importing && importProgress ? (
+            <div data-testid="import-progress">
+              <ProgressBar
+                label={
+                  stopRequested
+                    ? t.stopping
+                    : importProgress.retrying
+                      ? t.retryingRows
+                      : t.importing
+                }
+                detail={t.importProgress(
+                  importProgress.batch,
+                  importProgress.totalBatches,
+                  importProgress.imported,
+                )}
+                done={importProgress.processed}
+                total={summary.ready.length}
+              />
+
+              <div className="mt-4">
+                <button
+                  type="button"
+                  data-stop-import
+                  onClick={handleStop}
+                  disabled={stopRequested}
+                  className="vh-btn vh-btn-outline w-full sm:w-auto"
+                >
+                  {stopRequested ? (
+                    <LoadingIcon className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <StopIcon className="h-4 w-4" />
+                  )}
+
+                  {t.stop}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-5">
+              <button
+                type="button"
+                data-start-import
+                onClick={() => setConfirmOpen(true)}
+                disabled={
+                  summary.ready.length === 0 || needsRecheck || rechecking
+                }
+                className="vh-btn vh-btn-primary w-full sm:w-auto"
+              >
+                <UploadIcon className="h-4 w-4" />
+
+                {summary.ready.length === 0
+                  ? t.nothingToImport
+                  : t.importButton(summary.ready.length)}
+              </button>
+
+              {needsRecheck && (
+                <p className="mt-3 text-[13px] leading-6 text-muted">
+                  {t.recheckFirst}
+                </p>
+              )}
+            </div>
           )}
 
-          <p className="mt-5 text-[13px] text-muted">{t.importLater}</p>
+          {/* RESULT */}
+
+          {importResult && (
+            <div data-testid="import-result" className="mt-7">
+              <h3 className="font-serif text-[1.2rem] leading-tight text-ink">
+                {t.resultTitle}
+              </h3>
+
+              <p className="mt-1.5 font-mono text-[12px] tabular-nums text-muted">
+                {t.resultElapsed((importResult.elapsedMs / 1000).toFixed(1))}
+              </p>
+
+              {importResult.stopped && (
+                <div className="mt-4">
+                  <AlertBox type="error">{t.resultStopped}</AlertBox>
+                </div>
+              )}
+
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {Object.keys(importCounts).map((status) => (
+                  <StatCard
+                    key={status}
+                    id={`import-${status}`}
+                    label={t.importStatuses[status]}
+                    value={importCounts[status]}
+                    tone={
+                      status === "success"
+                        ? "moss"
+                        : importCounts[status]
+                          ? status === "failed"
+                            ? "clay"
+                            : "ochre"
+                          : null
+                    }
+                  />
+                ))}
+              </div>
+
+              {issueRows.length > 0 && (
+                <>
+                  <h3 className="vh-eyebrow mt-6">{t.issueRows}</h3>
+
+                  <div className="mt-3">
+                    <PagedTable
+                      t={t}
+                      rows={issueRows}
+                      page={issuePage}
+                      onPageChange={setIssuePage}
+                      testId="import-issue-table"
+                      columns={[
+                        {
+                          key: "pnu_no",
+                          label: t.fieldLabels.pnu_no,
+                          mono: true,
+                          render: (row) => row.pnuNo,
+                        },
+                        {
+                          key: "sheet",
+                          label: t.sheet,
+                          render: (row) => row.sheet,
+                        },
+                        {
+                          key: "row",
+                          label: t.row,
+                          mono: true,
+                          render: (row) => row.rowNumber,
+                        },
+                        {
+                          key: "status",
+                          label: t.status,
+                          render: (row) => (
+                            <span
+                              className={
+                                row.importStatus === "failed"
+                                  ? "text-clay"
+                                  : "text-ochre"
+                              }
+                            >
+                              {t.importStatuses[row.importStatus]}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "message",
+                          label: t.errorMessage,
+                          render: (row) => row.message || "—",
+                        },
+                      ]}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  data-download-result-report
+                  onClick={() => handleDownloadReport("result")}
+                  disabled={creatingReport}
+                  className="vh-btn vh-btn-outline w-full sm:w-auto"
+                >
+                  {creatingReport && reportResult?.kind === "result" ? (
+                    <LoadingIcon className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <DownloadIcon className="h-4 w-4" />
+                  )}
+
+                  {t.downloadResultReport}
+                </button>
+
+                <button
+                  type="button"
+                  data-recheck
+                  onClick={handleRecheck}
+                  disabled={rechecking}
+                  className="vh-btn vh-btn-primary w-full sm:w-auto"
+                >
+                  {rechecking ? (
+                    <LoadingIcon className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshIcon className="h-4 w-4" />
+                  )}
+
+                  {rechecking ? t.rechecking : t.recheck}
+                </button>
+              </div>
+
+              <ReportStatus t={t} result={reportResult} kind="result" />
+
+              <p className="mt-3 text-[13px] leading-6 text-muted">
+                {t.recheckHint}
+              </p>
+            </div>
+          )}
+
+          {confirmOpen && (
+            <ImportConfirmDialog
+              t={t}
+              count={summary.ready.length}
+              requiredFields={requiredFields}
+              reportResult={reportResult}
+              creatingReport={creatingReport}
+              onDownloadReport={() => handleDownloadReport("screening")}
+              onCancel={() => setConfirmOpen(false)}
+              onConfirm={handleImport}
+            />
+          )}
         </StepPanel>
       )}
 
@@ -1205,6 +1625,162 @@ function DataImportSection({ t }) {
 
 function formatNumber(value) {
   return Number(value).toLocaleString("en-US");
+}
+
+/* ข้อความหลังดาวน์โหลดรายงาน แบบเดียวกับปุ่ม PDF ป้าย */
+function ReportStatus({ t, result, kind }) {
+  if (result?.kind !== kind) {
+    return null;
+  }
+
+  if (result.status === "done") {
+    return (
+      <p
+        role="status"
+        data-report-result="done"
+        data-report-kind={kind}
+        className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-moss/30 bg-moss-soft px-3.5 py-3 text-[13px] leading-6 text-moss"
+      >
+        <CheckIcon className="mt-1 h-4 w-4 shrink-0" />
+
+        <span className="min-w-0 break-words">
+          {t.reportDownloaded(result.fileName)}
+        </span>
+      </p>
+    );
+  }
+
+  if (result.status === "failed") {
+    return (
+      <p
+        role="alert"
+        data-report-result="failed"
+        data-report-kind={kind}
+        className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-clay/40 bg-clay-soft px-3.5 py-3 text-[13px] leading-6 text-clay"
+      >
+        <AlertIcon className="mt-1 h-4 w-4 shrink-0" />
+
+        <span className="min-w-0">{t.reportFailed}</span>
+      </p>
+    );
+  }
+
+  return null;
+}
+
+function ImportConfirmDialog({
+  t,
+  count,
+  requiredFields,
+  reportResult,
+  creatingReport,
+  onDownloadReport,
+  onCancel,
+  onConfirm,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        onCancel();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel]);
+
+  /*
+   * render ที่ body: .page-enter มี transform ทำให้ position: fixed
+   * อิงกรอบเนื้อหาแทนหน้าจอ กล่องยืนยันจะหลุดไปอยู่ท้ายหน้า
+   */
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/40 p-4 pb-[calc(16px+env(safe-area-inset-bottom))] sm:items-center"
+      onClick={onCancel}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="import-confirm-title"
+        aria-describedby="import-confirm-description"
+        data-testid="import-confirm"
+        className="vh-sheet page-enter max-h-full w-full max-w-md overflow-y-auto p-6 shadow-lift"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p className="vh-eyebrow flex items-center gap-3">
+          <span className="h-px w-6 bg-ochre" />
+          {t.confirmTitle}
+        </p>
+
+        <h2
+          id="import-confirm-title"
+          className="vh-display mt-3 text-[1.5rem] leading-tight"
+        >
+          {t.confirmCount(count)}
+        </h2>
+
+        <div id="import-confirm-description" className="mt-4 space-y-3 text-[14px] leading-6">
+          <p className="text-muted">
+            {t.confirmBatches(Math.ceil(count / IMPORT_BATCH_SIZE), IMPORT_BATCH_SIZE)}
+          </p>
+
+          <div>
+            <p className="vh-eyebrow !text-[10px]">{t.confirmRequired}</p>
+
+            <p className="mt-1 text-ink-soft">
+              {requiredFields.length
+                ? requiredFields.map((field) => t.fieldLabels[field]).join(", ")
+                : "—"}
+            </p>
+          </div>
+
+          <p className="rounded-[6px] border border-ochre/40 bg-ochre-soft px-3.5 py-3 text-[13px] text-ink-soft">
+            {t.confirmReportHint}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onDownloadReport}
+          disabled={creatingReport}
+          className="vh-btn vh-btn-ghost vh-btn-sm mt-3 -ml-3"
+        >
+          {creatingReport ? (
+            <LoadingIcon className="h-4 w-4 animate-spin" />
+          ) : (
+            <DownloadIcon className="h-4 w-4" />
+          )}
+
+          {t.downloadReport}
+        </button>
+
+        <ReportStatus t={t} result={reportResult} kind="screening" />
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="vh-btn vh-btn-outline"
+            autoFocus
+          >
+            {t.cancel}
+          </button>
+
+          <button
+            type="button"
+            data-confirm-import
+            onClick={onConfirm}
+            className="vh-btn vh-btn-primary"
+          >
+            <UploadIcon className="h-4 w-4" />
+            {t.importButton(count)}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
 }
 
 const STAT_TONES = {
@@ -1832,8 +2408,12 @@ async function removeStorageFile(path, logMessage) {
   }
 }
 
-/* เตือนก่อนปิดหรือรีเฟรชหน้าระหว่างที่งานยังไม่เสร็จ */
-function useWarnBeforeLeave(active) {
+/*
+ * เตือนก่อนปิดหรือรีเฟรชหน้าระหว่างที่งานยังไม่เสร็จ
+ * linkMessage: ถ้ามี จะถามยืนยันก่อนกดลิงก์ภายในเว็บด้วย
+ * (ดักใน capture phase ก่อนที่ next/link จะเปลี่ยนหน้า)
+ */
+function useWarnBeforeLeave(active, linkMessage = null) {
   useEffect(() => {
     if (!active) {
       return;
@@ -1845,10 +2425,40 @@ function useWarnBeforeLeave(active) {
       event.returnValue = "";
     }
 
+    function handleLinkClick(event) {
+      if (
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const link = event.target.closest?.("a[href]");
+
+      if (!link || link.target === "_blank" || link.hasAttribute("download")) {
+        return;
+      }
+
+      if (!window.confirm(linkMessage)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+
     window.addEventListener("beforeunload", handleBeforeUnload);
 
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [active]);
+    if (linkMessage) {
+      document.addEventListener("click", handleLinkClick, true);
+    }
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [active, linkMessage]);
 }
 
 function StepPanel({ number, title, description, children }) {
@@ -2001,6 +2611,25 @@ function AlertIcon({ className = "" }) {
       <circle cx="12" cy="12" r="9" />
       <path d="M12 8v5" />
       <path d="M12 16.5h.01" />
+    </SvgIcon>
+  );
+}
+
+function StopIcon({ className = "" }) {
+  return (
+    <SvgIcon className={className}>
+      <rect x="6.5" y="6.5" width="11" height="11" rx="1.5" />
+    </SvgIcon>
+  );
+}
+
+function RefreshIcon({ className = "" }) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M20 11a8 8 0 0 0-14.6-4.5L4 8" />
+      <path d="M4 4v4h4" />
+      <path d="M4 13a8 8 0 0 0 14.6 4.5L20 16" />
+      <path d="M20 20v-4h-4" />
     </SvgIcon>
   );
 }
