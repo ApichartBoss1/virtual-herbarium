@@ -54,6 +54,7 @@ import {
   classifyImportRows,
   cleanImportRows,
   getMissingFields,
+  getRowWarnings,
   readImportWorkbook,
 } from "@/lib/plantImportSheets";
 import {
@@ -662,13 +663,13 @@ function DataImportSection({ t, user }) {
     const reasonCounts = Object.fromEntries(SKIP_REASONS.map((reason) => [reason, 0]));
 
     parsed.rows.forEach((row) => {
-      let finalRow = row;
+      let finalRow = { ...row, warnings: getRowWarnings(row, requiredFields) };
 
       if (row.reason === null) {
         const missing = getMissingFields(row, requiredFields);
 
         if (missing.length > 0) {
-          finalRow = { ...row, reason: "incomplete", missing };
+          finalRow = { ...finalRow, reason: "incomplete", missing };
         }
       }
 
@@ -1010,11 +1011,11 @@ function DataImportSection({ t, user }) {
     [parsed],
   );
 
-  /* คำเตือนนับจากทุกแถวที่ไม่ใช่แถวว่าง */
+  /* คำเตือนนับจากทุกแถวที่ไม่ใช่แถวว่าง (ขึ้นกับช่องบังคับที่เลือก) */
   const warningCounts = useMemo(() => {
     const counts = {};
 
-    (parsed?.rows || []).forEach((row) => {
+    [...(summary?.ready || []), ...(summary?.skipped || [])].forEach((row) => {
       if (row.reason === "blank") {
         return;
       }
@@ -1025,7 +1026,7 @@ function DataImportSection({ t, user }) {
     });
 
     return counts;
-  }, [parsed]);
+  }, [summary]);
 
   const warningTotal = Object.values(warningCounts).reduce(
     (total, count) => total + count,
