@@ -18,6 +18,7 @@ import {
 } from "@/lib/plantQueries";
 import { supabasePublic } from "@/lib/supabasePublic";
 import { useLeafletMap } from "@/lib/useLeafletMap";
+import { isGeocoded } from "@/lib/coordinateSource";
 
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -86,6 +87,10 @@ const text = {
     allGroups: "ทุกกลุ่มพืช",
     allCollectors: "ผู้เก็บทั้งหมด",
     clearFilters: "ล้างตัวกรอง",
+    legendTitle: "สัญลักษณ์",
+    legendManual: "พิกัดที่บันทึกไว้",
+    legendApproximate: "พิกัดโดยประมาณจากชื่อสถานที่",
+    approximate: (km) => `พิกัดโดยประมาณ (±${km} กม.)`,
   },
   EN: {
     title: "Collection Map",
@@ -116,11 +121,26 @@ const text = {
     allGroups: "All Plant Groups",
     allCollectors: "All Collectors",
     clearFilters: "Clear Filters",
+    legendTitle: "Legend",
+    legendManual: "Recorded coordinates",
+    legendApproximate: "Approximate (from locality name)",
+    approximate: (km) => `Approximate coordinates (±${km} km)`,
   },
 };
 
 function formatNumber(value) {
   return Number(value || 0).toLocaleString("en-US");
+}
+
+/* ±5.8 กม. / ±37 กม. */
+function formatUncertaintyKm(meters) {
+  const km = Number(meters) / 1000;
+
+  if (!Number.isFinite(km) || km <= 0) {
+    return "?";
+  }
+
+  return km < 10 ? km.toFixed(1) : Math.round(km).toLocaleString("en-US");
 }
 
 /* =========================================================
@@ -363,6 +383,15 @@ function CollectionMap() {
           popupAnchor: [0, -10],
         });
 
+        /* พิกัดจากชื่อสถานที่ (geocoded): วงแหวนสีเหลืองอมส้ม */
+        const approximateIcon = L.divIcon({
+          className: "vh-map-pin",
+          html: '<span class="vh-map-pin-dot vh-map-pin-dot--approx"></span>',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+          popupAnchor: [0, -10],
+        });
+
         clusterGroup = L.markerClusterGroup({
           chunkedLoading: true,
           showCoverageOnHover: false,
@@ -373,7 +402,7 @@ function CollectionMap() {
 
         const markers = data.points.map((point) => {
           const marker = L.marker([point.latitude, point.longitude], {
-            icon,
+            icon: isGeocoded(point) ? approximateIcon : icon,
             keyboard: true,
             title: point.pnu_no != null ? `PNU ${point.pnu_no}` : "",
           });
@@ -570,6 +599,25 @@ function CollectionMap() {
           className="vh-collection-map absolute inset-0 z-0 dark:[&_.leaflet-tile-pane]:brightness-[0.78] dark:[&_.leaflet-tile-pane]:contrast-[1.04] dark:[&_.leaflet-tile-pane]:saturate-[0.82]"
         />
 
+        {data.status === "ready" && !isEmpty && (
+          <div
+            data-map-legend
+            className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-[6px] border border-rule bg-sheet-raised/95 px-3 py-2 text-[12px] leading-5 text-ink-soft shadow-sm"
+          >
+            <p className="vh-eyebrow !text-[9.5px]">{t.legendTitle}</p>
+
+            <p className="mt-1 flex items-center gap-2">
+              <span className="vh-map-pin-dot inline-block !h-3 !w-3 !border-2 shrink-0" />
+              {t.legendManual}
+            </p>
+
+            <p className="mt-0.5 flex items-center gap-2">
+              <span className="vh-map-pin-dot vh-map-pin-dot--approx inline-block !h-3 !w-3 !border-2 shrink-0" />
+              {t.legendApproximate}
+            </p>
+          </div>
+        )}
+
         {(data.status === "loading" || (data.status === "ready" && !markersReady && !isEmpty)) && (
           <MapOverlay>
             <div role="status" className="flex items-center gap-3">
@@ -647,6 +695,13 @@ const PIN_CSS = `
   border: 3px solid var(--sheet-raised);
   box-shadow: 0 3px 10px rgba(0,0,0,.24), 0 0 0 4px var(--moss-soft);
 }
+.vh-map-pin-dot--approx {
+  width: 16px;
+  height: 16px;
+  background: var(--sheet-raised);
+  border: 3px solid var(--ochre);
+  box-shadow: 0 2px 8px rgba(0,0,0,.22), 0 0 0 3px var(--ochre-soft);
+}
 .vh-collection-map .leaflet-popup-content-wrapper,
 .vh-collection-map .leaflet-popup-tip {
   background: var(--sheet-raised);
@@ -688,6 +743,18 @@ function createPopup(point, { t, router }) {
     family.textContent = point.family;
 
     root.appendChild(family);
+  }
+
+  if (isGeocoded(point)) {
+    const approximate = document.createElement("p");
+
+    approximate.className = "mt-1 text-[12px] !text-ochre";
+    approximate.dataset.approximate = "true";
+    approximate.textContent = t.approximate(
+      formatUncertaintyKm(point.coordinate_uncertainty_m),
+    );
+
+    root.appendChild(approximate);
   }
 
   const link = document.createElement("a");

@@ -17,6 +17,11 @@ import {
   getPlantImageStoragePath,
   preparePlantImage,
 } from "@/lib/plantImage";
+import {
+  COORDINATE_SQL_FILE,
+  getCoordinateSourceFields,
+  isMissingCoordinateColumnError,
+} from "@/lib/coordinateSource";
 
 /* =========================================================
    CONFIG
@@ -160,6 +165,7 @@ const COPY = {
     uploadError: "ไม่สามารถอัปโหลดรูปภาพได้",
 
     updateError: "ไม่สามารถแก้ไขข้อมูลได้",
+    missingCoordinateColumns: `ฐานข้อมูลยังไม่มีคอลัมน์ที่มาของพิกัด กรุณาให้ผู้ดูแลรันไฟล์ ${COORDINATE_SQL_FILE} ใน Supabase SQL Editor ก่อน แล้วบันทึกอีกครั้ง`,
 
     success: "แก้ไขข้อมูลพรรณไม้เรียบร้อยแล้ว",
 
@@ -272,6 +278,7 @@ const COPY = {
     uploadError: "Unable to upload image",
 
     updateError: "Unable to update plant",
+    missingCoordinateColumns: `The database does not have the coordinate source columns yet. Please run ${COORDINATE_SQL_FILE} in the Supabase SQL Editor first, then save again.`,
 
     success: "Plant record updated successfully",
 
@@ -370,6 +377,9 @@ export default function EditPlantPage() {
     family: "",
   });
 
+  /* พิกัดและที่มาของพิกัดตอนโหลด ใช้ตัดสินว่า admin เปลี่ยนพิกัดหรือไม่ */
+  const originalCoordinateRef = useRef(null);
+
   const fileInputRef = useRef(null);
 
   const cameraInputRef = useRef(null);
@@ -394,23 +404,8 @@ export default function EditPlantPage() {
           error: plantError,
         } = await supabase
           .from("plants")
-          .select(
-            `
-                id,
-                user_id,
-                pnu_no,
-                artificial_group,
-                family,
-                botanical_name,
-                collected_by,
-                collector_no,
-                locality,
-                latitude,
-                longitude,
-                elevation,
-                image_url
-              `,
-          )
+          /* "*" ให้หน้ายังเปิดได้แม้ยังไม่ได้รันไฟล์ 03 (ไม่มีคอลัมน์ coordinate_source) */
+          .select("*")
           .eq("id", plantId)
           .maybeSingle();
 
@@ -449,6 +444,12 @@ export default function EditPlantPage() {
               ? String(plant.elevation)
               : "",
         });
+
+        originalCoordinateRef.current = {
+          latitude: toFiniteNumberOrNull(plant.latitude),
+          longitude: toFiniteNumberOrNull(plant.longitude),
+          coordinate_source: plant.coordinate_source ?? null,
+        };
 
         setRecord({
           pnu_no:
@@ -782,6 +783,19 @@ export default function EditPlantPage() {
         image_url: imageUrl,
       };
 
+      /*
+       * พิกัดใหม่หรือเปลี่ยนพิกัด → manual, ลบพิกัด → null
+       * รายการ geocoded ที่ไม่ได้แตะพิกัด → คงค่าเดิม
+       */
+      Object.assign(
+        updateData,
+        getCoordinateSourceFields(
+          updateData.latitude,
+          updateData.longitude,
+          originalCoordinateRef.current,
+        ),
+      );
+
       const {
         data,
 
@@ -795,6 +809,10 @@ export default function EditPlantPage() {
 
       if (updateError?.code === "23505") {
         throw new Error(t.pnuDuplicate);
+      }
+
+      if (isMissingCoordinateColumnError(updateError)) {
+        throw new Error(t.missingCoordinateColumns);
       }
 
       if (updateError || !data) {

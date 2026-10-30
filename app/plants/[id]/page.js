@@ -11,6 +11,7 @@ import SiteFooter from "@/components/SiteFooter";
 import { useSignedInAdmin } from "@/components/AdminContext";
 import { fetchPublicPlant, plantFiltersToSearch } from "@/lib/plantQueries";
 import { useLeafletMap } from "@/lib/useLeafletMap";
+import { formatUncertaintyKm, isGeocoded } from "@/lib/coordinateSource";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 import "leaflet/dist/leaflet.css";
@@ -84,6 +85,10 @@ export default function PlantDetailPage() {
       noCoordinates: "รายการนี้ยังไม่มีข้อมูลพิกัด",
       mapHint: "แผนที่แสดงตำแหน่งจากละติจูดและลองจิจูดที่บันทึกไว้",
       mapPinLabel: "ตำแหน่งนี้",
+      approximateCoordinates: (km) =>
+        `พิกัดโดยประมาณจากชื่อสถานที่ (±${km} กม.)`,
+      approximateArea: "บริเวณที่น่าจะเป็นตำแหน่งเก็บตัวอย่าง",
+      approximate: "โดยประมาณ",
       meters: "ม.",
 
       image: "ภาพตัวอย่างพรรณไม้",
@@ -151,6 +156,10 @@ export default function PlantDetailPage() {
       mapHint:
         "The map shows the position from the saved latitude and longitude.",
       mapPinLabel: "This location",
+      approximateCoordinates: (km) =>
+        `Approximate coordinates from the locality name (±${km} km)`,
+      approximateArea: "Likely collection area",
+      approximate: "approximate",
       meters: "m",
 
       image: "Specimen image",
@@ -655,6 +664,10 @@ function HerbariumLabel({
 
   const elevationNumber = toApproxNumberOrNull(plant.elevation);
 
+  const approximate = hasCoordinates && isGeocoded(plant);
+
+  const uncertaintyKm = formatUncertaintyKm(plant.coordinate_uncertainty_m);
+
   const recordedDate = formatRecordDate(plant.created_at, isEnglish);
 
   const citation = [
@@ -769,11 +782,22 @@ function HerbariumLabel({
 
           <LabelRow label={t.coordinates}>
             {hasCoordinates ? (
-              <span className="font-mono text-[13px] tabular-nums">
-                {formatHemisphere(latitude, true)}
-                <span className="text-faint">, </span>
-                {formatHemisphere(longitude, false)}
-              </span>
+              <>
+                <span className="font-mono text-[13px] tabular-nums">
+                  {formatHemisphere(latitude, true)}
+                  <span className="text-faint">, </span>
+                  {formatHemisphere(longitude, false)}
+                </span>
+
+                {approximate && (
+                  <span
+                    data-approximate-coordinates
+                    className="mt-1 block text-[12px] text-ochre"
+                  >
+                    {t.approximateCoordinates(uncertaintyKm)}
+                  </span>
+                )}
+              </>
             ) : (
               <EmptyValue text={t.noData} />
             )}
@@ -783,6 +807,11 @@ function HerbariumLabel({
             {elevationNumber !== null ? (
               <span className="font-mono text-[13px] tabular-nums">
                 {Math.round(elevationNumber).toLocaleString()} {t.meters}
+                {approximate && (
+                  <span className="font-sans text-[12px] text-ochre">
+                    {" "}({t.approximate})
+                  </span>
+                )}
               </span>
             ) : (
               <EmptyValue text={t.noData} />
@@ -917,6 +946,11 @@ function ReadOnlyLocationMap({ plant, t }) {
 
   const hasCoordinates = latitude !== null && longitude !== null;
 
+  /* พิกัดจากชื่อสถานที่: แสดงวงกลมรัศมีความคลาดเคลื่อนแทนหมุดอย่างเดียว */
+  const approximate = hasCoordinates && isGeocoded(plant);
+
+  const uncertaintyM = Number(plant?.coordinate_uncertainty_m) || null;
+
   const markerRef = useRef(null);
 
   const { map } = useLeafletMap(mapContainerRef, {
@@ -951,10 +985,42 @@ function ReadOnlyLocationMap({ plant, t }) {
          MINIMAL MARKER (uses design tokens)
       ============================================= */
 
+      if (approximate && uncertaintyM) {
+        /* แผนที่ใช้ canvas (preferCanvas) ซึ่งอ่าน var(--ochre) ไม่ได้ จึงอ่านค่าสีจริงจาก token */
+        const ochre =
+          getComputedStyle(document.documentElement)
+            .getPropertyValue("--ochre")
+            .trim() || "#9a6b1f";
+
+        const area = L.circle([latitude, longitude], {
+          radius: uncertaintyM,
+          color: ochre,
+          weight: 1.5,
+          dashArray: "6 5",
+          fillColor: ochre,
+          fillOpacity: 0.12,
+        }).addTo(createdMap);
+
+        area.bindTooltip(t.approximateArea, { sticky: true, opacity: 0.95 });
+
+        createdMap.fitBounds(area.getBounds(), { padding: [24, 24] });
+      }
+
       const markerIcon = L.divIcon({
         className: "",
 
-        html: `
+        html: approximate
+          ? `
+          <div style="
+            width:14px;
+            height:14px;
+            border-radius:999px;
+            background:var(--sheet-raised);
+            border:3px solid var(--ochre);
+            box-shadow:0 2px 8px rgba(0,0,0,.22);
+          "></div>
+        `
+          : `
           <div style="
             width:18px;
             height:18px;
@@ -967,8 +1033,8 @@ function ReadOnlyLocationMap({ plant, t }) {
           "></div>
         `,
 
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
+        iconSize: approximate ? [14, 14] : [18, 18],
+        iconAnchor: approximate ? [7, 7] : [9, 9],
         popupAnchor: [0, -12],
       });
 
@@ -978,7 +1044,7 @@ function ReadOnlyLocationMap({ plant, t }) {
         icon: markerIcon,
       }).addTo(createdMap);
 
-      marker.bindTooltip(t.mapPinLabel, {
+      marker.bindTooltip(approximate ? t.approximateArea : t.mapPinLabel, {
         direction: "top",
         offset: [0, -10],
         opacity: 0.95,
@@ -998,10 +1064,18 @@ function ReadOnlyLocationMap({ plant, t }) {
 
     marker.setLatLng([latitude, longitude]);
 
-    marker.setTooltipContent(t.mapPinLabel);
+    marker.setTooltipContent(approximate ? t.approximateArea : t.mapPinLabel);
 
     map.setView([latitude, longitude], map.getZoom(), { animate: false });
-  }, [map, hasCoordinates, latitude, longitude, t.mapPinLabel]);
+  }, [
+    map,
+    hasCoordinates,
+    latitude,
+    longitude,
+    approximate,
+    t.approximateArea,
+    t.mapPinLabel,
+  ]);
 
   const latitudeDms = hasCoordinates ? decimalToDms(latitude, true) : "";
 
@@ -1047,10 +1121,20 @@ function ReadOnlyLocationMap({ plant, t }) {
             {formatHemisphere(longitude, false, 7)}
           </p>
 
-          <p className="flex items-center gap-1.5 text-[11.5px] text-faint">
-            <InfoIcon className="h-3.5 w-3.5 shrink-0" />
-            {t.mapHint}
-          </p>
+          {approximate ? (
+            <p
+              data-approximate-caption
+              className="flex items-center gap-1.5 text-[11.5px] text-ochre"
+            >
+              <InfoIcon className="h-3.5 w-3.5 shrink-0" />
+              {t.approximateCoordinates(formatUncertaintyKm(uncertaintyM))}
+            </p>
+          ) : (
+            <p className="flex items-center gap-1.5 text-[11.5px] text-faint">
+              <InfoIcon className="h-3.5 w-3.5 shrink-0" />
+              {t.mapHint}
+            </p>
+          )}
         </div>
       </div>
 
@@ -1084,6 +1168,11 @@ function ReadOnlyLocationMap({ plant, t }) {
 
           <span className="ml-auto font-mono text-[13px] tabular-nums text-ink">
             {Math.round(elevationNumber)} {t.meters}
+            {approximate && (
+              <span className="font-sans text-[12px] text-ochre">
+                {" "}({t.approximate})
+              </span>
+            )}
           </span>
         </div>
       )}
@@ -1091,6 +1180,7 @@ function ReadOnlyLocationMap({ plant, t }) {
   );
 }
 
+/* ±5.8 กม. / ±37 กม. */
 /* =========================================================
    COORDINATE DISPLAY
 ========================================================= */

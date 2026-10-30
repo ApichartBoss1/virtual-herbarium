@@ -1,12 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import Navbar from "@/components/Navbar";
 import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
+import { useWarnBeforeLeave } from "@/lib/useWarnBeforeLeave";
+import GeocodeFillPanel from "@/components/GeocodeFillPanel";
+import NameReportPanel from "@/components/NameReportPanel";
+import {
+  AlertBox,
+  AlertIcon,
+  ArrowLeftIcon,
+  CheckIcon,
+  DownloadIcon,
+  ImageIcon,
+  LoadingIcon,
+  PagedTable,
+  ProgressBar,
+  RefreshIcon,
+  StatCard,
+  StepPanel,
+  StopIcon,
+  UploadIcon,
+  formatNumber,
+} from "@/components/ImportUi";
 import {
   IMAGE_INPUT_ACCEPT,
   getImageExtension,
@@ -15,23 +36,33 @@ import {
 } from "@/lib/plantImage";
 import {
   IMPORT_BATCH_SIZE,
-  IMPORT_FIELDS,
-  IMPORT_FILE_ACCEPT,
-  MAX_IMPORT_ROWS,
-  REQUIRED_IMPORT_FIELDS,
-  autoMapColumns,
-  chunkArray,
-  downloadCsv,
+  downloadBlob,
   downloadImportTemplate,
+  fetchAllPnuNumbers,
   fetchPlantsByPnu,
-  findExistingPnuNumbers,
   getPnuFromFileName,
-  readImportFile,
+  importPlantRows,
+  loadSheetJs,
   runWithConcurrency,
-  validateImportRows,
 } from "@/lib/plantImport";
-
-const PREVIEW_PAGE_SIZE = 50;
+import {
+  MAX_SHEET_IMPORT_ROWS,
+  REQUIRED_FIELD_OPTIONS,
+  SHEET_IMPORT_ACCEPT,
+  SHEET_IMPORT_FIELDS,
+  SKIP_REASONS,
+  classifyImportRows,
+  cleanImportRows,
+  getMissingFields,
+  getRowWarnings,
+  readImportWorkbook,
+} from "@/lib/plantImportSheets";
+import {
+  XLSX_MIME_TYPE,
+  buildImportReportWorkbook,
+  getImportReportFileName,
+  writeWorkbookWithFrozenHeader,
+} from "@/lib/plantImportReport";
 
 const IMAGE_BUCKET = "plant-images";
 
@@ -51,72 +82,140 @@ const COPY = {
 
     tabData: "นำเข้าข้อมูล (Excel/CSV)",
     tabImages: "นำเข้ารูปตามหมายเลข PNU",
+    tabTools: "เติมพิกัด / ตรวจชื่อ",
 
     stepFile: "เลือกไฟล์",
-    stepFileDesc: `รองรับ .xlsx และ .csv (UTF-8) ไม่เกิน 10 MB และไม่เกิน ${MAX_IMPORT_ROWS.toLocaleString("th-TH")} แถวต่อไฟล์`,
+    stepFileDesc: `รองรับ .xlsx และ .csv (UTF-8) ไม่เกิน 10 MB อ่านทุกชีตรวมกัน ไม่เกิน ${MAX_SHEET_IMPORT_ROWS.toLocaleString("th-TH")} แถวต่อไฟล์`,
     downloadTemplate: "ดาวน์โหลดเทมเพลต .xlsx",
     chooseFile: "เลือกไฟล์ข้อมูล",
     chooseFileHint: "แตะเพื่อเลือกไฟล์ .xlsx หรือ .csv",
-    reading: "กำลังอ่านไฟล์...",
-    fileSummary: (name, rows) =>
-      `${name} • ${rows.toLocaleString("th-TH")} แถว`,
+    reading: "กำลังอ่านไฟล์และตรวจข้อมูล...",
+    fileSummary: (name, rows, sheets) =>
+      `${name} • ${sheets.toLocaleString("th-TH")} ชีต • ${rows.toLocaleString("th-TH")} แถว`,
+    elapsed: (seconds) => `อ่านและตรวจเสร็จใน ${seconds} วินาที`,
+    sheetRows: "จำนวนแถวต่อชีต",
+    sheet: "ชีต",
+    rows: "แถว",
 
     stepMapping: "จับคู่คอลัมน์",
     stepMappingDesc:
-      "หัวคอลัมน์ที่ตรงกับชื่อฟิลด์จะถูกจับคู่อัตโนมัติ หากไม่ตรงให้เลือกคอลัมน์เอง",
-    notImported: "— ไม่นำเข้า —",
-    columnLabel: (index, name) => `คอลัมน์ ${index + 1}${name ? `: ${name}` : ""}`,
-    required: "จำเป็น",
-    mapRequired: "กรุณาจับคู่คอลัมน์ pnu_no และ botanical_name ก่อนตรวจสอบ",
-    validate: "ตรวจสอบข้อมูล",
-    validating: "กำลังตรวจสอบข้อมูล...",
+      "จับคู่จากหัวคอลัมน์อัตโนมัติ โดยไม่สนตัวพิมพ์ใหญ่-เล็กและช่องว่าง",
+    field: "ฟิลด์ในระบบ",
+    fileColumn: "คอลัมน์ในไฟล์",
+    columnNotFound: "ไม่พบในไฟล์",
+    unusedColumns: "คอลัมน์ที่ไม่นำเข้า",
+    noUnusedColumns: "ไม่มี",
 
-    stepPreview: "ตรวจสอบก่อนนำเข้า",
-    summary: (ready, invalid) =>
-      `พร้อมนำเข้า ${ready.toLocaleString("th-TH")} แถว / มีปัญหา ${invalid.toLocaleString("th-TH")} แถว`,
-    filterAll: "ทุกแถว",
-    filterInvalid: "เฉพาะแถวที่มีปัญหา",
+    stepSummary: "สรุปการคัดข้อมูล",
+    stepSummaryDesc:
+      "ขั้นนี้ยังไม่บันทึกข้อมูลลงระบบ แถวหนึ่งถูกคัดออกด้วยเหตุผลแรกที่พบตามลำดับ a–e",
+    requiredTitle: "ช่องที่ต้องมีข้อมูล",
+    totalRows: "แถวทั้งหมด",
+    readyRows: "พร้อมนำเข้า",
+    warnings: "คำเตือน",
+    duplicateNumbers: (count) => `${count.toLocaleString("th-TH")} เลข`,
+    warningsHint: "ไม่ถูกคัดออก",
+
+    fieldLabels: {
+      pnu_no: "เลข PNU",
+      artificial_group: "กลุ่มพืช",
+      family: "วงศ์",
+      botanical_name: "ชื่อวิทยาศาสตร์",
+      collected_by: "ผู้เก็บ",
+      collector_no: "เลขผู้เก็บ",
+      locality: "สถานที่เก็บ",
+      latitude: "ละติจูด",
+      longitude: "ลองจิจูด",
+      elevation: "ความสูง",
+    },
+
+    reasons: {
+      blank: "แถวว่าง",
+      pnuInvalid: "PNU ไม่ถูกต้อง",
+      pnuDuplicateInFile: "PNU ซ้ำในไฟล์",
+      pnuExists: "PNU มีในระบบแล้ว",
+      incomplete: "ข้อมูลไม่ครบ",
+    },
+
+    warningSummary: {
+      artificialGroupUnknown: "กลุ่มพืชไม่รู้จัก (ไม่นำเข้าค่านี้)",
+      collectorNoDate: "เลขผู้เก็บถูก Excel แปลงเป็นวันที่ (ถือว่าไม่มีค่า)",
+      latitudeInvalid: "ละติจูดไม่ถูกต้อง (ไม่นำเข้าค่านี้)",
+      longitudeInvalid: "ลองจิจูดไม่ถูกต้อง (ไม่นำเข้าค่านี้)",
+    },
+
+    warningLabels: {
+      artificialGroupUnknown: (value) => `กลุ่มพืชไม่รู้จัก “${value}” (ไม่นำเข้าค่านี้)`,
+      collectorNoDate: (value) => `เลขผู้เก็บถูก Excel แปลงเป็นวันที่ “${value}”`,
+      latitudeInvalid: () => "ละติจูดไม่ถูกต้อง (ไม่นำเข้าค่านี้)",
+      longitudeInvalid: () => "ลองจิจูดไม่ถูกต้อง (ไม่นำเข้าค่านี้)",
+    },
+
+    readyTitle: "แถวที่พร้อมนำเข้า",
+    skippedTitle: "แถวที่ถูกคัดออก",
+    filterAll: "ทุกเหตุผล",
     row: "แถว",
-    status: "สถานะ",
-    statusReady: "พร้อมนำเข้า",
+    reason: "เหตุผล",
+    missing: "ช่องที่ขาด",
+    warning: "คำเตือน",
     noRows: "ไม่มีแถวที่ตรงกับตัวกรอง",
     page: (current, total) => `หน้า ${current} / ${total}`,
     previous: "ก่อนหน้า",
     next: "ถัดไป",
-    import: (count) => `นำเข้า ${count.toLocaleString("th-TH")} แถว`,
-    nothingToImport: "ไม่มีแถวที่พร้อมนำเข้า",
+    importButton: (count) => `นำเข้า ${count.toLocaleString("th-TH")} รายการ`,
+    nothingToImport: "ไม่มีรายการที่พร้อมนำเข้า",
+    recheckFirst: "นำเข้าไฟล์นี้แล้ว กด “ตรวจใหม่” เพื่ออ่าน PNU จากฐานข้อมูลก่อนนำเข้าอีกครั้ง",
+    confirmTitle: "ยืนยันการนำเข้า",
+    confirmCount: (count) =>
+      `จะนำเข้า ${count.toLocaleString("th-TH")} รายการลงระบบ`,
+    confirmBatches: (batches, size) =>
+      `ส่งทีละชุด ${size.toLocaleString("th-TH")} รายการ รวม ${batches.toLocaleString("th-TH")} ชุด`,
+    confirmRequired: "ช่องบังคับที่ใช้",
+    confirmReportHint:
+      "แนะนำให้ดาวน์โหลดรายงานเก็บไว้ก่อน เพื่อใช้ตรวจแถวที่ถูกคัดออกภายหลัง",
+    cancel: "ยกเลิก",
     importing: "กำลังนำเข้าข้อมูล...",
-    progress: (done, total) =>
-      `${done.toLocaleString("th-TH")} / ${total.toLocaleString("th-TH")} แถว`,
-
-    stepResult: "ผลการนำเข้า",
-    resultSummary: (success, failed) =>
-      `นำเข้าสำเร็จ ${success.toLocaleString("th-TH")} แถว / ไม่สำเร็จ ${failed.toLocaleString("th-TH")} แถว`,
-    failedRows: "แถวที่ไม่สำเร็จ",
-    downloadFailed: "ดาวน์โหลดรายงานแถวที่ไม่สำเร็จ (CSV)",
+    importProgress: (batch, total, imported) =>
+      `ชุดที่ ${batch.toLocaleString("th-TH")} จาก ${total.toLocaleString("th-TH")} • นำเข้าแล้ว ${imported.toLocaleString("th-TH")} รายการ`,
+    retryingRows: "ชุดนี้มี PNU ที่ถูกเพิ่มในระบบระหว่างนำเข้า กำลังลองใหม่ทีละรายการ...",
+    stop: "หยุด",
+    stopping: "จะหยุดหลังชุดปัจจุบันเสร็จ...",
+    leaveWarning:
+      "กำลังนำเข้าข้อมูลอยู่ ถ้าออกจากหน้านี้ ระบบจะหยุดหลังชุดปัจจุบันและคุณจะไม่เห็นสรุปผล ต้องการออกจากหน้านี้หรือไม่?",
+    resultTitle: "ผลการนำเข้า",
+    resultStopped: "หยุดก่อนนำเข้าครบทุกชุด",
+    resultElapsed: (seconds) => `ใช้เวลา ${seconds} วินาที`,
+    importStatuses: {
+      success: "สำเร็จ",
+      duplicate: "ข้ามเพราะซ้ำระหว่างนำเข้า",
+      failed: "ล้มเหลว",
+      notImported: "ยังไม่ได้นำเข้า (หยุดก่อน)",
+    },
+    issueRows: "รายการที่ไม่ได้นำเข้า",
+    status: "สถานะ",
+    errorMessage: "ข้อความ error",
+    downloadResultReport: "ดาวน์โหลดรายงานรวมผลการนำเข้า (Excel)",
+    recheck: "ตรวจใหม่",
+    rechecking: "กำลังอ่าน PNU จากฐานข้อมูล...",
+    recheckHint:
+      "อ่านรายการ PNU จากฐานข้อมูลอีกครั้ง แถวที่นำเข้าแล้วจะย้ายไปอยู่ข้อ d",
+    downloadReport: "ดาวน์โหลดรายงาน (Excel)",
+    creatingReport: "กำลังสร้างรายงาน...",
+    reportDownloaded: (fileName) =>
+      `ดาวน์โหลดแล้ว: ${fileName} (ดูในโฟลเดอร์ Downloads)`,
+    reportFailed: "สร้างรายงาน Excel ไม่สำเร็จ กรุณาลองอีกครั้ง",
     goToList: "ไปหน้ารายการพรรณไม้",
-    startOver: "นำเข้าไฟล์ใหม่",
-    reason: "เหตุผล",
 
     errors: {
       NO_FILE: "กรุณาเลือกไฟล์",
       INVALID_FILE_TYPE: "รองรับเฉพาะไฟล์ .xlsx และ .csv",
       FILE_TOO_LARGE: "ไฟล์ต้องมีขนาดไม่เกิน 10 MB",
-      TOO_MANY_ROWS: `ไฟล์ต้องมีข้อมูลไม่เกิน ${MAX_IMPORT_ROWS.toLocaleString("th-TH")} แถว`,
-      EMPTY_FILE: "ไม่พบข้อมูลในไฟล์ (แถวแรกต้องเป็นหัวคอลัมน์)",
+      TOO_MANY_ROWS: `ไฟล์ต้องมีข้อมูลไม่เกิน ${MAX_SHEET_IMPORT_ROWS.toLocaleString("th-TH")} แถว`,
+      EMPTY_FILE: "ไม่พบข้อมูลในไฟล์ (แถวแรกของแต่ละชีตต้องเป็นหัวคอลัมน์)",
       READ_FAILED: "ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบรูปแบบไฟล์",
-      validateFailed: "ไม่สามารถตรวจสอบข้อมูลกับฐานข้อมูลได้",
-
-      pnuRequired: "ไม่มีหมายเลข PNU",
-      pnuInvalid: "หมายเลข PNU ต้องเป็นจำนวนเต็มบวก",
-      botanicalRequired: "ไม่มีชื่อวิทยาศาสตร์",
-      latitudeInvalid: "ละติจูดต้องเป็นตัวเลขระหว่าง −90 ถึง 90",
-      longitudeInvalid: "ลองจิจูดต้องเป็นตัวเลขระหว่าง −180 ถึง 180",
-      imageUrlInvalid: "image_url ต้องขึ้นต้นด้วย https://",
-      pnuDuplicateInFile: "หมายเลข PNU ซ้ำกันในไฟล์",
-      pnuExists: "หมายเลข PNU นี้มีอยู่ในระบบแล้ว",
-      pnuDuplicate: "หมายเลข PNU นี้มีอยู่ในระบบแล้ว",
-      insertFailed: "บันทึกไม่สำเร็จ",
+      noPnuColumn: (sheets) =>
+        `ไม่พบคอลัมน์ PNU (เช่น “PNU no.” หรือ “pnu_no”) ในชีต: ${sheets.join(", ")} จึงหยุดการตรวจ กรุณาแก้หัวคอลัมน์แล้วเลือกไฟล์ใหม่`,
+      existingFailed: "ไม่สามารถดึงเลข PNU ที่มีในระบบได้ กรุณาลองใหม่",
     },
 
     img: {
@@ -183,72 +282,140 @@ const COPY = {
 
     tabData: "Import Data (Excel/CSV)",
     tabImages: "Import Images by PNU",
+    tabTools: "Coordinates & Names",
 
     stepFile: "Choose File",
-    stepFileDesc: `Supports .xlsx and .csv (UTF-8), up to 10 MB and ${MAX_IMPORT_ROWS.toLocaleString("en-US")} rows per file.`,
+    stepFileDesc: `Supports .xlsx and .csv (UTF-8) up to 10 MB. All sheets are read together, up to ${MAX_SHEET_IMPORT_ROWS.toLocaleString("en-US")} rows per file.`,
     downloadTemplate: "Download .xlsx Template",
     chooseFile: "Choose Data File",
     chooseFileHint: "Tap to choose a .xlsx or .csv file",
-    reading: "Reading file...",
-    fileSummary: (name, rows) =>
-      `${name} • ${rows.toLocaleString("en-US")} rows`,
+    reading: "Reading and checking the file...",
+    fileSummary: (name, rows, sheets) =>
+      `${name} • ${sheets.toLocaleString("en-US")} sheets • ${rows.toLocaleString("en-US")} rows`,
+    elapsed: (seconds) => `Read and checked in ${seconds} s`,
+    sheetRows: "Rows per sheet",
+    sheet: "Sheet",
+    rows: "Rows",
 
-    stepMapping: "Map Columns",
+    stepMapping: "Column Mapping",
     stepMappingDesc:
-      "Columns whose header matches a field name are mapped automatically. Choose the column yourself when it does not match.",
-    notImported: "— Not imported —",
-    columnLabel: (index, name) => `Column ${index + 1}${name ? `: ${name}` : ""}`,
-    required: "Required",
-    mapRequired: "Please map the pnu_no and botanical_name columns before checking.",
-    validate: "Check Data",
-    validating: "Checking data...",
+      "Columns are matched automatically by header, ignoring letter case and spaces.",
+    field: "System field",
+    fileColumn: "Column in file",
+    columnNotFound: "Not in file",
+    unusedColumns: "Columns not imported",
+    noUnusedColumns: "None",
 
-    stepPreview: "Review Before Import",
-    summary: (ready, invalid) =>
-      `Ready to import ${ready.toLocaleString("en-US")} rows / ${invalid.toLocaleString("en-US")} rows with problems`,
-    filterAll: "All rows",
-    filterInvalid: "Rows with problems",
+    stepSummary: "Filtering Summary",
+    stepSummaryDesc:
+      "Nothing is saved at this step. Each row is excluded for the first reason found, in order a–e.",
+    requiredTitle: "Fields that must have a value",
+    totalRows: "Total rows",
+    readyRows: "Ready to import",
+    warnings: "Warnings",
+    duplicateNumbers: (count) => `${count.toLocaleString("en-US")} numbers`,
+    warningsHint: "Not excluded",
+
+    fieldLabels: {
+      pnu_no: "PNU No.",
+      artificial_group: "Artificial group",
+      family: "Family",
+      botanical_name: "Botanical name",
+      collected_by: "Collector",
+      collector_no: "Collector no.",
+      locality: "Locality",
+      latitude: "Latitude",
+      longitude: "Longitude",
+      elevation: "Elevation",
+    },
+
+    reasons: {
+      blank: "Blank row",
+      pnuInvalid: "Invalid PNU",
+      pnuDuplicateInFile: "PNU duplicated in file",
+      pnuExists: "PNU already in system",
+      incomplete: "Incomplete",
+    },
+
+    warningSummary: {
+      artificialGroupUnknown: "Unknown artificial group (value not imported)",
+      collectorNoDate: "Collector no. converted to a date by Excel (treated as empty)",
+      latitudeInvalid: "Invalid latitude (value not imported)",
+      longitudeInvalid: "Invalid longitude (value not imported)",
+    },
+
+    warningLabels: {
+      artificialGroupUnknown: (value) => `Unknown artificial group “${value}” (value not imported)`,
+      collectorNoDate: (value) => `Collector no. was converted to a date by Excel “${value}”`,
+      latitudeInvalid: () => "Invalid latitude (value not imported)",
+      longitudeInvalid: () => "Invalid longitude (value not imported)",
+    },
+
+    readyTitle: "Rows ready to import",
+    skippedTitle: "Excluded rows",
+    filterAll: "All reasons",
     row: "Row",
-    status: "Status",
-    statusReady: "Ready",
+    reason: "Reason",
+    missing: "Missing fields",
+    warning: "Warnings",
     noRows: "No rows match this filter",
     page: (current, total) => `Page ${current} / ${total}`,
     previous: "Previous",
     next: "Next",
-    import: (count) => `Import ${count.toLocaleString("en-US")} rows`,
-    nothingToImport: "No rows are ready to import",
+    importButton: (count) => `Import ${count.toLocaleString("en-US")} records`,
+    nothingToImport: "No records are ready to import",
+    recheckFirst: "This file has been imported. Press “Check Again” to reload PNU numbers from the database before importing again.",
+    confirmTitle: "Confirm Import",
+    confirmCount: (count) =>
+      `${count.toLocaleString("en-US")} records will be imported into the system`,
+    confirmBatches: (batches, size) =>
+      `Sent in batches of ${size.toLocaleString("en-US")}, ${batches.toLocaleString("en-US")} batches in total`,
+    confirmRequired: "Required fields used",
+    confirmReportHint:
+      "We recommend downloading the report first so you can review the excluded rows later.",
+    cancel: "Cancel",
     importing: "Importing data...",
-    progress: (done, total) =>
-      `${done.toLocaleString("en-US")} / ${total.toLocaleString("en-US")} rows`,
-
-    stepResult: "Import Result",
-    resultSummary: (success, failed) =>
-      `Imported ${success.toLocaleString("en-US")} rows / ${failed.toLocaleString("en-US")} rows failed`,
-    failedRows: "Failed Rows",
-    downloadFailed: "Download failed rows report (CSV)",
+    importProgress: (batch, total, imported) =>
+      `Batch ${batch.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} • ${imported.toLocaleString("en-US")} records imported`,
+    retryingRows: "Some PNU numbers in this batch were added during the import. Retrying one record at a time...",
+    stop: "Stop",
+    stopping: "Stopping after the current batch...",
+    leaveWarning:
+      "Data is being imported. If you leave this page, the import stops after the current batch and you will not see the summary. Leave this page?",
+    resultTitle: "Import Result",
+    resultStopped: "Stopped before all batches were imported",
+    resultElapsed: (seconds) => `Took ${seconds} s`,
+    importStatuses: {
+      success: "Succeeded",
+      duplicate: "Skipped (added during import)",
+      failed: "Failed",
+      notImported: "Not imported (stopped)",
+    },
+    issueRows: "Records not imported",
+    status: "Status",
+    errorMessage: "Error message",
+    downloadResultReport: "Download Report with Import Result (Excel)",
+    recheck: "Check Again",
+    rechecking: "Reading PNU numbers from the database...",
+    recheckHint:
+      "Reload PNU numbers from the database. Imported rows move to rule d.",
+    downloadReport: "Download Report (Excel)",
+    creatingReport: "Creating report...",
+    reportDownloaded: (fileName) =>
+      `Downloaded: ${fileName} (check your Downloads folder)`,
+    reportFailed: "Unable to create the Excel report. Please try again.",
     goToList: "Go to Plant List",
-    startOver: "Import Another File",
-    reason: "Reason",
 
     errors: {
       NO_FILE: "Please choose a file",
       INVALID_FILE_TYPE: "Only .xlsx and .csv files are supported",
       FILE_TOO_LARGE: "The file must be 10 MB or smaller",
-      TOO_MANY_ROWS: `The file must contain no more than ${MAX_IMPORT_ROWS.toLocaleString("en-US")} rows`,
-      EMPTY_FILE: "No data found in the file (the first row must be the header)",
+      TOO_MANY_ROWS: `The file must contain no more than ${MAX_SHEET_IMPORT_ROWS.toLocaleString("en-US")} rows`,
+      EMPTY_FILE: "No data found in the file (the first row of each sheet must be the header)",
       READ_FAILED: "Unable to read the file. Please check the file format.",
-      validateFailed: "Unable to check the data against the database",
-
-      pnuRequired: "Missing PNU No.",
-      pnuInvalid: "PNU No. must be a positive whole number",
-      botanicalRequired: "Missing botanical name",
-      latitudeInvalid: "Latitude must be a number between −90 and 90",
-      longitudeInvalid: "Longitude must be a number between −180 and 180",
-      imageUrlInvalid: "image_url must start with https://",
-      pnuDuplicateInFile: "PNU No. is duplicated within the file",
-      pnuExists: "This PNU No. already exists in the system.",
-      pnuDuplicate: "This PNU No. already exists in the system.",
-      insertFailed: "Unable to save",
+      noPnuColumn: (sheets) =>
+        `No PNU column (e.g. “PNU no.” or “pnu_no”) found in sheet: ${sheets.join(", ")}. Checking stopped. Please fix the header and choose the file again.`,
+      existingFailed: "Unable to load the PNU numbers already in the system. Please try again.",
     },
 
     img: {
@@ -364,6 +531,7 @@ export default function ImportPlantsPage() {
           {[
             ["data", t.tabData],
             ["images", t.tabImages],
+            ["tools", t.tabTools],
           ].map(([value, label]) => (
             <button
               key={value}
@@ -402,6 +570,18 @@ export default function ImportPlantsPage() {
         >
           <ImageImportSection t={t} user={user} />
         </div>
+
+        <div
+          role="tabpanel"
+          id="import-panel-tools"
+          aria-labelledby="import-tab-tools"
+          hidden={tab !== "tools"}
+          className="mt-7 space-y-6"
+        >
+          <GeocodeFillPanel mode="all" />
+
+          <NameReportPanel />
+        </div>
       </div>
     </main>
   );
@@ -409,16 +589,11 @@ export default function ImportPlantsPage() {
 
 /* =========================================================
    DATA IMPORT (EXCEL / CSV)
+   ขั้นนี้อ่านทุกชีต ทำความสะอาด และคัดแถว ยังไม่บันทึกลงฐานข้อมูล
 ========================================================= */
 
 function DataImportSection({ t, user }) {
   const [fileName, setFileName] = useState("");
-
-  const [headers, setHeaders] = useState([]);
-
-  const [rows, setRows] = useState([]);
-
-  const [mapping, setMapping] = useState({});
 
   const [reading, setReading] = useState(false);
 
@@ -426,60 +601,99 @@ function DataImportSection({ t, user }) {
 
   const [error, setError] = useState("");
 
-  /* ผลการตรวจ: null = ยังไม่ได้ตรวจ */
-  const [checkedRows, setCheckedRows] = useState(null);
+  /* ผลการอ่าน: null = ยังไม่ได้เลือกไฟล์ */
+  const [parsed, setParsed] = useState(null);
 
-  const [validating, setValidating] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(null);
 
-  const [filter, setFilter] = useState("all");
+  const [requiredFields, setRequiredFields] = useState(REQUIRED_FIELD_OPTIONS);
 
-  const [previewPage, setPreviewPage] = useState(1);
+  const [skipFilter, setSkipFilter] = useState("all");
 
-  const [importing, setImporting] = useState(false);
+  const [readyPage, setReadyPage] = useState(1);
 
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
-
-  const [result, setResult] = useState(null);
+  const [skippedPage, setSkippedPage] = useState(1);
 
   const [inputKey, setInputKey] = useState(0);
 
-  useWarnBeforeLeave(importing);
+  /* { kind: "screening" | "result", status: "creating" | "done" | "failed", fileName } */
+  const [reportResult, setReportResult] = useState(null);
 
-  const readyRows = useMemo(
-    () => (checkedRows || []).filter((row) => row.errors.length === 0),
-    [checkedRows],
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const [importing, setImporting] = useState(false);
+
+  /* { batch, totalBatches, imported, processed, retrying } */
+  const [importProgress, setImportProgress] = useState(null);
+
+  const [stopRequested, setStopRequested] = useState(false);
+
+  const stopRef = useRef(false);
+
+  /* { results, stopped, elapsedMs, finishedAt, requiredFields } */
+  const [importResult, setImportResult] = useState(null);
+
+  /* นำเข้าแล้วต้องตรวจกับฐานข้อมูลใหม่ก่อน กันการส่งแถวเดิมซ้ำ */
+  const [needsRecheck, setNeedsRecheck] = useState(false);
+
+  const [rechecking, setRechecking] = useState(false);
+
+  const [issuePage, setIssuePage] = useState(1);
+
+  useWarnBeforeLeave(importing, t.leaveWarning);
+
+  /* ออกจากหน้าระหว่างนำเข้า: หยุดหลังชุดปัจจุบัน */
+  useEffect(
+    () => () => {
+      stopRef.current = true;
+    },
+    [],
   );
 
-  const invalidCount = checkedRows ? checkedRows.length - readyRows.length : 0;
+  /* ข้อ e คำนวณใหม่ทุกครั้งที่เปลี่ยนช่องบังคับ โดยไม่ต้องอ่านไฟล์ใหม่ */
+  const summary = useMemo(() => {
+    if (!parsed) {
+      return null;
+    }
 
-  const visibleRows = useMemo(() => {
-    const list = checkedRows || [];
+    const ready = [];
 
-    return filter === "invalid"
-      ? list.filter((row) => row.errors.length > 0)
-      : list;
-  }, [checkedRows, filter]);
+    const skipped = [];
 
-  const totalPreviewPages = Math.max(
-    1,
-    Math.ceil(visibleRows.length / PREVIEW_PAGE_SIZE),
-  );
+    const reasonCounts = Object.fromEntries(SKIP_REASONS.map((reason) => [reason, 0]));
 
-  const currentPreviewPage = Math.min(previewPage, totalPreviewPages);
+    parsed.rows.forEach((row) => {
+      let finalRow = { ...row, warnings: getRowWarnings(row, requiredFields) };
 
-  const pageRows = visibleRows.slice(
-    (currentPreviewPage - 1) * PREVIEW_PAGE_SIZE,
-    currentPreviewPage * PREVIEW_PAGE_SIZE,
-  );
+      if (row.reason === null) {
+        const missing = getMissingFields(row, requiredFields);
 
-  const columnOptions = headers.map((_, index) => String(index));
+        if (missing.length > 0) {
+          finalRow = { ...finalRow, reason: "incomplete", missing };
+        }
+      }
 
-  const columnLabels = Object.fromEntries(
-    headers.map((name, index) => [String(index), t.columnLabel(index, name)]),
-  );
+      if (finalRow.reason === null) {
+        ready.push(finalRow);
+      } else {
+        reasonCounts[finalRow.reason] += 1;
+        skipped.push(finalRow);
+      }
+    });
+
+    return { ready, skipped, reasonCounts };
+  }, [parsed, requiredFields]);
+
+  const filteredSkipped = useMemo(() => {
+    const list = summary?.skipped || [];
+
+    return skipFilter === "all"
+      ? list
+      : list.filter((row) => row.reason === skipFilter);
+  }, [summary, skipFilter]);
 
   function errorText(code) {
-    return t.errors[code] || code;
+    return t.errors[code] || t.errors.READ_FAILED;
   }
 
   /* =====================================================
@@ -506,15 +720,16 @@ function DataImportSection({ t, user }) {
 
   function resetAll() {
     setFileName("");
-    setHeaders([]);
-    setRows([]);
-    setMapping({});
     setError("");
-    setCheckedRows(null);
-    setFilter("all");
-    setPreviewPage(1);
-    setProgress({ done: 0, total: 0 });
-    setResult(null);
+    setParsed(null);
+    setElapsedMs(null);
+    setSkipFilter("all");
+    setReadyPage(1);
+    setSkippedPage(1);
+    setReportResult(null);
+    setImportResult(null);
+    setNeedsRecheck(false);
+    setIssuePage(1);
     setInputKey((key) => key + 1);
   }
 
@@ -525,160 +740,311 @@ function DataImportSection({ t, user }) {
       return;
     }
 
+    const startedAt = performance.now();
+
     resetAll();
+
+    setFileName(file.name);
 
     setReading(true);
 
-    try {
-      const table = await readImportFile(file);
+    /* ดึง pnu_no ในระบบไปพร้อมกับอ่านไฟล์ */
+    const existingPromise = fetchAllPnuNumbers();
 
-      setFileName(file.name);
-      setHeaders(table.headers);
-      setRows(table.rows);
-      setMapping(autoMapColumns(table.headers));
+    existingPromise.catch(() => {});
+
+    try {
+      const [XLSX, data] = await Promise.all([
+        loadSheetJs(),
+        file.arrayBuffer(),
+      ]);
+
+      const workbook = readImportWorkbook(XLSX, {
+        name: file.name,
+        data: new Uint8Array(data),
+      });
+
+      const sheetsWithoutPnu = workbook.sheets
+        .filter((sheet) => !sheet.mapping.pnu_no)
+        .map((sheet) => sheet.name);
+
+      if (sheetsWithoutPnu.length > 0) {
+        setError(t.errors.noPnuColumn(sheetsWithoutPnu));
+        return;
+      }
+
+      const cleaned = cleanImportRows(workbook.rows);
+
+      let existing;
+
+      try {
+        existing = await existingPromise;
+      } catch (err) {
+        console.error("Fetch existing PNU error:", err);
+
+        setError(t.errors.existingFailed);
+        return;
+      }
+
+      setParsed({
+        sheets: workbook.sheets,
+        rows: classifyImportRows(cleaned, existing),
+        checkedAt: new Date(),
+      });
+
+      setElapsedMs(performance.now() - startedAt);
     } catch (err) {
       console.error("Read import file error:", err);
 
-      setError(errorText(err?.code || "READ_FAILED"));
+      setError(errorText(err?.code));
     } finally {
       setReading(false);
     }
   }
 
-  function handleMappingChange(field, value) {
-    setMapping((previous) => ({ ...previous, [field]: value }));
+  function toggleRequired(field) {
+    setRequiredFields((previous) =>
+      previous.includes(field)
+        ? previous.filter((item) => item !== field)
+        : REQUIRED_FIELD_OPTIONS.filter(
+            (item) => item === field || previous.includes(item),
+          ),
+    );
 
-    /* เปลี่ยนการจับคู่แล้วต้องตรวจใหม่ */
-    setCheckedRows(null);
-    setError("");
+    setReadyPage(1);
+    setSkippedPage(1);
+
+    /* รายงานเดิมใช้ช่องบังคับชุดก่อน */
+    setReportResult(null);
   }
 
   /* =====================================================
-     VALIDATE
+     REPORT
   ===================================================== */
 
-  async function handleValidate() {
-    if (REQUIRED_IMPORT_FIELDS.some((field) => !mapping[field])) {
-      setError(t.mapRequired);
+  /* kind: "screening" = รายงานการคัด, "result" = รวมผลการนำเข้า */
+  async function handleDownloadReport(kind = "screening") {
+    if (!summary || reportResult?.status === "creating") {
       return;
     }
 
-    setError("");
-    setValidating(true);
+    const name = getImportReportFileName(fileName);
+
+    setReportResult({ kind, status: "creating", fileName: name });
 
     try {
-      const checked = validateImportRows(rows, mapping);
+      const XLSX = await loadSheetJs();
 
-      const existing = await findExistingPnuNumbers(
-        checked.map((row) => row.record.pnu_no),
-      );
-
-      checked.forEach((row) => {
-        if (existing.has(row.record.pnu_no)) {
-          row.errors.push("pnuExists");
-        }
+      const workbook = buildImportReportWorkbook(XLSX, {
+        fileName,
+        checkedAt: parsed.checkedAt,
+        requiredFields,
+        sheets: parsed.sheets,
+        rows: [...summary.ready, ...summary.skipped],
+        importResult: kind === "result" ? importResult : null,
       });
 
-      setCheckedRows(checked);
-      setFilter("all");
-      setPreviewPage(1);
-    } catch (err) {
-      console.error("Validate import error:", err);
+      const bytes = writeWorkbookWithFrozenHeader(XLSX, workbook);
 
-      setError(t.errors.validateFailed);
-    } finally {
-      setValidating(false);
+      downloadBlob(new Blob([bytes], { type: XLSX_MIME_TYPE }), name);
+
+      setReportResult({ kind, status: "done", fileName: name });
+    } catch (err) {
+      console.error("Create import report error:", err);
+
+      setReportResult({ kind, status: "failed", fileName: name });
     }
   }
+
+  const creatingReport = reportResult?.status === "creating";
 
   /* =====================================================
      IMPORT
   ===================================================== */
 
   async function handleImport() {
-    if (importing || readyRows.length === 0) {
+    setConfirmOpen(false);
+
+    if (importing || needsRecheck || !summary?.ready.length) {
       return;
     }
 
+    const rows = summary.ready;
+
+    /* ส่งเฉพาะฟิลด์ที่จับคู่ได้ในไฟล์ */
+    const fields = SHEET_IMPORT_FIELDS.filter((field) =>
+      parsed.sheets.some((sheet) => sheet.mapping[field]),
+    );
+
+    const usedRequiredFields = requiredFields;
+
+    stopRef.current = false;
+
+    setStopRequested(false);
+    setImportResult(null);
+    setReportResult(null);
+    setIssuePage(1);
+    setImporting(true);
+    setImportProgress({
+      batch: 1,
+      totalBatches: Math.ceil(rows.length / IMPORT_BATCH_SIZE),
+      imported: 0,
+      processed: 0,
+      retrying: false,
+    });
+
+    const startedAt = performance.now();
+
+    try {
+      const { results, stopped } = await importPlantRows({
+        rows,
+        fields,
+        userId: user.id,
+        onProgress: setImportProgress,
+        shouldStop: () => stopRef.current,
+      });
+
+      setImportResult({
+        results,
+        stopped,
+        elapsedMs: performance.now() - startedAt,
+        finishedAt: new Date(),
+        requiredFields: usedRequiredFields,
+      });
+    } finally {
+      setImporting(false);
+      setImportProgress(null);
+      setNeedsRecheck(true);
+    }
+  }
+
+  function handleStop() {
+    stopRef.current = true;
+
+    setStopRequested(true);
+  }
+
+  /* อ่าน pnu_no จากฐานข้อมูลใหม่ แล้วคัดข้อ a–d อีกครั้งโดยไม่ต้องอ่านไฟล์ */
+  async function handleRecheck() {
+    setRechecking(true);
     setError("");
 
-    setImporting(true);
-    setProgress({ done: 0, total: readyRows.length });
+    try {
+      const existing = await fetchAllPnuNumbers();
 
-    let successCount = 0;
-
-    const failed = [];
-
-    for (const batch of chunkArray(readyRows, IMPORT_BATCH_SIZE)) {
-      /* ไม่ส่ง plant_id และ search_text (ฐานข้อมูลสร้างเอง) */
-      const payload = batch.map((row) => ({
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        ...row.record,
+      setParsed((previous) => ({
+        ...previous,
+        rows: classifyImportRows(previous.rows, existing),
+        checkedAt: new Date(),
       }));
 
-      try {
-        const { error: insertError } = await supabase
-          .from("plants")
-          .insert(payload);
+      setNeedsRecheck(false);
+      setReadyPage(1);
+      setSkippedPage(1);
+      setReportResult(null);
+    } catch (err) {
+      console.error("Recheck existing PNU error:", err);
 
-        if (insertError) {
-          throw insertError;
-        }
+      setError(t.errors.existingFailed);
+    } finally {
+      setRechecking(false);
+    }
+  }
 
-        successCount += batch.length;
-      } catch (err) {
-        console.error("Import batch error:", err);
+  const importCounts = useMemo(() => {
+    const counts = { success: 0, duplicate: 0, failed: 0, notImported: 0 };
 
-        const code = err?.code === "23505" ? "pnuDuplicate" : null;
+    (importResult?.results || []).forEach(({ status }) => {
+      counts[status] += 1;
+    });
 
-        batch.forEach((row) =>
-          failed.push({
-            rowNumber: row.rowNumber,
-            values: row.values,
-            code,
-            message: err?.message || "",
-          }),
-        );
+    return counts;
+  }, [importResult]);
+
+  /* เติมพิกัดอัตโนมัติให้เฉพาะรายการที่เพิ่งนำเข้าสำเร็จ */
+  const importedPnuNumbers = useMemo(
+    () =>
+      (importResult?.results || [])
+        .filter(({ status }) => status === "success")
+        .map(({ row }) => row.pnuNo),
+    [importResult],
+  );
+
+  const issueRows = useMemo(
+    () =>
+      (importResult?.results || [])
+        .filter(({ status }) => status !== "success")
+        .map(({ row, status, message }) => ({ ...row, importStatus: status, message })),
+    [importResult],
+  );
+
+  /* =====================================================
+     DERIVED
+  ===================================================== */
+
+  const sheets = parsed?.sheets || [];
+
+  const totalRows = parsed?.rows.length || 0;
+
+  /* ฟิลด์ → หัวคอลัมน์ในไฟล์ (ถ้าแต่ละชีตใช้ชื่อต่างกันจะแสดงทุกชื่อ) */
+  const mappingRows = SHEET_IMPORT_FIELDS.map((field) => [
+    field,
+    [...new Set(sheets.map((sheet) => sheet.mapping[field]).filter(Boolean))],
+  ]);
+
+  const unusedHeaders = [
+    ...new Set(sheets.flatMap((sheet) => sheet.unusedHeaders)),
+  ];
+
+  /* คอลัมน์ที่แสดงในตาราง: เฉพาะฟิลด์ที่พบในไฟล์ */
+  const tableFields = mappingRows
+    .filter(([, headers]) => headers.length > 0)
+    .map(([field]) => field);
+
+  const duplicateNumbers = useMemo(
+    () =>
+      new Set(
+        (parsed?.rows || [])
+          .filter((row) => row.reason === "pnuDuplicateInFile")
+          .map((row) => row.pnuNo),
+      ).size,
+    [parsed],
+  );
+
+  /* คำเตือนนับจากทุกแถวที่ไม่ใช่แถวว่าง (ขึ้นกับช่องบังคับที่เลือก) */
+  const warningCounts = useMemo(() => {
+    const counts = {};
+
+    [...(summary?.ready || []), ...(summary?.skipped || [])].forEach((row) => {
+      if (row.reason === "blank") {
+        return;
       }
 
-      setProgress((previous) => ({
-        ...previous,
-        done: previous.done + batch.length,
-      }));
-    }
+      row.warnings.forEach((code) => {
+        counts[code] = (counts[code] || 0) + 1;
+      });
+    });
 
-    setResult({ success: successCount, failed });
-    setImporting(false);
-  }
+    return counts;
+  }, [summary]);
 
-  function failedReason(row) {
-    return row.code
-      ? errorText(row.code)
-      : `${t.errors.insertFailed}${row.message ? `: ${row.message}` : ""}`;
-  }
+  const warningTotal = Object.values(warningCounts).reduce(
+    (total, count) => total + count,
+    0,
+  );
 
-  function handleDownloadFailed() {
-    if (!result?.failed.length) {
-      return;
-    }
+  function warningText(row, code) {
+    const value =
+      code === "artificialGroupUnknown"
+        ? row.values.artificialGroupOriginal
+        : row.collectorNoDate;
 
-    downloadCsv(
-      "plant-import-failed-rows.csv",
-      ["row", ...IMPORT_FIELDS, "error"],
-      result.failed.map((row) => [
-        row.rowNumber,
-        ...IMPORT_FIELDS.map((field) => row.values[field]),
-        failedReason(row),
-      ]),
-    );
+    return t.warningLabels[code](value);
   }
 
   /* =====================================================
      RENDER
   ===================================================== */
-
-  const busy = reading || validating || importing;
 
   return (
     <div className="mt-7 space-y-6">
@@ -704,15 +1070,17 @@ function DataImportSection({ t, user }) {
 
         <label
           className={`mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[6px] border border-dashed border-rule-strong bg-sheet px-4 py-8 text-center transition hover:border-moss hover:bg-moss-soft ${
-            busy ? "pointer-events-none opacity-60" : ""
+            reading || importing || rechecking
+              ? "pointer-events-none opacity-60"
+              : ""
           }`}
         >
           <input
             key={inputKey}
             type="file"
-            accept={IMPORT_FILE_ACCEPT}
+            accept={SHEET_IMPORT_ACCEPT}
             onChange={handleFileChange}
-            disabled={busy}
+            disabled={reading || importing || rechecking}
             className="sr-only"
           />
 
@@ -726,288 +1094,742 @@ function DataImportSection({ t, user }) {
             {reading ? t.reading : t.chooseFile}
           </span>
 
-          <span className="text-[13px] text-muted">
-            {fileName ? t.fileSummary(fileName, rows.length) : t.chooseFileHint}
+          <span className="break-all text-[13px] text-muted">
+            {parsed
+              ? t.fileSummary(fileName, totalRows, sheets.length)
+              : fileName || t.chooseFileHint}
           </span>
         </label>
+
+        {parsed && (
+          <>
+            {elapsedMs !== null && (
+              <p
+                data-testid="import-elapsed"
+                data-ms={Math.round(elapsedMs)}
+                className="mt-3 font-mono text-[12px] tabular-nums text-muted"
+              >
+                {t.elapsed((elapsedMs / 1000).toFixed(2))}
+              </p>
+            )}
+
+            <h3 className="vh-eyebrow mt-5">{t.sheetRows}</h3>
+
+            <div className="mt-3 overflow-x-auto rounded-[6px] border border-rule">
+              <table className="vh-table min-w-[320px]">
+                <thead>
+                  <tr>
+                    <th>{t.sheet}</th>
+                    <th className="text-right">{t.rows}</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {sheets.map((sheet) => (
+                    <tr key={sheet.name}>
+                      <td className="text-[13px]">{sheet.name}</td>
+                      <td className="text-right font-mono tabular-nums">
+                        {formatNumber(sheet.rowCount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </StepPanel>
+
+      {error && <AlertBox type="error">{error}</AlertBox>}
 
       {/* 02 MAPPING */}
 
-      {headers.length > 0 && !result && (
+      {parsed && (
         <StepPanel
           number="02"
           title={t.stepMapping}
           description={t.stepMappingDesc}
         >
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {IMPORT_FIELDS.map((field) => (
-              <SelectField
-                key={field}
-                label={
-                  REQUIRED_IMPORT_FIELDS.includes(field)
-                    ? `${field} · ${t.required}`
-                    : field
-                }
-                value={mapping[field] || ""}
-                onChange={(value) => handleMappingChange(field, value)}
-                options={columnOptions}
-                labels={columnLabels}
-                placeholder={t.notImported}
-                disabled={busy}
-              />
-            ))}
-          </div>
-
-          <div className="mt-5">
-            <button
-              type="button"
-              onClick={handleValidate}
-              disabled={busy}
-              className="vh-btn vh-btn-primary w-full sm:w-auto"
-            >
-              {validating && <LoadingIcon className="h-4 w-4 animate-spin" />}
-
-              {validating ? t.validating : t.validate}
-            </button>
-          </div>
-        </StepPanel>
-      )}
-
-      {error && <AlertBox type="error">{error}</AlertBox>}
-
-      {/* 03 PREVIEW */}
-
-      {checkedRows && !result && (
-        <StepPanel number="03" title={t.stepPreview}>
-          <p
-            className={`font-mono text-[13px] tabular-nums ${
-              invalidCount ? "text-clay" : "text-moss"
-            }`}
-          >
-            {t.summary(readyRows.length, invalidCount)}
-          </p>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {[
-              ["all", t.filterAll],
-              ["invalid", t.filterInvalid],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => {
-                  setFilter(value);
-                  setPreviewPage(1);
-                }}
-                aria-pressed={filter === value}
-                className={`vh-btn vh-btn-sm ${
-                  filter === value ? "vh-btn-primary" : "vh-btn-outline"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-4 overflow-x-auto rounded-[6px] border border-rule">
-            <table className="vh-table min-w-[960px]">
+          <div className="overflow-x-auto rounded-[6px] border border-rule">
+            <table className="vh-table min-w-[480px]">
               <thead>
                 <tr>
-                  <th>{t.row}</th>
-                  <th>{t.status}</th>
-                  {IMPORT_FIELDS.map((field) => (
-                    <th key={field}>{field}</th>
-                  ))}
+                  <th>{t.field}</th>
+                  <th>{t.fileColumn}</th>
                 </tr>
               </thead>
 
               <tbody>
-                {pageRows.map((row) => {
-                  const invalid = row.errors.length > 0;
+                {mappingRows.map(([field, headers]) => (
+                  <tr key={field}>
+                    <td className="text-[13px]">
+                      <span className="text-ink">{t.fieldLabels[field]}</span>
+                      <span className="ml-2 font-mono text-[11px] text-faint">
+                        {field}
+                      </span>
+                    </td>
 
-                  return (
-                    <tr
-                      key={row.rowNumber}
-                      className={invalid ? "bg-clay-soft" : ""}
-                    >
-                      <td className="font-mono tabular-nums">
-                        {row.rowNumber}
-                      </td>
-
-                      <td className="min-w-[220px]">
-                        {invalid ? (
-                          <ul className="space-y-0.5 text-[13px] leading-5 text-clay">
-                            {row.errors.map((code) => (
-                              <li key={code}>• {errorText(code)}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-[13px] text-moss">
-                            {t.statusReady}
-                          </span>
-                        )}
-                      </td>
-
-                      {IMPORT_FIELDS.map((field) => (
-                        <td
-                          key={field}
-                          className="max-w-[220px] truncate text-[13px]"
-                          title={row.values[field] ?? ""}
-                        >
-                          {row.values[field] ?? "—"}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-
-                {pageRows.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={IMPORT_FIELDS.length + 2}
-                      className="py-8 text-center text-muted"
-                    >
-                      {t.noRows}
+                    <td className="text-[13px]">
+                      {headers.length > 0 ? (
+                        <span className="font-mono text-moss">
+                          {headers.join(" / ")}
+                        </span>
+                      ) : (
+                        <span className="text-faint">{t.columnNotFound}</span>
+                      )}
                     </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
 
-          {totalPreviewPages > 1 && (
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setPreviewPage(Math.max(1, currentPreviewPage - 1))}
-                disabled={currentPreviewPage <= 1}
-                className="vh-btn vh-btn-outline vh-btn-sm"
-              >
-                {t.previous}
-              </button>
+          <h3 className="vh-eyebrow mt-5">{t.unusedColumns}</h3>
 
-              <span className="font-mono text-[12px] tabular-nums text-muted">
-                {t.page(currentPreviewPage, totalPreviewPages)}
-              </span>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {unusedHeaders.length > 0 ? (
+              unusedHeaders.map((header) => (
+                <span key={header} className="vh-tag font-mono">
+                  {header}
+                </span>
+              ))
+            ) : (
+              <span className="text-[13px] text-muted">{t.noUnusedColumns}</span>
+            )}
+          </div>
+        </StepPanel>
+      )}
 
-              <button
-                type="button"
-                onClick={() =>
-                  setPreviewPage(Math.min(totalPreviewPages, currentPreviewPage + 1))
-                }
-                disabled={currentPreviewPage >= totalPreviewPages}
-                className="vh-btn vh-btn-outline vh-btn-sm"
-              >
-                {t.next}
-              </button>
+      {/* 03 SUMMARY */}
+
+      {summary && (
+        <StepPanel
+          number="03"
+          title={t.stepSummary}
+          description={t.stepSummaryDesc}
+        >
+          <fieldset>
+            <legend className="vh-eyebrow !text-[10px]">{t.requiredTitle}</legend>
+
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-3">
+              {REQUIRED_FIELD_OPTIONS.map((field) => (
+                <label
+                  key={field}
+                  className={`flex items-center gap-2 text-[14px] text-ink-soft ${
+                    importing ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    data-required-field={field}
+                    checked={requiredFields.includes(field)}
+                    onChange={() => toggleRequired(field)}
+                    disabled={importing}
+                    className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-moss"
+                  />
+
+                  {t.fieldLabels[field]}
+                </label>
+              ))}
             </div>
+          </fieldset>
+
+          <div
+            data-testid="import-summary"
+            className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+          >
+            <StatCard id="total" label={t.totalRows} value={totalRows} />
+
+            <StatCard
+              id="ready"
+              label={t.readyRows}
+              value={summary.ready.length}
+              tone="moss"
+            />
+
+            {SKIP_REASONS.map((reason, index) => (
+              <StatCard
+                key={reason}
+                id={reason}
+                label={`${String.fromCharCode(97 + index)}) ${t.reasons[reason]}`}
+                value={summary.reasonCounts[reason]}
+                sub={
+                  reason === "pnuDuplicateInFile" && duplicateNumbers
+                    ? t.duplicateNumbers(duplicateNumbers)
+                    : null
+                }
+                tone={summary.reasonCounts[reason] ? "clay" : null}
+              />
+            ))}
+
+            <StatCard
+              id="warnings"
+              label={t.warnings}
+              value={warningTotal}
+              sub={t.warningsHint}
+              tone={warningTotal ? "ochre" : null}
+            />
+          </div>
+
+          {warningTotal > 0 && (
+            <ul className="mt-4 space-y-1 text-[13px] leading-6 text-ochre">
+              {Object.entries(warningCounts).map(([code, count]) => (
+                <li key={code}>
+                  • {t.warningSummary[code]} —{" "}
+                  <span className="font-mono tabular-nums">
+                    {formatNumber(count)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="mt-6">
+            <button
+              type="button"
+              data-download-report
+              onClick={() => handleDownloadReport("screening")}
+              disabled={creatingReport}
+              aria-busy={creatingReport}
+              className="vh-btn vh-btn-outline w-full sm:w-auto"
+            >
+              {creatingReport && reportResult?.kind === "screening" ? (
+                <LoadingIcon className="h-4 w-4 animate-spin" />
+              ) : (
+                <DownloadIcon className="h-4 w-4" />
+              )}
+
+              {creatingReport && reportResult?.kind === "screening"
+                ? t.creatingReport
+                : t.downloadReport}
+            </button>
+          </div>
+
+          {!confirmOpen && (
+            <ReportStatus t={t} result={reportResult} kind="screening" />
           )}
 
           <div className="vh-rule mt-6" />
 
-          {importing && (
-            <ProgressBar
-              label={t.importing}
-              detail={t.progress(progress.done, progress.total)}
-              done={progress.done}
-              total={progress.total}
-            />
+          {/* IMPORT */}
+
+          {importing && importProgress ? (
+            <div data-testid="import-progress">
+              <ProgressBar
+                label={
+                  stopRequested
+                    ? t.stopping
+                    : importProgress.retrying
+                      ? t.retryingRows
+                      : t.importing
+                }
+                detail={t.importProgress(
+                  importProgress.batch,
+                  importProgress.totalBatches,
+                  importProgress.imported,
+                )}
+                done={importProgress.processed}
+                total={summary.ready.length}
+              />
+
+              <div className="mt-4">
+                <button
+                  type="button"
+                  data-stop-import
+                  onClick={handleStop}
+                  disabled={stopRequested}
+                  className="vh-btn vh-btn-outline w-full sm:w-auto"
+                >
+                  {stopRequested ? (
+                    <LoadingIcon className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <StopIcon className="h-4 w-4" />
+                  )}
+
+                  {t.stop}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-5">
+              <button
+                type="button"
+                data-start-import
+                onClick={() => setConfirmOpen(true)}
+                disabled={
+                  summary.ready.length === 0 || needsRecheck || rechecking
+                }
+                className="vh-btn vh-btn-primary w-full sm:w-auto"
+              >
+                <UploadIcon className="h-4 w-4" />
+
+                {summary.ready.length === 0
+                  ? t.nothingToImport
+                  : t.importButton(summary.ready.length)}
+              </button>
+
+              {needsRecheck && (
+                <p className="mt-3 text-[13px] leading-6 text-muted">
+                  {t.recheckFirst}
+                </p>
+              )}
+            </div>
           )}
 
-          <div className="mt-5">
-            <button
-              type="button"
-              onClick={handleImport}
-              disabled={busy || readyRows.length === 0}
-              className="vh-btn vh-btn-primary w-full sm:w-auto"
-            >
-              {importing ? (
-                <LoadingIcon className="h-4 w-4 animate-spin" />
-              ) : (
-                <UploadIcon className="h-4 w-4" />
+          {/* RESULT */}
+
+          {importResult && (
+            <div data-testid="import-result" className="mt-7">
+              <h3 className="font-serif text-[1.2rem] leading-tight text-ink">
+                {t.resultTitle}
+              </h3>
+
+              <p className="mt-1.5 font-mono text-[12px] tabular-nums text-muted">
+                {t.resultElapsed((importResult.elapsedMs / 1000).toFixed(1))}
+              </p>
+
+              {importResult.stopped && (
+                <div className="mt-4">
+                  <AlertBox type="error">{t.resultStopped}</AlertBox>
+                </div>
               )}
 
-              {readyRows.length === 0
-                ? t.nothingToImport
-                : t.import(readyRows.length)}
-            </button>
-          </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {Object.keys(importCounts).map((status) => (
+                  <StatCard
+                    key={status}
+                    id={`import-${status}`}
+                    label={t.importStatuses[status]}
+                    value={importCounts[status]}
+                    tone={
+                      status === "success"
+                        ? "moss"
+                        : importCounts[status]
+                          ? status === "failed"
+                            ? "clay"
+                            : "ochre"
+                          : null
+                    }
+                  />
+                ))}
+              </div>
+
+              {issueRows.length > 0 && (
+                <>
+                  <h3 className="vh-eyebrow mt-6">{t.issueRows}</h3>
+
+                  <div className="mt-3">
+                    <PagedTable
+                      t={t}
+                      rows={issueRows}
+                      page={issuePage}
+                      onPageChange={setIssuePage}
+                      testId="import-issue-table"
+                      columns={[
+                        {
+                          key: "pnu_no",
+                          label: t.fieldLabels.pnu_no,
+                          mono: true,
+                          render: (row) => row.pnuNo,
+                        },
+                        {
+                          key: "sheet",
+                          label: t.sheet,
+                          render: (row) => row.sheet,
+                        },
+                        {
+                          key: "row",
+                          label: t.row,
+                          mono: true,
+                          render: (row) => row.rowNumber,
+                        },
+                        {
+                          key: "status",
+                          label: t.status,
+                          render: (row) => (
+                            <span
+                              className={
+                                row.importStatus === "failed"
+                                  ? "text-clay"
+                                  : "text-ochre"
+                              }
+                            >
+                              {t.importStatuses[row.importStatus]}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "message",
+                          label: t.errorMessage,
+                          render: (row) => row.message || "—",
+                        },
+                      ]}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  data-download-result-report
+                  onClick={() => handleDownloadReport("result")}
+                  disabled={creatingReport}
+                  className="vh-btn vh-btn-outline w-full sm:w-auto"
+                >
+                  {creatingReport && reportResult?.kind === "result" ? (
+                    <LoadingIcon className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <DownloadIcon className="h-4 w-4" />
+                  )}
+
+                  {t.downloadResultReport}
+                </button>
+
+                <button
+                  type="button"
+                  data-recheck
+                  onClick={handleRecheck}
+                  disabled={rechecking}
+                  className="vh-btn vh-btn-primary w-full sm:w-auto"
+                >
+                  {rechecking ? (
+                    <LoadingIcon className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshIcon className="h-4 w-4" />
+                  )}
+
+                  {rechecking ? t.rechecking : t.recheck}
+                </button>
+              </div>
+
+              <ReportStatus t={t} result={reportResult} kind="result" />
+
+              <p className="mt-3 text-[13px] leading-6 text-muted">
+                {t.recheckHint}
+              </p>
+
+              {importedPnuNumbers.length > 0 && (
+                <div className="mt-7">
+                  <GeocodeFillPanel
+                    key={importResult.finishedAt.getTime()}
+                    mode="imported"
+                    pnuNumbers={importedPnuNumbers}
+                    autoStart
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {confirmOpen && (
+            <ImportConfirmDialog
+              t={t}
+              count={summary.ready.length}
+              requiredFields={requiredFields}
+              reportResult={reportResult}
+              creatingReport={creatingReport}
+              onDownloadReport={() => handleDownloadReport("screening")}
+              onCancel={() => setConfirmOpen(false)}
+              onConfirm={handleImport}
+            />
+          )}
         </StepPanel>
       )}
 
-      {/* 04 RESULT */}
+      {/* 04 READY ROWS */}
 
-      {result && (
-        <StepPanel number="04" title={t.stepResult}>
-          <AlertBox type={result.failed.length ? "error" : "success"}>
-            {t.resultSummary(result.success, result.failed.length)}
-          </AlertBox>
+      {summary && (
+        <StepPanel number="04" title={t.readyTitle}>
+          <PagedTable
+            t={t}
+            rows={summary.ready}
+            page={readyPage}
+            onPageChange={setReadyPage}
+            testId="ready-table"
+            columns={[
+              {
+                key: "sheet",
+                label: t.sheet,
+                render: (row) => row.sheet,
+              },
+              {
+                key: "row",
+                label: t.row,
+                mono: true,
+                render: (row) => row.rowNumber,
+              },
+              ...tableFields.map((field) => ({
+                key: field,
+                label: t.fieldLabels[field],
+                mono: field === "pnu_no",
+                render: (row) => row.values[field] ?? "—",
+              })),
+              {
+                key: "warnings",
+                label: t.warning,
+                render: (row) =>
+                  row.warnings.length > 0 ? (
+                    <span className="text-ochre">
+                      {row.warnings.map((code) => warningText(row, code)).join(" • ")}
+                    </span>
+                  ) : (
+                    "—"
+                  ),
+              },
+            ]}
+          />
+        </StepPanel>
+      )}
 
-          {result.failed.length > 0 && (
-            <>
-              <h3 className="vh-eyebrow mt-6">{t.failedRows}</h3>
+      {/* 05 SKIPPED ROWS */}
 
-              <div className="mt-3 max-h-[420px] overflow-auto rounded-[6px] border border-rule">
-                <table className="vh-table min-w-[640px]">
-                  <thead>
-                    <tr>
-                      <th>{t.row}</th>
-                      <th>pnu_no</th>
-                      <th>botanical_name</th>
-                      <th>{t.reason}</th>
-                    </tr>
-                  </thead>
+      {summary && (
+        <StepPanel number="05" title={t.skippedTitle}>
+          <div className="flex flex-wrap gap-2">
+            {[["all", summary.skipped.length], ...SKIP_REASONS.map((reason) => [reason, summary.reasonCounts[reason]])].map(
+              ([value, count]) => (
+                <button
+                  key={value}
+                  type="button"
+                  data-skip-filter={value}
+                  onClick={() => {
+                    setSkipFilter(value);
+                    setSkippedPage(1);
+                  }}
+                  aria-pressed={skipFilter === value}
+                  className={`vh-btn vh-btn-sm ${
+                    skipFilter === value ? "vh-btn-primary" : "vh-btn-outline"
+                  }`}
+                >
+                  {value === "all" ? t.filterAll : t.reasons[value]}
 
-                  <tbody>
-                    {result.failed.map((row) => (
-                      <tr key={row.rowNumber} className="bg-clay-soft">
-                        <td className="font-mono tabular-nums">
-                          {row.rowNumber}
-                        </td>
-                        <td className="font-mono">{row.values.pnu_no}</td>
-                        <td className="text-[13px]">
-                          {row.values.botanical_name}
-                        </td>
-                        <td className="text-[13px] text-clay">
-                          {failedReason(row)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  <span className="font-mono tabular-nums opacity-70">
+                    {formatNumber(count)}
+                  </span>
+                </button>
+              ),
+            )}
+          </div>
 
-              <button
-                type="button"
-                onClick={handleDownloadFailed}
-                className="vh-btn vh-btn-outline mt-4 w-full sm:w-auto"
-              >
-                <DownloadIcon className="h-4 w-4" />
-                {t.downloadFailed}
-              </button>
-            </>
-          )}
+          <div className="mt-4">
+            <PagedTable
+              t={t}
+              rows={filteredSkipped}
+              page={skippedPage}
+              onPageChange={setSkippedPage}
+              testId="skipped-table"
+              columns={[
+                {
+                  key: "sheet",
+                  label: t.sheet,
+                  render: (row) => row.sheet,
+                },
+                {
+                  key: "row",
+                  label: t.row,
+                  mono: true,
+                  render: (row) => row.rowNumber,
+                },
+                {
+                  key: "pnu_no",
+                  label: t.fieldLabels.pnu_no,
+                  mono: true,
+                  render: (row) => row.values.pnu_no ?? "—",
+                },
+                {
+                  key: "reason",
+                  label: t.reason,
+                  render: (row) => (
+                    <span className="text-clay">{t.reasons[row.reason]}</span>
+                  ),
+                },
+                {
+                  key: "missing",
+                  label: t.missing,
+                  render: (row) =>
+                    row.missing?.length
+                      ? row.missing.map((field) => t.fieldLabels[field]).join(", ")
+                      : "—",
+                },
+                ...tableFields
+                  .filter((field) => field !== "pnu_no")
+                  .map((field) => ({
+                    key: field,
+                    label: t.fieldLabels[field],
+                    render: (row) => row.values[field] ?? "—",
+                  })),
+              ]}
+            />
+          </div>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/account/plants"
-              className="vh-btn vh-btn-primary w-full sm:w-auto"
+              className="vh-btn vh-btn-outline w-full sm:w-auto"
             >
               {t.goToList}
             </Link>
-
-            <button
-              type="button"
-              onClick={resetAll}
-              className="vh-btn vh-btn-outline w-full sm:w-auto"
-            >
-              {t.startOver}
-            </button>
           </div>
         </StepPanel>
       )}
     </div>
+  );
+}
+
+/* ข้อความหลังดาวน์โหลดรายงาน แบบเดียวกับปุ่ม PDF ป้าย */
+function ReportStatus({ t, result, kind }) {
+  if (result?.kind !== kind) {
+    return null;
+  }
+
+  if (result.status === "done") {
+    return (
+      <p
+        role="status"
+        data-report-result="done"
+        data-report-kind={kind}
+        className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-moss/30 bg-moss-soft px-3.5 py-3 text-[13px] leading-6 text-moss"
+      >
+        <CheckIcon className="mt-1 h-4 w-4 shrink-0" />
+
+        <span className="min-w-0 break-words">
+          {t.reportDownloaded(result.fileName)}
+        </span>
+      </p>
+    );
+  }
+
+  if (result.status === "failed") {
+    return (
+      <p
+        role="alert"
+        data-report-result="failed"
+        data-report-kind={kind}
+        className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-clay/40 bg-clay-soft px-3.5 py-3 text-[13px] leading-6 text-clay"
+      >
+        <AlertIcon className="mt-1 h-4 w-4 shrink-0" />
+
+        <span className="min-w-0">{t.reportFailed}</span>
+      </p>
+    );
+  }
+
+  return null;
+}
+
+function ImportConfirmDialog({
+  t,
+  count,
+  requiredFields,
+  reportResult,
+  creatingReport,
+  onDownloadReport,
+  onCancel,
+  onConfirm,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        onCancel();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel]);
+
+  /*
+   * render ที่ body: .page-enter มี transform ทำให้ position: fixed
+   * อิงกรอบเนื้อหาแทนหน้าจอ กล่องยืนยันจะหลุดไปอยู่ท้ายหน้า
+   */
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/40 p-4 pb-[calc(16px+env(safe-area-inset-bottom))] sm:items-center"
+      onClick={onCancel}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="import-confirm-title"
+        aria-describedby="import-confirm-description"
+        data-testid="import-confirm"
+        className="vh-sheet page-enter max-h-full w-full max-w-md overflow-y-auto p-6 shadow-lift"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p className="vh-eyebrow flex items-center gap-3">
+          <span className="h-px w-6 bg-ochre" />
+          {t.confirmTitle}
+        </p>
+
+        <h2
+          id="import-confirm-title"
+          className="vh-display mt-3 text-[1.5rem] leading-tight"
+        >
+          {t.confirmCount(count)}
+        </h2>
+
+        <div id="import-confirm-description" className="mt-4 space-y-3 text-[14px] leading-6">
+          <p className="text-muted">
+            {t.confirmBatches(Math.ceil(count / IMPORT_BATCH_SIZE), IMPORT_BATCH_SIZE)}
+          </p>
+
+          <div>
+            <p className="vh-eyebrow !text-[10px]">{t.confirmRequired}</p>
+
+            <p className="mt-1 text-ink-soft">
+              {requiredFields.length
+                ? requiredFields.map((field) => t.fieldLabels[field]).join(", ")
+                : "—"}
+            </p>
+          </div>
+
+          <p className="rounded-[6px] border border-ochre/40 bg-ochre-soft px-3.5 py-3 text-[13px] text-ink-soft">
+            {t.confirmReportHint}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onDownloadReport}
+          disabled={creatingReport}
+          className="vh-btn vh-btn-ghost vh-btn-sm mt-3 -ml-3"
+        >
+          {creatingReport ? (
+            <LoadingIcon className="h-4 w-4 animate-spin" />
+          ) : (
+            <DownloadIcon className="h-4 w-4" />
+          )}
+
+          {t.downloadReport}
+        </button>
+
+        <ReportStatus t={t} result={reportResult} kind="screening" />
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="vh-btn vh-btn-outline"
+            autoFocus
+          >
+            {t.cancel}
+          </button>
+
+          <button
+            type="button"
+            data-confirm-import
+            onClick={onConfirm}
+            className="vh-btn vh-btn-primary"
+          >
+            <UploadIcon className="h-4 w-4" />
+            {t.importButton(count)}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1517,242 +2339,4 @@ async function removeStorageFile(path, logMessage) {
   } catch (err) {
     console.error(logMessage, err);
   }
-}
-
-/* เตือนก่อนปิดหรือรีเฟรชหน้าระหว่างที่งานยังไม่เสร็จ */
-function useWarnBeforeLeave(active) {
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-
-    function handleBeforeUnload(event) {
-      event.preventDefault();
-
-      event.returnValue = "";
-    }
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [active]);
-}
-
-function StepPanel({ number, title, description, children }) {
-  return (
-    <section className="vh-panel p-4 sm:p-6">
-      <div className="flex items-start gap-4">
-        <span className="font-mono text-[12px] tabular-nums text-ochre">
-          {number}
-        </span>
-
-        <div className="min-w-0">
-          <h2 className="font-serif text-[1.35rem] leading-tight text-ink">
-            {title}
-          </h2>
-
-          {description && (
-            <p className="mt-1.5 text-[14px] leading-6 text-muted">
-              {description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-5">{children}</div>
-    </section>
-  );
-}
-
-function ProgressBar({ label, detail, done, total }) {
-  const percent = total ? Math.round((done / total) * 100) : 0;
-
-  return (
-    <div className="mt-5">
-      <div className="flex items-center justify-between gap-3 text-[13px]">
-        <span className="text-ink-soft">{label}</span>
-
-        <span className="font-mono tabular-nums text-muted">{detail}</span>
-      </div>
-
-      <div
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-        className="mt-2 h-2 overflow-hidden rounded-full bg-paper-deep"
-      >
-        <div
-          className="h-full rounded-full bg-moss transition-[width] duration-300"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-  labels = {},
-  disabled = false,
-}) {
-  return (
-    <label className="block min-w-0">
-      <span className="vh-eyebrow mb-1.5 block !text-[10px]">{label}</span>
-
-      <span className="relative block">
-        <select
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          disabled={disabled}
-          className="vh-input appearance-none truncate pr-9 text-[14px]"
-        >
-          {placeholder && <option value="">{placeholder}</option>}
-
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {labels[option] || option}
-            </option>
-          ))}
-        </select>
-
-        <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
-      </span>
-    </label>
-  );
-}
-
-function AlertBox({ type, children }) {
-  const isSuccess = type === "success";
-
-  return (
-    <div
-      role={isSuccess ? "status" : "alert"}
-      className={`flex items-start gap-3 rounded-[6px] border px-4 py-3.5 text-[14px] leading-6 ${
-        isSuccess
-          ? "border-moss/30 bg-moss-soft text-moss"
-          : "border-clay/40 bg-clay-soft text-clay"
-      }`}
-    >
-      {isSuccess ? (
-        <CheckIcon className="mt-1 h-4 w-4 shrink-0" />
-      ) : (
-        <AlertIcon className="mt-1 h-4 w-4 shrink-0" />
-      )}
-
-      <span>{children}</span>
-    </div>
-  );
-}
-
-/* =========================================================
-   ICONS
-========================================================= */
-
-function SvgIcon({ className = "", children }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
-
-function ArrowLeftIcon({ className = "" }) {
-  return (
-    <SvgIcon className={className}>
-      <path d="m15 18-6-6 6-6" />
-      <path d="M9 12h10" />
-    </SvgIcon>
-  );
-}
-
-function ChevronDownIcon({ className = "" }) {
-  return (
-    <SvgIcon className={className}>
-      <path d="m6 9 6 6 6-6" />
-    </SvgIcon>
-  );
-}
-
-function UploadIcon({ className = "" }) {
-  return (
-    <SvgIcon className={className}>
-      <path d="M12 15V4" />
-      <path d="m7 9 5-5 5 5" />
-      <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
-    </SvgIcon>
-  );
-}
-
-function DownloadIcon({ className = "" }) {
-  return (
-    <SvgIcon className={className}>
-      <path d="M12 4v11" />
-      <path d="m7 10 5 5 5-5" />
-      <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
-    </SvgIcon>
-  );
-}
-
-function ImageIcon({ className = "" }) {
-  return (
-    <SvgIcon className={className}>
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
-      <circle cx="9" cy="10" r="1.6" />
-      <path d="m20.5 16-4.5-4.5L6 19.5" />
-    </SvgIcon>
-  );
-}
-
-function CheckIcon({ className = "" }) {
-  return (
-    <SvgIcon className={className}>
-      <path d="m5 12 4.5 4.5L19 7" />
-    </SvgIcon>
-  );
-}
-
-function AlertIcon({ className = "" }) {
-  return (
-    <SvgIcon className={className}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 8v5" />
-      <path d="M12 16.5h.01" />
-    </SvgIcon>
-  );
-}
-
-function LoadingIcon({ className = "" }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-        stroke="currentColor"
-        strokeWidth="2"
-        opacity="0.25"
-      />
-
-      <path
-        d="M21 12a9 9 0 0 0-9-9"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
 }

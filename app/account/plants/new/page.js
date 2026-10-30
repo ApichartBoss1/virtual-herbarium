@@ -16,6 +16,11 @@ import {
   getImageExtension,
   preparePlantImage,
 } from "@/lib/plantImage";
+import {
+  COORDINATE_SQL_FILE,
+  getCoordinateSourceFields,
+  isMissingCoordinateColumnError,
+} from "@/lib/coordinateSource";
 
 const IMAGE_BUCKET = "plant-images";
 
@@ -203,6 +208,7 @@ export default function NewPlantPage() {
       loginRequired: "กรุณาเข้าสู่ระบบก่อนเพิ่มข้อมูลพรรณไม้",
 
       saveError: "ไม่สามารถบันทึกข้อมูลพรรณไม้ได้",
+      missingCoordinateColumns: `ฐานข้อมูลยังไม่มีคอลัมน์ที่มาของพิกัด กรุณาให้ผู้ดูแลรันไฟล์ ${COORDINATE_SQL_FILE} ใน Supabase SQL Editor ก่อน แล้วบันทึกอีกครั้ง`,
 
       uploadError: "ไม่สามารถอัปโหลดรูปภาพได้",
 
@@ -319,6 +325,7 @@ export default function NewPlantPage() {
       loginRequired: "Please log in before adding a plant",
 
       saveError: "Unable to save plant",
+      missingCoordinateColumns: `The database does not have the coordinate source columns yet. Please run ${COORDINATE_SQL_FILE} in the Supabase SQL Editor first, then save again.`,
 
       uploadError: "Unable to upload image",
 
@@ -677,6 +684,12 @@ export default function NewPlantPage() {
         image_url: imageUrl,
       };
 
+      /* บันทึกพร้อมพิกัด = admin ใส่เอง (manual) */
+      Object.assign(
+        plantData,
+        getCoordinateSourceFields(plantData.latitude, plantData.longitude),
+      );
+
       const {
         data: insertedPlant,
 
@@ -685,6 +698,10 @@ export default function NewPlantPage() {
 
       if (insertError?.code === "23505") {
         throw new Error(t.pnuDuplicate);
+      }
+
+      if (isMissingCoordinateColumnError(insertError)) {
+        throw new Error(t.missingCoordinateColumns);
       }
 
       if (insertError || !insertedPlant) {
