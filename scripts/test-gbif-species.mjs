@@ -161,6 +161,20 @@ report(
   `รูปย่อโหลดได้ทุกรูป รวม ${(thumbnailBytes / 1024).toFixed(0)} KB จาก ${photos.length} รูป`,
 );
 
+/* small ของ iNaturalist ด้านยาว 240 px ราว 15–50 KB ต่อรูป (ไฟล์ original รวมหลาย MB) */
+const MAX_THUMBNAIL_TOTAL_KB = 400;
+
+report(
+  thumbnailBytes <= MAX_THUMBNAIL_TOTAL_KB * 1024,
+  `รูปย่อรวมไม่เกิน ${MAX_THUMBNAIL_TOTAL_KB} KB`,
+  `${(thumbnailBytes / 1024).toFixed(0)} KB`,
+);
+
+report(
+  photos.every((photo) => String(photo.publisher || "").trim()),
+  'ทุกรูปมีส่วน "ผ่าน ..." (publisher หรือ datasetName)',
+);
+
 const LICENSE_CASES = [
   ["http://creativecommons.org/licenses/by-nc/4.0/", "CC BY-NC 4.0"],
   ["https://creativecommons.org/licenses/by/4.0/legalcode", "CC BY 4.0"],
