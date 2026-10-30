@@ -5,12 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import FilterDropdown from "@/components/FilterDropdown";
 import Navbar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
 import {
   EMPTY_FACETS,
   fetchPlantFacets,
   fetchPlantsPage,
+  plantFiltersToSearch,
+  readPlantFilters,
 } from "@/lib/plantQueries";
 import { supabasePublic } from "@/lib/supabasePublic";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
@@ -61,13 +64,13 @@ function PlantsBrowser() {
 
   const searchParams = useSearchParams();
 
-  const search = searchParams.get("q")?.trim() || "";
-
-  const familyFilter = searchParams.get("family")?.trim() || "";
-
-  const artificialGroupFilter = searchParams.get("group")?.trim() || "";
-
-  const collectorFilter = searchParams.get("collector")?.trim() || "";
+  /* q, family, group, collector อ่านด้วยฟังก์ชันเดียวกับ /map */
+  const {
+    search,
+    family: familyFilter,
+    group: artificialGroupFilter,
+    collector: collectorFilter,
+  } = readPlantFilters(searchParams);
 
   const sortParam = searchParams.get("sort");
 
@@ -218,6 +221,8 @@ function PlantsBrowser() {
 
       clearFilters: "ล้างตัวกรอง",
 
+      viewOnMap: "ดูบนแผนที่",
+
       applyFilters: "แสดงผล",
 
       closeFilters: "ปิดตัวกรอง",
@@ -344,6 +349,8 @@ function PlantsBrowser() {
       noSearchDescription: "Try another keyword or remove some filters.",
 
       clearFilters: "Clear Filters",
+
+      viewOnMap: "View on map",
 
       applyFilters: "Show Results",
 
@@ -857,6 +864,16 @@ function PlantsBrowser() {
 
   const activeView = isDesktop ? view : "grid";
 
+  /* ตัวกรองปัจจุบันไปหน้า /map (ชื่อพารามิเตอร์เดียวกัน) */
+  const mapQuery = plantFiltersToSearch({
+    search,
+    family: familyFilter,
+    group: artificialGroupFilter,
+    collector: collectorFilter,
+  });
+
+  const mapHref = mapQuery ? `/map?${mapQuery}` : "/map";
+
   const activeChips = [
     familyFilter && {
       key: "family",
@@ -1121,40 +1138,51 @@ function PlantsBrowser() {
                 </p>
               </div>
 
-              <div className="hidden items-center gap-2 md:flex">
-                <div className="w-[190px]">
-                  <span className="sr-only">{t.sortFilter}</span>
-
-                  <FilterDropdown
-                    value={sort === "newest" ? "" : sort}
-                    onChange={(value) => setSort(value || "newest")}
-                    options={SORT_OPTIONS.slice(1)}
-                    labels={sortLabels}
-                    placeholder={t.newest}
-                    compact
-                  />
-                </div>
-
-                <div
-                  role="group"
-                  aria-label={t.viewMode}
-                  className="flex items-center rounded-full border border-rule p-0.5"
+              <div className="flex items-center gap-2">
+                <Link
+                  href={mapHref}
+                  data-view-on-map
+                  className="vh-btn vh-btn-outline vh-btn-sm !min-h-[40px] !rounded-full"
                 >
-                  <ViewToggleButton
-                    active={view === "grid"}
-                    label={t.gridView}
-                    onClick={() => setView("grid")}
-                  >
-                    <GridIcon className="h-4 w-4" />
-                  </ViewToggleButton>
+                  <PinIcon className="h-4 w-4 shrink-0" />
+                  {t.viewOnMap}
+                </Link>
 
-                  <ViewToggleButton
-                    active={view === "list"}
-                    label={t.listView}
-                    onClick={() => setView("list")}
+                <div className="hidden items-center gap-2 md:flex">
+                  <div className="w-[190px]">
+                    <span className="sr-only">{t.sortFilter}</span>
+
+                    <FilterDropdown
+                      value={sort === "newest" ? "" : sort}
+                      onChange={(value) => setSort(value || "newest")}
+                      options={SORT_OPTIONS.slice(1)}
+                      labels={sortLabels}
+                      placeholder={t.newest}
+                      compact
+                    />
+                  </div>
+
+                  <div
+                    role="group"
+                    aria-label={t.viewMode}
+                    className="flex items-center rounded-full border border-rule p-0.5"
                   >
-                    <ListIcon className="h-4 w-4" />
-                  </ViewToggleButton>
+                    <ViewToggleButton
+                      active={view === "grid"}
+                      label={t.gridView}
+                      onClick={() => setView("grid")}
+                    >
+                      <GridIcon className="h-4 w-4" />
+                    </ViewToggleButton>
+
+                    <ViewToggleButton
+                      active={view === "list"}
+                      label={t.listView}
+                      onClick={() => setView("list")}
+                    >
+                      <ListIcon className="h-4 w-4" />
+                    </ViewToggleButton>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1691,233 +1719,6 @@ function getVisiblePages(currentPage, totalPages) {
 }
 
 /* =========================================================
-   CUSTOM FILTER DROPDOWN
-========================================================= */
-
-function FilterDropdown({
-  value,
-  onChange,
-  options,
-  placeholder,
-  labels = {},
-  mobile = false,
-  compact = false,
-}) {
-  const [open, setOpen] = useState(false);
-
-  const [menuPosition, setMenuPosition] = useState(null);
-
-  const buttonRef = useRef(null);
-
-  const menuRef = useRef(null);
-
-  const selectedLabel = value ? labels[value] || value : placeholder;
-
-  function updateMenuPosition() {
-    const button = buttonRef.current;
-
-    if (!button || typeof window === "undefined") {
-      return;
-    }
-
-    const rect = button.getBoundingClientRect();
-
-    const margin = 8;
-
-    const desiredWidth = mobile
-      ? Math.max(rect.width, 220)
-      : Math.max(rect.width, 230);
-
-    const width = Math.min(desiredWidth, window.innerWidth - 16);
-
-    let left = rect.left;
-
-    if (left + width > window.innerWidth - 8) {
-      left = window.innerWidth - width - 8;
-    }
-
-    if (left < 8) {
-      left = 8;
-    }
-
-    const spaceBelow = window.innerHeight - rect.bottom - margin;
-
-    const spaceAbove = rect.top - margin;
-
-    const openUpward = spaceBelow < 190 && spaceAbove > spaceBelow;
-
-    const availableSpace = openUpward ? spaceAbove : spaceBelow;
-
-    const maxHeight = Math.max(140, Math.min(260, availableSpace - 6));
-
-    if (openUpward) {
-      setMenuPosition({
-        left,
-        width,
-        bottom: window.innerHeight - rect.top + margin,
-        top: "auto",
-        maxHeight,
-      });
-
-      return;
-    }
-
-    setMenuPosition({
-      left,
-      width,
-      top: rect.bottom + margin,
-      bottom: "auto",
-      maxHeight,
-    });
-  }
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    updateMenuPosition();
-
-    function handleResize() {
-      updateMenuPosition();
-    }
-
-    function handleScroll() {
-      updateMenuPosition();
-    }
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-
-    function handlePointerDown(event) {
-      const button = buttonRef.current;
-
-      const menu = menuRef.current;
-
-      if (button?.contains(event.target)) {
-        return;
-      }
-
-      if (menu?.contains(event.target)) {
-        return;
-      }
-
-      setOpen(false);
-    }
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("scroll", handleScroll, true);
-    window.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleScroll, true);
-      window.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [open]);
-
-  function handleSelect(option) {
-    onChange(option);
-
-    setOpen(false);
-  }
-
-  return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className={`vh-input flex items-center justify-between gap-2 text-left ${
-          compact
-            ? "!min-h-[40px] !rounded-full !py-2 !pl-4 !pr-2.5 !text-[13px]"
-            : mobile
-              ? "!min-h-[44px] !py-2 !pl-3 !pr-2 !text-[13px]"
-              : "!min-h-[44px] !py-2 !pl-3.5 !pr-2.5 !text-[14px]"
-        } ${open ? "!border-moss shadow-[0_0_0_3px_var(--moss-soft)]" : ""} ${
-          value ? "!text-ink" : "!text-ink-soft"
-        }`}
-      >
-        <span className="min-w-0 truncate">{selectedLabel}</span>
-
-        <ChevronDownIcon
-          className={`h-4 w-4 shrink-0 text-faint transition-transform duration-200 ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {open &&
-        menuPosition &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={menuRef}
-            role="listbox"
-            style={{
-              position: "fixed",
-              left: menuPosition.left,
-              width: menuPosition.width,
-              top: menuPosition.top,
-              bottom: menuPosition.bottom,
-              maxHeight: menuPosition.maxHeight,
-              zIndex: 260,
-            }}
-            className="overflow-y-auto rounded-[6px] border border-rule-strong bg-sheet-raised p-1 text-ink shadow-lift"
-          >
-            <DropdownOption
-              active={!value}
-              label={placeholder}
-              onClick={() => handleSelect("")}
-            />
-
-            {options.map((option) => (
-              <DropdownOption
-                key={option}
-                active={value === option}
-                label={labels[option] || option}
-                onClick={() => handleSelect(option)}
-              />
-            ))}
-          </div>,
-          document.body,
-        )}
-    </>
-  );
-}
-
-/* =========================================================
-   DROPDOWN OPTION
-========================================================= */
-
-function DropdownOption({ active, label, onClick }) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={active}
-      onClick={onClick}
-      className={`flex min-h-[40px] w-full items-center justify-between gap-3 rounded-[4px] px-3 text-left text-[13px] transition ${
-        active
-          ? "bg-moss-soft text-moss"
-          : "text-ink-soft hover:bg-moss-soft hover:text-ink"
-      }`}
-    >
-      <span className="min-w-0 break-words">{label}</span>
-
-      {active && <CheckIcon className="h-4 w-4 shrink-0 text-moss" />}
-    </button>
-  );
-}
-
-/* =========================================================
    PLANT CARD
 ========================================================= */
 
@@ -2332,23 +2133,6 @@ function ListIcon({ className = "" }) {
   );
 }
 
-function ChevronDownIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m7 10 5 5 5-5" />
-    </svg>
-  );
-}
-
 function DocumentIcon({ className = "" }) {
   return (
     <svg
@@ -2454,23 +2238,6 @@ function CloseIcon({ className = "" }) {
     >
       <path d="m6 6 12 12" />
       <path d="m18 6-12 12" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m5 12 4 4L19 6" />
     </svg>
   );
 }

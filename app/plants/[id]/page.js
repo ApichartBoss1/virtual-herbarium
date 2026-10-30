@@ -9,7 +9,7 @@ import Navbar from "@/components/Navbar";
 import PlantQR from "@/components/PlantQR";
 import SiteFooter from "@/components/SiteFooter";
 import { useSignedInAdmin } from "@/components/AdminContext";
-import { fetchPublicPlant } from "@/lib/plantQueries";
+import { fetchPublicPlant, plantFiltersToSearch } from "@/lib/plantQueries";
 import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
@@ -67,6 +67,7 @@ export default function PlantDetailPage() {
       pnuNo: "หมายเลข PNU",
       artificialGroup: "กลุ่มพรรณไม้",
       family: "วงศ์พืช",
+      familyOnMap: "ดูวงศ์นี้บนแผนที่",
 
       collectedBy: "ผู้เก็บตัวอย่าง",
       collectorNo: "หมายเลขผู้เก็บตัวอย่าง",
@@ -132,6 +133,7 @@ export default function PlantDetailPage() {
       pnuNo: "PNU No.",
       artificialGroup: "Artificial Group",
       family: "Family",
+      familyOnMap: "View this family on the map",
 
       collectedBy: "Collector",
       collectorNo: "Collector No.",
@@ -714,7 +716,18 @@ function HerbariumLabel({
 
           <LabelRow label={t.family}>
             {isFilled(plant.family) ? (
-              <span className="text-ink">{plant.family}</span>
+              <>
+                <span className="text-ink">{plant.family}</span>
+
+                {/* ตัวกรอง family ชื่อเดียวกับ /plants และ /map */}
+                <Link
+                  href={`/map?${plantFiltersToSearch({ family: plant.family })}`}
+                  data-family-map-link
+                  className="mt-0.5 block w-fit text-[12.5px] text-moss underline decoration-moss/40 underline-offset-4 transition hover:decoration-moss"
+                >
+                  {t.familyOnMap}
+                </Link>
+              </>
             ) : (
               <EmptyValue text={t.noData} />
             )}
