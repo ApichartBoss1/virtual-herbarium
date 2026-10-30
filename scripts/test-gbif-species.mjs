@@ -6,6 +6,8 @@
    BASE_URL=http://localhost:3000 npm run test:gbif-species
 ========================================================= */
 
+import { formatPhotoCredit, getLicenseLabel } from "../lib/photoCredit.js";
+
 const BASE_URL = (process.env.BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
 
 const NAMES = [
@@ -103,6 +105,87 @@ report(
   Array.isArray(samaneaData?.photos) && photos.every((photo) => Boolean(photo.license)),
   '"Samanea saman" → รูปทุกรูปมี license',
   `${photos.length} รูป`,
+);
+
+report(
+  photos.length > 0 &&
+    photos.every(
+      (photo) =>
+        photo.thumbnailUrl &&
+        !/\/original\.\w+(\?|$)/i.test(photo.thumbnailUrl) &&
+        !("url" in photo),
+    ),
+  '"Samanea saman" → ทุกรูปมี thumbnailUrl ที่ไม่ใช่ไฟล์ original และไม่ส่ง URL ไฟล์เต็ม',
+);
+
+report(
+  photos.every((photo) => /^https:\/\/www\.gbif\.org\/occurrence\/\d+$/.test(photo.occurrenceUrl)),
+  '"Samanea saman" → ทุกรูปลิงก์ไปหน้า occurrence บน GBIF',
+);
+
+report(
+  photos.every((photo) => photo.licenseLabel || photo.licenseUrl),
+  '"Samanea saman" → ทุกรูปมีชื่อ license สั้นหรือ URL ของ license',
+);
+
+console.table(
+  photos.map((photo) => ({
+    ย่อจาก: photo.thumbnailSource,
+    เครดิต: formatPhotoCredit(photo, "TH"),
+    occurrence: photo.occurrenceUrl,
+  })),
+);
+
+/* ขนาดไฟล์รูปย่อที่หน้าเว็บจะโหลดจริง (รวมทุกรูป) */
+let thumbnailBytes = 0;
+let thumbnailErrors = 0;
+
+for (const photo of photos) {
+  try {
+    const response = await fetch(photo.thumbnailUrl, {
+      headers: { "User-Agent": "virtual-herbarium (Naresuan University)" },
+    });
+
+    if (!response.ok || !String(response.headers.get("content-type")).startsWith("image/")) {
+      thumbnailErrors += 1;
+    }
+
+    thumbnailBytes += (await response.arrayBuffer()).byteLength;
+  } catch {
+    thumbnailErrors += 1;
+  }
+}
+
+report(
+  thumbnailErrors === 0,
+  `รูปย่อโหลดได้ทุกรูป รวม ${(thumbnailBytes / 1024).toFixed(0)} KB จาก ${photos.length} รูป`,
+);
+
+const LICENSE_CASES = [
+  ["http://creativecommons.org/licenses/by-nc/4.0/", "CC BY-NC 4.0"],
+  ["https://creativecommons.org/licenses/by/4.0/legalcode", "CC BY 4.0"],
+  ["http://creativecommons.org/licenses/by-sa/4.0/", "CC BY-SA 4.0"],
+  ["https://creativecommons.org/licenses/by-nc-nd/3.0/", "CC BY-NC-ND 3.0"],
+  ["http://creativecommons.org/publicdomain/zero/1.0/", "CC0"],
+  ["CC_BY_NC_4_0", "CC BY-NC 4.0"],
+  ["https://example.org/my-license", null],
+  ["All rights reserved", null],
+];
+
+const wrongLicenses = LICENSE_CASES.filter(([input, expected]) => getLicenseLabel(input) !== expected)
+  .map(([input, expected]) => `${input} → ${getLicenseLabel(input)} (ควรเป็น ${expected})`);
+
+report(wrongLicenses.length === 0, "แปลง URL ของ license เป็นชื่อสั้น", wrongLicenses.join("; "));
+
+const unknownCredit = formatPhotoCredit(
+  { creator: "A", license: "https://example.org/my-license", publisher: "Herbarium X" },
+  "TH",
+);
+
+report(
+  unknownCredit === "© A · License · ผ่าน Herbarium X",
+  'license ที่ไม่รู้จักแสดงเป็น "License"',
+  unknownCredit,
 );
 
 report(
