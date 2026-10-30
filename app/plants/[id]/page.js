@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
+import GbifSpeciesPanel from "@/components/GbifSpeciesPanel";
 import Navbar from "@/components/Navbar";
 import PlantQR from "@/components/PlantQR";
 import SiteFooter from "@/components/SiteFooter";
@@ -522,6 +523,15 @@ export default function PlantDetailPage() {
             <ReadOnlyLocationMap plant={plant} t={t} />
           </div>
         </section>
+
+        {/* =================================================
+            GBIF SPECIES (โหลดแยก ไม่รอก่อนแสดงข้อมูลหลัก)
+        ================================================= */}
+
+        <GbifSpeciesPanel
+          botanicalName={plant.botanical_name}
+          language={language}
+        />
 
         {/* =================================================
             COLLECTION
