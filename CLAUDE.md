@@ -11,6 +11,12 @@
 - ข้อความในหน้าเว็บอยู่ในออบเจกต์ TH/EN ในไฟล์ของหน้าหรือ component
 - แผนที่ใช้ Leaflet ผ่าน `lib/useLeafletMap.js`
 - ดึงข้อมูลจาก Supabase เกิน 1000 แถวต้องวน `range()`
+- query ฝั่ง public ใช้ client จาก `lib/supabasePublic.js` เสมอ (ไม่ขึ้นกับ session ใน browser)
+  ฟังก์ชันที่ใช้ร่วมกับฝั่ง admin (เช่น `fetchPlantsPage`, `fetchPlantFacets`) ให้หน้า public ส่ง `client: supabasePublic`
+  ฝั่ง admin และ Navbar ใช้ client หลักจาก `lib/supabase.js`
+- ตรรกะกรองพรรณไม้ใช้ `applyPlantFilters()` และการอ่านตัวกรองจาก URL ใช้ `readPlantFilters()` (`lib/plantQueries.js`) เท่านั้น ห้ามเขียนซ้ำ
+- `lib/gbif.js` ใช้ได้ทั้ง browser และ server ห้ามใส่ `server-only`; โค้ดที่ต้องรันฝั่ง server เท่านั้นใส่ใน `lib/gbifSpecies.js`
+- `NEXT_PUBLIC_SITE_URL` ตั้งไว้ใน Vercel ทั้ง Production และ Preview แล้ว; QR ทุกอันต้องสร้าง URL ด้วย `getPlantUrl()` (`lib/siteUrl.js`)
 - SQL ห้ามรันเอง เขียนเป็นไฟล์ใน `supabase/sql/` ให้ผู้ใช้รันใน SQL Editor
 - ทุกขั้นต้อง `npm run build` ผ่านและ commit แยก, ห้าม push เอง
 - ห้ามมีตัวแปร `NEXT_PUBLIC_` ที่เป็นความลับ
