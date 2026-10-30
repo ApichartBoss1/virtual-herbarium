@@ -39,6 +39,7 @@ export default function Navbar() {
     TH: {
       home: "หน้าแรก",
       plants: "พรรณไม้",
+      map: "แผนที่",
       about: "เกี่ยวกับเรา",
 
       account: "จัดการข้อมูล",
@@ -67,6 +68,7 @@ export default function Navbar() {
     EN: {
       home: "Home",
       plants: "Plants",
+      map: "Map",
       about: "About",
 
       account: "Manage Data",
@@ -181,6 +183,10 @@ export default function Navbar() {
       label: t.plants,
     },
     {
+      href: "/map",
+      label: t.map,
+    },
+    {
       href: "/about",
       label: t.about,
     },
@@ -211,7 +217,7 @@ export default function Navbar() {
      MOBILE BACK
   ========================================================= */
 
-  const mobileRootRoutes = ["/", "/plants", "/about", "/account"];
+  const mobileRootRoutes = ["/", "/plants", "/map", "/about", "/account"];
 
   const showMobileBack = !mobileRootRoutes.includes(pathname);
 
@@ -231,6 +237,10 @@ export default function Navbar() {
 
     if (type === "plants") {
       return pathname === "/plants" || /^\/plants\/[^/]+$/.test(pathname);
+    }
+
+    if (type === "map") {
+      return pathname === "/map";
     }
 
     if (type === "add") {
@@ -519,7 +529,7 @@ export default function Navbar() {
       {!hideMobileBottomNav && (
         <nav className="mobile-bottom-nav md:hidden">
           <div
-            className={`mobile-bottom-nav-inner ${user ? "" : "!grid-cols-3"}`}
+            className={`mobile-bottom-nav-inner ${user ? "!grid-cols-6" : "!grid-cols-4"}`}
           >
             <MobileBottomItem
               href="/"
@@ -533,6 +543,13 @@ export default function Navbar() {
               label={t.plants}
               active={isBottomActive("plants")}
               icon={<CollectionIcon className="h-5 w-5" />}
+            />
+
+            <MobileBottomItem
+              href="/map"
+              label={t.map}
+              active={isBottomActive("map")}
+              icon={<MapIcon className="h-5 w-5" />}
             />
 
             {user && (
@@ -680,6 +697,27 @@ function CollectionIcon({ className = "" }) {
       <path d="M8 12h8" />
 
       <path d="M8 16h5" />
+    </svg>
+  );
+}
+
+function MapIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m9 4-5.5 2v14L9 18l6 2 5.5-2V4L15 6 9 4Z" />
+
+      <path d="M9 4v14" />
+
+      <path d="M15 6v14" />
     </svg>
   );
 }
