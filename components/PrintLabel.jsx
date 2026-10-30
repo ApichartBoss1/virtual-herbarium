@@ -6,7 +6,7 @@ import { QR_OPTIONS } from "@/components/PlantQR";
 import { getPlantUrl } from "@/lib/siteUrl";
 
 /* =========================================================
-   HERBARIUM LABEL (พิมพ์ติดตัวอย่างจริง)
+   PRINT LABEL (ป้ายพิมพ์ติดตัวอย่างจริง)
    - ป้ายแนวนอนขนาดจริงตาม LABEL_WIDTH_MM × LABEL_HEIGHT_MM
    - ดำบนขาวเสมอ แม้เปิดในโหมดมืด, เส้นประรอบป้ายคือเส้นตัด
    - ข้อความซ้าย, QR คอลัมน์ขวาชิดล่าง (สร้างแบบเดียวกับ PlantQR)
@@ -50,7 +50,7 @@ const COPY = {
   },
 };
 
-function HerbariumLabel({
+function PrintLabel({
   plant,
   language,
   overflowing = false,
@@ -240,7 +240,7 @@ function HerbariumLabel({
   );
 }
 
-export default memo(HerbariumLabel);
+export default memo(PrintLabel);
 
 function LabelLine({ label, value, valueClassName = "", lineRef }) {
   return (

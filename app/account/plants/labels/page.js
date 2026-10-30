@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import HerbariumLabel, {
+import PrintLabel, {
   LABEL_HEIGHT_MM,
   LABEL_WIDTH_MM,
-} from "@/components/HerbariumLabel";
+} from "@/components/PrintLabel";
 import Navbar from "@/components/Navbar";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 import { readLabelSelection } from "@/lib/labelSelection";
@@ -31,7 +31,7 @@ const LAYOUTS = {
 /* ช่องว่างระหว่างป้าย (มม.) */
 const LABEL_GAP_MM = 5;
 
-/* ขนาดป้ายมาจาก HerbariumLabel ที่เดียว
+/* ขนาดป้ายมาจาก PrintLabel ที่เดียว
    ตอนพิมพ์ซ่อนทุกอย่างนอกพื้นที่ป้าย (navbar, footer, พื้นหลัง 3D, แถบล่างมือถือ, ปุ่ม) */
 const PRINT_CSS = `
 @page { size: A4; margin: 10mm; }
@@ -263,7 +263,7 @@ export default function PrintLabelsPage() {
   const qrResultsRef = useRef(new Map());
   const [qrCounts, setQrCounts] = useState({ ready: 0, failed: 0 });
 
-  /* id ของป้ายที่ข้อความล้น (วัดหลัง render ใน HerbariumLabel) */
+  /* id ของป้ายที่ข้อความล้น (วัดหลัง render ใน PrintLabel) */
   const [overflowIds, setOverflowIds] = useState(() => new Set());
 
   const requestIdRef = useRef(0);
@@ -773,7 +773,7 @@ export default function PrintLabelsPage() {
                 </p>
 
                 {pagePlants.map((plant) => (
-                  <HerbariumLabel
+                  <PrintLabel
                     key={plant.id}
                     plant={plant}
                     language={language}
