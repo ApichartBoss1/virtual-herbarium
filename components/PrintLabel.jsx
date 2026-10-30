@@ -4,6 +4,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { QR_OPTIONS } from "@/components/PlantQR";
 import { getPlantUrl } from "@/lib/siteUrl";
+import { isGeocoded } from "@/lib/coordinateSource";
 
 /* =========================================================
    PRINT LABEL (ป้ายพิมพ์ติดตัวอย่างจริง)
@@ -262,9 +263,12 @@ function LabelLine({ label, value, valueClassName = "", lineRef }) {
 ========================================================= */
 
 /* ข้อความบนป้าย ใช้ทั้งป้ายบนหน้าจอและไฟล์ PDF
-   lines มีเฉพาะฟิลด์ที่มีค่า (ฟิลด์ว่างไม่แสดงทั้งบรรทัด) */
+   lines มีเฉพาะฟิลด์ที่มีค่า (ฟิลด์ว่างไม่แสดงทั้งบรรทัด)
+   พิกัดโดยประมาณจากชื่อสถานที่ (geocoded) ไม่พิมพ์พิกัดและความสูงบนป้าย */
 export function getLabelContent(plant, language) {
   const t = language === "EN" ? COPY.EN : COPY.TH;
+
+  const approximate = isGeocoded(plant);
 
   const collectorName = textOf(plant.collected_by);
   const collectorNo = textOf(plant.collector_no);
@@ -278,13 +282,13 @@ export function getLabelContent(plant, language) {
     {
       key: "coordinates",
       label: t.coordinates,
-      value: formatCoordinates(plant.latitude, plant.longitude),
+      value: approximate ? "" : formatCoordinates(plant.latitude, plant.longitude),
       mono: true,
     },
     {
       key: "elevation",
       label: t.elevation,
-      value: formatElevation(plant.elevation),
+      value: approximate ? "" : formatElevation(plant.elevation),
     },
     { key: "collector", label: t.collector, value: collector },
   ].filter((line) => line.value);

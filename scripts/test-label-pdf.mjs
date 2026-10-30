@@ -26,7 +26,7 @@ const { OPS, getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
 const { default: jsQR } = await import("jsqr");
 const { default: PDFDocument } = await import("pdfkit");
 const { createLabelPdf, renderGlyphs } = await import("../lib/labelPdf.js");
-const { LABEL_HEIGHT_MM, LABEL_WIDTH_MM } = await import(
+const { LABEL_HEIGHT_MM, LABEL_WIDTH_MM, getLabelContent } = await import(
   "../components/PrintLabel.jsx"
 );
 
@@ -245,6 +245,71 @@ for (const [base, minEm] of [
     offset === undefined ? "ไม่พบ" : `${offset.toFixed(3)} pt`,
   );
 }
+
+/* =========================================================
+   5. พิกัดโดยประมาณ (coordinate_source = geocoded)
+   ป้ายไม่พิมพ์พิกัดและความสูง เพราะเป็นค่าประมาณจากชื่อสถานที่
+   ป้ายพิกัดที่ admin ใส่เอง (manual) ยังพิมพ์ตามเดิม
+========================================================= */
+
+const GEOCODED_LOCALITY = "อุทยานแห่งชาติแก่งเจ็ดแคว จังหวัดพิษณุโลก";
+
+const manualPlant = plant("00000000-0000-4000-8000-000000004001", {
+  pnu_no: 4001,
+  locality: GEOCODED_LOCALITY,
+  coordinate_source: "manual",
+});
+
+const geocodedPlant = plant("00000000-0000-4000-8000-000000004002", {
+  pnu_no: 4002,
+  locality: GEOCODED_LOCALITY,
+  latitude: 16.987654,
+  longitude: 100.456789,
+  elevation: "345 m",
+  coordinate_source: "geocoded",
+  coordinate_uncertainty_m: 6200,
+});
+
+async function labelText(item) {
+  const bytes = await createPdf({ plants: [item], layout: "one" });
+
+  const document = await getDocument({ data: new Uint8Array(bytes), verbosity: 0 })
+    .promise;
+
+  const content = await (await document.getPage(1)).getTextContent();
+
+  return normalizeThai(content.items.map((part) => part.str).join(""));
+}
+
+const manualText = await labelText(manualPlant);
+
+const geocodedText = await labelText(geocodedPlant);
+
+report(
+  manualText.includes("พิกัด:") && manualText.includes("ความสูง:"),
+  "ป้ายพิกัด manual ยังพิมพ์พิกัดและความสูง",
+);
+
+report(
+  !geocodedText.includes("พิกัด:") &&
+    !geocodedText.includes("ความสูง:") &&
+    !geocodedText.includes("16.98") &&
+    !geocodedText.includes("345"),
+  "ป้ายพิกัด geocoded ไม่พิมพ์พิกัดและความสูงใน PDF",
+);
+
+report(
+  geocodedText.includes(normalizeThai(GEOCODED_LOCALITY)),
+  "ป้ายพิกัด geocoded ยังพิมพ์สถานที่เก็บ",
+);
+
+const screenKeys = getLabelContent(geocodedPlant, "TH").lines.map((line) => line.key);
+
+report(
+  !screenKeys.includes("coordinates") && !screenKeys.includes("elevation"),
+  "ป้ายบนหน้าจอของรายการ geocoded ไม่มีบรรทัดพิกัดและความสูง",
+  screenKeys.join(", "),
+);
 
 console.log(`\nPDF: ${pdfPath}`);
 console.log(`ภาพหน้าแรก (ตรวจสระ/วรรณยุกต์ด้วยตา): ${imagePath}`);
