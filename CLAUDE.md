@@ -17,6 +17,7 @@
 - ตรรกะกรองพรรณไม้ใช้ `applyPlantFilters()` และการอ่านตัวกรองจาก URL ใช้ `readPlantFilters()` (`lib/plantQueries.js`) เท่านั้น ห้ามเขียนซ้ำ
 - `lib/gbif.js` ใช้ได้ทั้ง browser และ server ห้ามใส่ `server-only`; โค้ดที่ต้องรันฝั่ง server เท่านั้นใส่ใน `lib/gbifSpecies.js`
 - `NEXT_PUBLIC_SITE_URL` ตั้งไว้ใน Vercel ทั้ง Production และ Preview แล้ว; QR ทุกอันต้องสร้าง URL ด้วย `getPlantUrl()` (`lib/siteUrl.js`)
+- การทดสอบด้วย Chrome headless ห้ามรอ network idle ให้กำหนด selector ที่รอและเวลาสูงสุดเสมอ
 - SQL ห้ามรันเอง เขียนเป็นไฟล์ใน `supabase/sql/` ให้ผู้ใช้รันใน SQL Editor
 - ทุกขั้นต้อง `npm run build` ผ่านและ commit แยก, ห้าม push เอง
 - ห้ามมีตัวแปร `NEXT_PUBLIC_` ที่เป็นความลับ
