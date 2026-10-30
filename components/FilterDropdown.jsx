@@ -29,67 +29,67 @@ export default function FilterDropdown({
 
   const selectedLabel = value ? labels[value] || value : placeholder;
 
-  function updateMenuPosition() {
-    const button = buttonRef.current;
-
-    if (!button || typeof window === "undefined") {
-      return;
-    }
-
-    const rect = button.getBoundingClientRect();
-
-    const margin = 8;
-
-    const desiredWidth = mobile
-      ? Math.max(rect.width, 220)
-      : Math.max(rect.width, 230);
-
-    const width = Math.min(desiredWidth, window.innerWidth - 16);
-
-    let left = rect.left;
-
-    if (left + width > window.innerWidth - 8) {
-      left = window.innerWidth - width - 8;
-    }
-
-    if (left < 8) {
-      left = 8;
-    }
-
-    const spaceBelow = window.innerHeight - rect.bottom - margin;
-
-    const spaceAbove = rect.top - margin;
-
-    const openUpward = spaceBelow < 190 && spaceAbove > spaceBelow;
-
-    const availableSpace = openUpward ? spaceAbove : spaceBelow;
-
-    const maxHeight = Math.max(140, Math.min(260, availableSpace - 6));
-
-    if (openUpward) {
-      setMenuPosition({
-        left,
-        width,
-        bottom: window.innerHeight - rect.top + margin,
-        top: "auto",
-        maxHeight,
-      });
-
-      return;
-    }
-
-    setMenuPosition({
-      left,
-      width,
-      top: rect.bottom + margin,
-      bottom: "auto",
-      maxHeight,
-    });
-  }
-
   useEffect(() => {
     if (!open) {
       return;
+    }
+
+    function updateMenuPosition() {
+      const button = buttonRef.current;
+
+      if (!button || typeof window === "undefined") {
+        return;
+      }
+
+      const rect = button.getBoundingClientRect();
+
+      const margin = 8;
+
+      const desiredWidth = mobile
+        ? Math.max(rect.width, 220)
+        : Math.max(rect.width, 230);
+
+      const width = Math.min(desiredWidth, window.innerWidth - 16);
+
+      let left = rect.left;
+
+      if (left + width > window.innerWidth - 8) {
+        left = window.innerWidth - width - 8;
+      }
+
+      if (left < 8) {
+        left = 8;
+      }
+
+      const spaceBelow = window.innerHeight - rect.bottom - margin;
+
+      const spaceAbove = rect.top - margin;
+
+      const openUpward = spaceBelow < 190 && spaceAbove > spaceBelow;
+
+      const availableSpace = openUpward ? spaceAbove : spaceBelow;
+
+      const maxHeight = Math.max(140, Math.min(260, availableSpace - 6));
+
+      if (openUpward) {
+        setMenuPosition({
+          left,
+          width,
+          bottom: window.innerHeight - rect.top + margin,
+          top: "auto",
+          maxHeight,
+        });
+
+        return;
+      }
+
+      setMenuPosition({
+        left,
+        width,
+        top: rect.bottom + margin,
+        bottom: "auto",
+        maxHeight,
+      });
     }
 
     updateMenuPosition();
@@ -135,7 +135,7 @@ export default function FilterDropdown({
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("pointerdown", handlePointerDown);
     };
-  }, [open]);
+  }, [open, mobile]);
 
   function handleSelect(option) {
     onChange(option);

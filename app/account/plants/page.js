@@ -362,14 +362,38 @@ export default function MyPlantsPage() {
 
   const itemsPerPage = isMobile ? 10 : 12;
 
+  /* คำขอใหม่ → ตั้งสถานะกำลังโหลดระหว่าง render แทนการ setState ใน effect
+     ("" = ยังไม่ส่งคำขอ) */
+  const listRequestKey =
+    userId && viewportReady
+      ? JSON.stringify([
+          userId,
+          search,
+          familyFilter,
+          localityFilter,
+          sort,
+          currentPage,
+          itemsPerPage,
+          reloadKey,
+        ])
+      : "";
+
+  const [startedListKey, setStartedListKey] = useState("");
+
+  if (listRequestKey !== startedListKey) {
+    setStartedListKey(listRequestKey);
+
+    if (listRequestKey) {
+      setListLoading(true);
+      setError("");
+    }
+  }
+
   useEffect(() => {
     if (!userId || !viewportReady) return;
 
     /* ignore responses that arrive after a newer request */
     const requestId = ++requestIdRef.current;
-
-    setListLoading(true);
-    setError("");
 
     fetchPlantsPage({
       search,

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 
@@ -294,6 +294,25 @@ const COPY = {
    PAGE
 ========================================================= */
 
+/* =========================================================
+   CAMERA SUPPORT
+   ค่าคงที่ของอุปกรณ์ อ่านผ่าน useSyncExternalStore (ไม่ต้อง subscribe)
+========================================================= */
+
+function subscribeNothing() {
+  return () => {};
+}
+
+function isCameraDevice() {
+  const userAgent = navigator.userAgent || navigator.vendor || "";
+
+  const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+
+  const iPadOS = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
+
+  return mobile || iPadOS;
+}
+
 export default function EditPlantPage() {
   const router = useRouter();
 
@@ -321,7 +340,12 @@ export default function EditPlantPage() {
 
   const [oldImageUrl, setOldImageUrl] = useState("");
 
-  const [canUseCamera, setCanUseCamera] = useState(false);
+  /* อุปกรณ์มือถือ/แท็บเล็ตเท่านั้น (server = false แล้วตรวจจริงหลัง hydrate) */
+  const canUseCamera = useSyncExternalStore(
+    subscribeNothing,
+    isCameraDevice,
+    () => false,
+  );
 
   const [processingImage, setProcessingImage] = useState(false);
 
@@ -349,24 +373,6 @@ export default function EditPlantPage() {
   const fileInputRef = useRef(null);
 
   const cameraInputRef = useRef(null);
-
-  /* =====================================================
-     CAMERA SUPPORT
-  ===================================================== */
-
-  useEffect(() => {
-    if (typeof navigator === "undefined") {
-      return;
-    }
-
-    const userAgent = navigator.userAgent || navigator.vendor || "";
-
-    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
-
-    const iPadOS = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
-
-    setCanUseCamera(mobile || iPadOS);
-  }, []);
 
   /* =====================================================
      LOAD PLANT

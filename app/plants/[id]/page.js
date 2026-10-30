@@ -232,10 +232,16 @@ export default function PlantDetailPage() {
      RESET IMAGE STATE
   ===================================================== */
 
-  useEffect(() => {
+  /* รูปเปลี่ยน → ล้างสถานะรูปเสีย/ตัวดูรูประหว่าง render (แทนการ setState ใน effect) */
+  const imageUrl = plant?.image_url;
+
+  const [imageStateFor, setImageStateFor] = useState(imageUrl);
+
+  if (imageStateFor !== imageUrl) {
+    setImageStateFor(imageUrl);
     setImageFailed(false);
     setImageViewerOpen(false);
-  }, [plant?.image_url]);
+  }
 
   /* =====================================================
      IMAGE VIEWER BODY LOCK

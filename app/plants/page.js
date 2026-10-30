@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 import FilterDropdown from "@/components/FilterDropdown";
@@ -23,6 +23,11 @@ import { useSiteSettings } from "@/components/SiteSettingsContext";
 ========================================================= */
 
 const SORT_OPTIONS = ["newest", "oldest", "nameAZ", "nameZA"];
+
+/* portal ใช้ได้หลัง hydrate เท่านั้น (server = false, browser = true) */
+function subscribeNothing() {
+  return () => {};
+}
 
 /* รอให้หยุดพิมพ์ก่อนค่อยค้นหาที่ฐานข้อมูล */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -104,7 +109,11 @@ function PlantsBrowser() {
 
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
-  const [portalReady, setPortalReady] = useState(false);
+  const portalReady = useSyncExternalStore(
+    subscribeNothing,
+    () => true,
+    () => false,
+  );
 
   const requestIdRef = useRef(0);
 
@@ -392,14 +401,6 @@ function PlantsBrowser() {
   const t = isEnglish ? text.EN : text.TH;
 
   /* =====================================================
-     PORTAL
-  ===================================================== */
-
-  useEffect(() => {
-    setPortalReady(true);
-  }, []);
-
-  /* =====================================================
      PAGINATION RESPONSIVE SIZE
 
      MOBILE    = 10 records
@@ -579,14 +580,15 @@ function PlantsBrowser() {
      page   = rows of the current page (on every change)
   ===================================================== */
 
+  /* facets โหลดใหม่เฉพาะตอนกดโหลดใหม่ จึงตั้งสถานะกำลังโหลดที่นี่ */
   function refreshData() {
+    setFacetsLoading(true);
+
     setReloadKey((key) => key + 1);
   }
 
   useEffect(() => {
     let active = true;
-
-    setFacetsLoading(true);
 
     fetchPlantFacets(supabasePublic)
       .then((data) => {
@@ -616,6 +618,32 @@ function PlantsBrowser() {
 
   const pageSize = isDesktop ? 12 : 10;
 
+  /* คำขอใหม่ (ตัวกรอง หน้า หรือกดโหลดใหม่) → ตั้งสถานะกำลังโหลดระหว่าง render
+     แทนการ setState ใน effect ("" = ยังไม่ส่งคำขอ เพราะยังไม่รู้ขนาดจอ) */
+  const pageRequestKey = viewportReady
+    ? JSON.stringify([
+        search,
+        familyFilter,
+        artificialGroupFilter,
+        collectorFilter,
+        sort,
+        currentPage,
+        pageSize,
+        reloadKey,
+      ])
+    : "";
+
+  const [startedRequestKey, setStartedRequestKey] = useState("");
+
+  if (pageRequestKey !== startedRequestKey) {
+    setStartedRequestKey(pageRequestKey);
+
+    if (pageRequestKey) {
+      setLoading(true);
+      setError("");
+    }
+  }
+
   useEffect(() => {
     if (!viewportReady) {
       return;
@@ -623,9 +651,6 @@ function PlantsBrowser() {
 
     /* ignore responses that arrive after a newer request */
     const requestId = ++requestIdRef.current;
-
-    setLoading(true);
-    setError("");
 
     fetchPlantsPage({
       search,
@@ -879,27 +904,30 @@ function PlantsBrowser() {
       key: "family",
       label: t.familyFilter,
       value: familyFilter,
-      clear: () => setFamilyFilter(""),
     },
     artificialGroupFilter && {
       key: "group",
       label: t.artificialGroupFilter,
       value: artificialGroupFilter,
-      clear: () => setArtificialGroupFilter(""),
     },
     collectorFilter && {
       key: "collector",
       label: t.collectorFilter,
       value: collectorFilter,
-      clear: () => setCollectorFilter(""),
     },
     search.trim() && {
       key: "search",
       label: t.searchLabel,
       value: `“${search.trim()}”`,
-      clear: () => setSearch(""),
     },
   ].filter(Boolean);
+
+  function clearChip(key) {
+    if (key === "family") setFamilyFilter("");
+    if (key === "group") setArtificialGroupFilter("");
+    if (key === "collector") setCollectorFilter("");
+    if (key === "search") setSearch("");
+  }
 
   /* =====================================================
      PAGE
@@ -1199,7 +1227,7 @@ function PlantsBrowser() {
                   <button
                     key={chip.key}
                     type="button"
-                    onClick={chip.clear}
+                    onClick={() => clearChip(chip.key)}
                     title={chip.label}
                     className="vh-tag vh-tag-moss max-w-full transition hover:bg-moss-tint"
                   >
