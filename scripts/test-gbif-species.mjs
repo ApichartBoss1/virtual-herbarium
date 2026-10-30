@@ -1,6 +1,6 @@
 /* =========================================================
    npm run test:gbif-species
-   ยิง /api/gbif/species ของเซิร์ฟเวอร์ที่รันอยู่ (BASE_URL)
+   ยิง /api/gbif/species และ /api/gbif/photo ของเซิร์ฟเวอร์ที่รันอยู่ (BASE_URL)
    แล้วพิมพ์ตารางสรุปและตรวจผลอัตโนมัติ (exit code 1 ถ้ามีข้อใด FAIL)
 
    BASE_URL=http://localhost:3000 npm run test:gbif-species
@@ -19,8 +19,8 @@ const NAMES = [
   "",
 ];
 
-async function callApi(name) {
-  const url = `${BASE_URL}/api/gbif/species?${new URLSearchParams({ name })}`;
+async function callApi(name, route = "species") {
+  const url = `${BASE_URL}/api/gbif/${route}?${new URLSearchParams({ name })}`;
 
   const started = performance.now();
 
@@ -255,6 +255,135 @@ console.log(
 report(
   JSON.stringify(repeat.body) === JSON.stringify(samanea.body),
   "เรียกซ้ำได้ข้อมูลเดิม",
+);
+
+/* =========================================================
+   /api/gbif/photo (รูปตัวอย่างหนึ่งรูปสำหรับรายการที่ไม่มีรูป)
+========================================================= */
+
+console.log("\n/api/gbif/photo");
+
+const PHOTO_FIELDS = [
+  "thumbnailUrl",
+  "largeUrl",
+  "creator",
+  "licenseLabel",
+  "licenseUrl",
+  "publisher",
+  "occurrenceUrl",
+  "level",
+];
+
+const photoOk = await callApi("Samanea saman (Jacq.) Merr.", "photo");
+const example = photoOk.body?.data;
+
+console.table(
+  example
+    ? [{ ms: photoOk.ms, level: example.level, เครดิต: formatPhotoCredit(example, "TH"), occurrence: example.occurrenceUrl }]
+    : [],
+);
+
+report(
+  photoOk.status === 200 && Boolean(example),
+  '/api/gbif/photo "Samanea saman" → ได้รูป',
+  `status=${photoOk.status}, ${photoOk.ms} ms`,
+);
+
+report(
+  Boolean(example) &&
+    Object.keys(example).sort().join() === [...PHOTO_FIELDS].sort().join(),
+  "/api/gbif/photo คืนเฉพาะฟิลด์ของรูป",
+  example ? Object.keys(example).join(", ") : "ไม่มี",
+);
+
+report(
+  Boolean(example?.licenseLabel || example?.licenseUrl),
+  "/api/gbif/photo รูปมี license",
+  example?.licenseLabel || example?.licenseUrl || "ไม่มี",
+);
+
+report(
+  Boolean(example?.thumbnailUrl && example?.largeUrl) &&
+    ![example.thumbnailUrl, example.largeUrl].some((url) => /\/original\.\w+(\?|$)/i.test(url)),
+  "/api/gbif/photo รูปย่อและรูปใหญ่ไม่ใช่ไฟล์ original",
+);
+
+report(
+  /^https:\/\/www\.gbif\.org\/occurrence\/\d+$/.test(example?.occurrenceUrl || ""),
+  "/api/gbif/photo ลิงก์ไปหน้า occurrence บน GBIF",
+);
+
+report(
+  JSON.stringify(samaneaData?.examplePhoto) === JSON.stringify(example),
+  "examplePhoto ใน /api/gbif/species เป็นรูปเดียวกับ /api/gbif/photo",
+);
+
+for (const url of [example?.thumbnailUrl, example?.largeUrl].filter(Boolean)) {
+  let ok = false;
+
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": "virtual-herbarium (Naresuan University)" },
+      signal: AbortSignal.timeout(30000),
+    });
+
+    ok = response.ok && String(response.headers.get("content-type")).startsWith("image/");
+
+    await response.arrayBuffer();
+  } catch {
+    ok = false;
+  }
+
+  report(ok, `/api/gbif/photo รูปโหลดได้ (${url === example.largeUrl ? "largeUrl" : "thumbnailUrl"})`);
+}
+
+report(
+  photoOk.cacheControl === "public, s-maxage=86400, stale-while-revalidate=604800",
+  "/api/gbif/photo Cache-Control ถูกต้อง",
+  photoOk.cacheControl || "ไม่มี",
+);
+
+const photoGenus = await callApi("Zingiber sp.", "photo");
+
+report(
+  photoGenus.body?.data === null || photoGenus.body?.data?.level === "genus",
+  '/api/gbif/photo "Zingiber sp." → level "genus"',
+  `level=${photoGenus.body?.data?.level || "—"}`,
+);
+
+const photoMisspelled = await callApi("Hydrophila erecta", "photo");
+
+report(
+  photoMisspelled.status === 200 && photoMisspelled.body?.ok === true && photoMisspelled.body?.data === null,
+  '/api/gbif/photo "Hydrophila erecta" → data เป็น null (สะกดผิด)',
+  `status=${photoMisspelled.status}`,
+);
+
+const photoNonsense = await callApi("asdfgh", "photo");
+
+report(
+  photoNonsense.status === 200 && photoNonsense.body?.data === null,
+  '/api/gbif/photo "asdfgh" → data เป็น null',
+  `status=${photoNonsense.status}`,
+);
+
+const photoEmpty = await callApi("", "photo");
+
+report(photoEmpty.status === 400, "/api/gbif/photo name ว่าง → 400", `status=${photoEmpty.status}`);
+
+const photoTooLong = await callApi("a".repeat(201), "photo");
+
+report(photoTooLong.status === 400, "/api/gbif/photo name ยาว 201 ตัวอักษร → 400", `status=${photoTooLong.status}`);
+
+const photoRepeat = await callApi("Samanea saman (Jacq.) Merr.", "photo");
+
+console.log(
+  `เวลา /api/gbif/photo "Samanea saman": ครั้งแรก ${photoOk.ms} ms, ครั้งที่สอง ${photoRepeat.ms} ms`,
+);
+
+report(
+  JSON.stringify(photoRepeat.body) === JSON.stringify(photoOk.body),
+  "/api/gbif/photo เรียกซ้ำได้ข้อมูลเดิม",
 );
 
 process.exit(failed ? 1 : 0);
