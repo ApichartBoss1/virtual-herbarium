@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 
+import NameCheck from "@/components/NameCheck";
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
+import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 import {
   IMAGE_INPUT_ACCEPT,
@@ -48,6 +51,25 @@ const INITIAL_FORM = {
   elevation: "",
 };
 
+/* =========================================================
+   CAMERA SUPPORT
+   ค่าคงที่ของอุปกรณ์ อ่านผ่าน useSyncExternalStore (ไม่ต้อง subscribe)
+========================================================= */
+
+function subscribeNothing() {
+  return () => {};
+}
+
+function isCameraDevice() {
+  const userAgent = navigator.userAgent || navigator.vendor || "";
+
+  const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+
+  const iPadOS = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
+
+  return mobile || iPadOS;
+}
+
 export default function NewPlantPage() {
   const router = useRouter();
 
@@ -59,7 +81,7 @@ export default function NewPlantPage() {
      STATE
   ===================================================== */
 
-  const [user, setUser] = useState(null);
+  const { user } = useAdmin();
 
   const [form, setForm] = useState(INITIAL_FORM);
 
@@ -67,7 +89,12 @@ export default function NewPlantPage() {
 
   const [preview, setPreview] = useState("");
 
-  const [canUseCamera, setCanUseCamera] = useState(false);
+  /* อุปกรณ์มือถือ/แท็บเล็ตเท่านั้น (server = false แล้วตรวจจริงหลัง hydrate) */
+  const canUseCamera = useSyncExternalStore(
+    subscribeNothing,
+    isCameraDevice,
+    () => false,
+  );
 
   const [processingImage, setProcessingImage] = useState(false);
 
@@ -75,7 +102,6 @@ export default function NewPlantPage() {
 
   const [dragActive, setDragActive] = useState(false);
 
-  const [loading, setLoading] = useState(true);
 
   const [saving, setSaving] = useState(false);
 
@@ -174,8 +200,6 @@ export default function NewPlantPage() {
 
       cancel: "ยกเลิก",
 
-      loading: "กำลังเตรียมแบบฟอร์ม...",
-
       loginRequired: "กรุณาเข้าสู่ระบบก่อนเพิ่มข้อมูลพรรณไม้",
 
       saveError: "ไม่สามารถบันทึกข้อมูลพรรณไม้ได้",
@@ -191,6 +215,8 @@ export default function NewPlantPage() {
       pnuError: "หมายเลข PNU ต้องเป็นเลขจำนวนเต็มตั้งแต่ 1 ขึ้นไป",
 
       botanicalRequired: "กรุณากรอกชื่อวิทยาศาสตร์",
+
+      pnuDuplicate: "หมายเลข PNU นี้มีอยู่ในระบบแล้ว",
 
       identification: "การระบุชนิด",
 
@@ -290,8 +316,6 @@ export default function NewPlantPage() {
 
       cancel: "Cancel",
 
-      loading: "Preparing form...",
-
       loginRequired: "Please log in before adding a plant",
 
       saveError: "Unable to save plant",
@@ -308,6 +332,8 @@ export default function NewPlantPage() {
 
       botanicalRequired: "Please enter the Botanical Name",
 
+      pnuDuplicate: "This PNU No. already exists in the system.",
+
       identification: "Identification",
 
       collectionShort: "Collection",
@@ -323,72 +349,6 @@ export default function NewPlantPage() {
   };
 
   const t = isEnglish ? text.EN : text.TH;
-
-  /* =====================================================
-     CAMERA SUPPORT
-  ===================================================== */
-
-  useEffect(() => {
-    if (typeof navigator === "undefined") {
-      return;
-    }
-
-    const userAgent = navigator.userAgent || navigator.vendor || "";
-
-    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
-
-    const iPadOS = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
-
-    setCanUseCamera(mobile || iPadOS);
-  }, []);
-
-  /* =====================================================
-     LOAD USER ONLY
-  ===================================================== */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadUser() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const {
-          data: { user: currentUser },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (!mounted) {
-          return;
-        }
-
-        if (userError || !currentUser) {
-          router.replace("/login");
-
-          return;
-        }
-
-        setUser(currentUser);
-      } catch (err) {
-        console.error("Load user error:", err);
-
-        if (mounted) {
-          setError(t.loginRequired);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadUser();
-
-    return () => {
-      mounted = false;
-    };
-  }, [router, t.loginRequired]);
 
   /* =====================================================
      FORM
@@ -711,7 +671,8 @@ export default function NewPlantPage() {
 
         longitude: toFiniteNumberOrNull(form.longitude),
 
-        elevation: toFiniteNumberOrNull(form.elevation),
+        /* elevation เป็น text ในฐานข้อมูล และอาจเป็นช่วง เช่น "800–900 m" */
+        elevation: String(form.elevation ?? "").trim() || null,
 
         image_url: imageUrl,
       };
@@ -721,6 +682,10 @@ export default function NewPlantPage() {
 
         error: insertError,
       } = await supabase.from("plants").insert(plantData).select().single();
+
+      if (insertError?.code === "23505") {
+        throw new Error(t.pnuDuplicate);
+      }
 
       if (insertError || !insertedPlant) {
         throw new Error(insertError?.message || t.saveError);
@@ -750,30 +715,14 @@ export default function NewPlantPage() {
     }
   }
 
-  /* =====================================================
-     LOADING
-  ===================================================== */
-
-  if (loading) {
-    return (
-      <main className="page min-h-screen text-ink">
-        <Navbar />
-
-        <div className="flex min-h-[65dvh] items-center justify-center px-5">
-          <div className="text-center">
-            <LoadingIcon className="mx-auto h-6 w-6 animate-spin text-moss" />
-
-            <p className="mt-4 font-serif text-[15px] italic text-muted">
-              {t.loading}
-            </p>
-          </div>
-        </div>
-      </main>
-    );
-  }
 
   const pnuFieldError =
-    error && (error === t.pnuRequired || error === t.pnuError) ? error : "";
+    error &&
+    (error === t.pnuRequired ||
+      error === t.pnuError ||
+      error === t.pnuDuplicate)
+      ? error
+      : "";
 
   const botanicalFieldError =
     error && error === t.botanicalRequired ? error : "";
@@ -1087,6 +1036,15 @@ export default function NewPlantPage() {
                     error={botanicalFieldError}
                     disabled={saving}
                   />
+
+                  <NameCheck
+                    botanicalName={form.botanical_name}
+                    family={form.family}
+                    language={language}
+                    disabled={saving}
+                    onUseName={(name) => updateField("botanical_name", name)}
+                    onUseFamily={(value) => updateField("family", value)}
+                  />
                 </div>
 
                 <Field
@@ -1212,11 +1170,7 @@ function AutoLocationMap({
 
   const mapContainerRef = useRef(null);
 
-  const mapRef = useRef(null);
-
   const markerRef = useRef(null);
-
-  const leafletRef = useRef(null);
 
   const forwardTimerRef = useRef(null);
 
@@ -1232,8 +1186,6 @@ function AutoLocationMap({
 
   const initialLocationRef = useRef(initialLocation);
 
-  const [mapReady, setMapReady] = useState(false);
-
   const [locating, setLocating] = useState(false);
 
   const [searchingLocation, setSearchingLocation] = useState(false);
@@ -1245,6 +1197,73 @@ function AutoLocationMap({
   const [locationData, setLocationData] = useState(() =>
     normalizeLocationData(initialLocation),
   );
+
+  /* =====================================================
+     MAP (lib/useLeafletMap จัดการสร้าง/ลบแผนที่)
+  ===================================================== */
+
+  const {
+    map: leafletMap,
+    error: mapLoadError,
+    mapRef,
+    leafletRef,
+  } = useLeafletMap(mapContainerRef, {
+    options: {
+      zoomControl: true,
+
+      attributionControl: true,
+
+      preferCanvas: true,
+
+      center: [DEFAULT_MAP_CENTER.latitude, DEFAULT_MAP_CENTER.longitude],
+
+      zoom: DEFAULT_MAP_ZOOM,
+    },
+
+    setup: (L, map) => {
+      /* แผนที่ใหม่ ต้องสร้าง marker ใหม่ */
+      markerRef.current = null;
+
+      L.tileLayer(MAP_TILE_URL, {
+        maxZoom: 19,
+
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      map.on("click", (event) => {
+        selectLocation(
+          event.latlng.lat,
+
+          event.latlng.lng,
+
+          true,
+        );
+      });
+
+      const initial = normalizeLocationData(initialLocationRef.current);
+
+      setLocationData(initial);
+
+      if (hasValidCoordinates(initial.latitude, initial.longitude)) {
+        placeMarker(initial.latitude, initial.longitude);
+
+        map.setView([initial.latitude, initial.longitude], 16, {
+          animate: false,
+        });
+      }
+    },
+  });
+
+  const mapReady = Boolean(leafletMap);
+
+  const shownMapError =
+    mapError ||
+    (mapLoadError
+      ? isEnglish
+        ? "Unable to load the map."
+        : "ไม่สามารถโหลดแผนที่ได้"
+      : "");
 
   const mapText = isEnglish
     ? {
@@ -1338,138 +1357,20 @@ function AutoLocationMap({
   }, [initialLocation]);
 
   /* =====================================================
-     AUTO SEARCH LOCALITY
+     CLEANUP SEARCH ON UNMOUNT
   ===================================================== */
 
   useEffect(() => {
-    if (!mapReady) {
-      return;
-    }
+    const forwardTimer = forwardTimerRef;
 
-    const keyword = String(initialLocation?.locality || "").trim();
-
-    if (forwardTimerRef.current) {
-      window.clearTimeout(forwardTimerRef.current);
-    }
-
-    forwardAbortRef.current?.abort();
-
-    if (keyword.length < 3) {
-      setSearchingLocation(false);
-
-      setMapError("");
-
-      return;
-    }
-
-    forwardTimerRef.current = window.setTimeout(() => {
-      searchLocality(keyword);
-    }, 1000);
+    const forwardAbort = forwardAbortRef;
 
     return () => {
-      if (forwardTimerRef.current) {
-        window.clearTimeout(forwardTimerRef.current);
-      }
-    };
-  }, [initialLocation?.locality, mapReady]);
-
-  /* =====================================================
-     INITIALIZE MAP
-  ===================================================== */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function initializeMap() {
-      try {
-        const leafletModule = await import("leaflet");
-
-        if (!mounted || !mapContainerRef.current) {
-          return;
-        }
-
-        const L = leafletModule.default || leafletModule;
-
-        leafletRef.current = L;
-
-        const map = L.map(mapContainerRef.current, {
-          zoomControl: true,
-
-          attributionControl: true,
-
-          preferCanvas: true,
-        }).setView(
-          [DEFAULT_MAP_CENTER.latitude, DEFAULT_MAP_CENTER.longitude],
-          DEFAULT_MAP_ZOOM,
-        );
-
-        L.tileLayer(MAP_TILE_URL, {
-          maxZoom: 19,
-
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-        }).addTo(map);
-
-        map.on("click", (event) => {
-          selectLocation(
-            event.latlng.lat,
-
-            event.latlng.lng,
-
-            true,
-          );
-        });
-
-        mapRef.current = map;
-
-        const initial = normalizeLocationData(initialLocationRef.current);
-
-        setLocationData(initial);
-
-        if (hasValidCoordinates(initial.latitude, initial.longitude)) {
-          placeMarker(initial.latitude, initial.longitude);
-
-          map.setView([initial.latitude, initial.longitude], 16, {
-            animate: false,
-          });
-        }
-
-        setMapReady(true);
-
-        window.setTimeout(() => {
-          if (mounted && mapRef.current === map) map.invalidateSize();
-        }, 150);
-      } catch (err) {
-        console.error("Initialize map error:", err);
-
-        if (mounted) {
-          setMapError(
-            isEnglish ? "Unable to load the map." : "ไม่สามารถโหลดแผนที่ได้",
-          );
-        }
-      }
-    }
-
-    initializeMap();
-
-    return () => {
-      mounted = false;
-
-      if (forwardTimerRef.current) {
-        window.clearTimeout(forwardTimerRef.current);
+      if (forwardTimer.current) {
+        window.clearTimeout(forwardTimer.current);
       }
 
-      forwardAbortRef.current?.abort();
-
-      if (mapRef.current) {
-        mapRef.current.remove();
-
-        mapRef.current = null;
-      }
-
-      markerRef.current = null;
-
-      leafletRef.current = null;
+      forwardAbort.current?.abort();
     };
   }, []);
 
@@ -1739,6 +1640,43 @@ function AutoLocationMap({
   }
 
   /* =====================================================
+     AUTO SEARCH LOCALITY
+     (อยู่หลัง searchLocality เพื่อให้ประกาศฟังก์ชันก่อนใช้)
+  ===================================================== */
+
+  useEffect(() => {
+    if (!mapReady) {
+      return;
+    }
+
+    const keyword = String(initialLocation?.locality || "").trim();
+
+    if (forwardTimerRef.current) {
+      window.clearTimeout(forwardTimerRef.current);
+    }
+
+    forwardAbortRef.current?.abort();
+
+    if (keyword.length < 3) {
+      setSearchingLocation(false);
+
+      setMapError("");
+
+      return;
+    }
+
+    forwardTimerRef.current = window.setTimeout(() => {
+      searchLocality(keyword);
+    }, 1000);
+
+    return () => {
+      if (forwardTimerRef.current) {
+        window.clearTimeout(forwardTimerRef.current);
+      }
+    };
+  }, [initialLocation?.locality, mapReady]);
+
+  /* =====================================================
      CURRENT LOCATION
   ===================================================== */
 
@@ -1877,7 +1815,7 @@ function AutoLocationMap({
             className="h-[240px] w-full sm:h-[300px] lg:h-[340px] dark:brightness-[0.78] dark:contrast-[1.05]"
           />
 
-          {!mapReady && !mapError && (
+          {!mapReady && !shownMapError && (
             <div className="vh-skeleton absolute inset-0 flex items-center justify-center">
               <LoadingIcon className="h-6 w-6 animate-spin text-moss" />
             </div>
@@ -1920,11 +1858,11 @@ function AutoLocationMap({
         )}
       </div>
 
-      {mapError && (
+      {shownMapError && (
         <div className="mt-3 flex items-start gap-2 rounded-[4px] border border-ochre/30 bg-ochre-soft px-3 py-2.5 text-[13px] leading-5 text-ink-soft">
           <InfoIcon className="mt-0.5 h-4 w-4 shrink-0 text-ochre" />
 
-          <span>{mapError}</span>
+          <span>{shownMapError}</span>
         </div>
       )}
 

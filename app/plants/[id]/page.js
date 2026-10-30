@@ -4,9 +4,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
+import GbifSpeciesPanel from "@/components/GbifSpeciesPanel";
 import Navbar from "@/components/Navbar";
+import PlantQR from "@/components/PlantQR";
 import SiteFooter from "@/components/SiteFooter";
-import { supabase } from "@/lib/supabase";
+import { useSignedInAdmin } from "@/components/AdminContext";
+import { fetchPublicPlant, plantFiltersToSearch } from "@/lib/plantQueries";
+import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 import "leaflet/dist/leaflet.css";
@@ -25,6 +29,9 @@ const UUID_PATTERN =
 export default function PlantDetailPage() {
   const params = useParams();
   const plantId = params?.id;
+
+  /* admin ที่ล็อกอินอยู่เห็นปุ่มแก้ไข (ไม่กระทบการโหลดข้อมูล) */
+  const signedInAdmin = useSignedInAdmin();
 
   const { language } = useSiteSettings();
   const isEnglish = language === "EN";
@@ -46,6 +53,7 @@ export default function PlantDetailPage() {
   const text = {
     TH: {
       back: "กลับไปยังคลังพรรณไม้",
+      edit: "แก้ไข",
       loading: "กำลังเปิดข้อมูลตัวอย่างพรรณไม้",
       errorTitle: "ไม่สามารถเปิดข้อมูลพรรณไม้ได้",
       invalidId: "รหัสตัวอย่างพรรณไม้ไม่ถูกต้อง",
@@ -59,6 +67,7 @@ export default function PlantDetailPage() {
       pnuNo: "หมายเลข PNU",
       artificialGroup: "กลุ่มพรรณไม้",
       family: "วงศ์พืช",
+      familyOnMap: "ดูวงศ์นี้บนแผนที่",
 
       collectedBy: "ผู้เก็บตัวอย่าง",
       collectorNo: "หมายเลขผู้เก็บตัวอย่าง",
@@ -110,6 +119,7 @@ export default function PlantDetailPage() {
 
     EN: {
       back: "Back to Plant Collection",
+      edit: "Edit",
       loading: "Opening specimen record",
       errorTitle: "Unable to open plant information",
       invalidId: "The specimen identifier is invalid.",
@@ -123,6 +133,7 @@ export default function PlantDetailPage() {
       pnuNo: "PNU No.",
       artificialGroup: "Artificial Group",
       family: "Family",
+      familyOnMap: "View this family on the map",
 
       collectedBy: "Collector",
       collectorNo: "Collector No.",
@@ -194,30 +205,8 @@ export default function PlantDetailPage() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("plants")
-        .select(
-          `
-          pnu_no,
-          artificial_group,
-          family,
-          botanical_name,
-          collected_by,
-          collector_no,
-          locality,
-          latitude,
-          longitude,
-          elevation,
-          image_url
-        `,
-        )
-        .eq("id", plantId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Fetch plant error:", error);
-        throw error;
-      }
+      /* ข้อมูลเหมือนกันทุกคน ไม่ขึ้นกับการล็อกอิน */
+      const data = await fetchPublicPlant(plantId);
 
       if (!data) {
         setPlant(null);
@@ -243,10 +232,16 @@ export default function PlantDetailPage() {
      RESET IMAGE STATE
   ===================================================== */
 
-  useEffect(() => {
+  /* รูปเปลี่ยน → ล้างสถานะรูปเสีย/ตัวดูรูประหว่าง render (แทนการ setState ใน effect) */
+  const imageUrl = plant?.image_url;
+
+  const [imageStateFor, setImageStateFor] = useState(imageUrl);
+
+  if (imageStateFor !== imageUrl) {
+    setImageStateFor(imageUrl);
     setImageFailed(false);
     setImageViewerOpen(false);
-  }, [plant?.image_url]);
+  }
 
   /* =====================================================
      IMAGE VIEWER BODY LOCK
@@ -428,6 +423,16 @@ export default function PlantDetailPage() {
               <span className="vh-catalog">{plantNo}</span>
             </>
           )}
+
+          {signedInAdmin && plant && (
+            <Link
+              href={`/account/plants/${plantId}/edit`}
+              className="vh-btn vh-btn-outline vh-btn-sm ml-auto"
+            >
+              <EditIcon className="h-4 w-4" />
+              {t.edit}
+            </Link>
+          )}
         </nav>
 
         {/* =================================================
@@ -494,7 +499,13 @@ export default function PlantDetailPage() {
             displayName={displayName}
             plantNo={plantNo}
             displayValue={displayValue}
-            actions={null}
+            actions={
+              <PlantQR
+                plantId={plantId}
+                pnuNo={plant.pnu_no}
+                language={language}
+              />
+            }
           />
         </div>
 
@@ -520,6 +531,15 @@ export default function PlantDetailPage() {
             <ReadOnlyLocationMap plant={plant} t={t} />
           </div>
         </section>
+
+        {/* =================================================
+            GBIF SPECIES (โหลดแยก ไม่รอก่อนแสดงข้อมูลหลัก)
+        ================================================= */}
+
+        <GbifSpeciesPanel
+          botanicalName={plant.botanical_name}
+          language={language}
+        />
 
         {/* =================================================
             COLLECTION
@@ -702,7 +722,18 @@ function HerbariumLabel({
 
           <LabelRow label={t.family}>
             {isFilled(plant.family) ? (
-              <span className="text-ink">{plant.family}</span>
+              <>
+                <span className="text-ink">{plant.family}</span>
+
+                {/* ตัวกรอง family ชื่อเดียวกับ /plants และ /map */}
+                <Link
+                  href={`/map?${plantFiltersToSearch({ family: plant.family })}`}
+                  data-family-map-link
+                  className="mt-0.5 block w-fit text-[12.5px] text-moss underline decoration-moss/40 underline-offset-4 transition hover:decoration-moss"
+                >
+                  {t.familyOnMap}
+                </Link>
+              </>
             ) : (
               <EmptyValue text={t.noData} />
             )}
@@ -880,112 +911,97 @@ function SectionHeading({ eyebrow, title }) {
 
 function ReadOnlyLocationMap({ plant, t }) {
   const mapContainerRef = useRef(null);
-  const mapRef = useRef(null);
 
   const latitude = toCoordinateNumber(plant?.latitude);
   const longitude = toCoordinateNumber(plant?.longitude);
 
   const hasCoordinates = latitude !== null && longitude !== null;
 
+  const markerRef = useRef(null);
+
+  const { map } = useLeafletMap(mapContainerRef, {
+    enabled: hasCoordinates,
+
+    options: {
+      zoomControl: true,
+      attributionControl: true,
+      scrollWheelZoom: false,
+      doubleClickZoom: true,
+      dragging: true,
+      touchZoom: true,
+      boxZoom: false,
+      keyboard: false,
+      preferCanvas: true,
+    },
+
+    setup: (L, createdMap) => {
+      createdMap.setView([latitude, longitude], 16);
+
+      L.tileLayer(
+        process.env.NEXT_PUBLIC_MAP_TILE_URL ||
+          "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution:
+            '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+        },
+      ).addTo(createdMap);
+
+      /* =============================================
+         MINIMAL MARKER (uses design tokens)
+      ============================================= */
+
+      const markerIcon = L.divIcon({
+        className: "",
+
+        html: `
+          <div style="
+            width:18px;
+            height:18px;
+            border-radius:999px;
+            background:var(--moss);
+            border:3px solid var(--sheet-raised);
+            box-shadow:
+              0 3px 10px rgba(0,0,0,.24),
+              0 0 0 4px var(--moss-soft);
+          "></div>
+        `,
+
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+        popupAnchor: [0, -12],
+      });
+
+      const marker = L.marker([latitude, longitude], {
+        draggable: false,
+        keyboard: false,
+        icon: markerIcon,
+      }).addTo(createdMap);
+
+      marker.bindTooltip(t.mapPinLabel, {
+        direction: "top",
+        offset: [0, -10],
+        opacity: 0.95,
+      });
+
+      markerRef.current = marker;
+    },
+  });
+
+  /* เปลี่ยนพิกัดหรือภาษาโดยไม่ต้องสร้างแผนที่ใหม่ */
   useEffect(() => {
-    let active = true;
+    const marker = markerRef.current;
 
-    async function createMap() {
-      if (!hasCoordinates || !mapContainerRef.current || mapRef.current) {
-        return;
-      }
-
-      try {
-        const leafletModule = await import("leaflet");
-
-        if (!active || !mapContainerRef.current) {
-          return;
-        }
-
-        const L = leafletModule.default || leafletModule;
-
-        const map = L.map(mapContainerRef.current, {
-          zoomControl: true,
-          attributionControl: true,
-          scrollWheelZoom: false,
-          doubleClickZoom: true,
-          dragging: true,
-          touchZoom: true,
-          boxZoom: false,
-          keyboard: false,
-          preferCanvas: true,
-        }).setView([latitude, longitude], 16);
-
-        L.tileLayer(
-          process.env.NEXT_PUBLIC_MAP_TILE_URL ||
-            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          {
-            maxZoom: 19,
-            attribution:
-              '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-          },
-        ).addTo(map);
-
-        /* =============================================
-           MINIMAL MARKER (uses design tokens)
-        ============================================= */
-
-        const markerIcon = L.divIcon({
-          className: "",
-
-          html: `
-            <div style="
-              width:18px;
-              height:18px;
-              border-radius:999px;
-              background:var(--moss);
-              border:3px solid var(--sheet-raised);
-              box-shadow:
-                0 3px 10px rgba(0,0,0,.24),
-                0 0 0 4px var(--moss-soft);
-            "></div>
-          `,
-
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
-          popupAnchor: [0, -12],
-        });
-
-        const marker = L.marker([latitude, longitude], {
-          draggable: false,
-          keyboard: false,
-          icon: markerIcon,
-        }).addTo(map);
-
-        marker.bindTooltip(t.mapPinLabel, {
-          direction: "top",
-          offset: [0, -10],
-          opacity: 0.95,
-        });
-
-        mapRef.current = map;
-
-        window.setTimeout(() => {
-          if (mapRef.current) {
-            mapRef.current.invalidateSize();
-          }
-        }, 120);
-      } catch (error) {
-        console.error("Read-only map error:", error);
-      }
+    if (!map || !marker || !hasCoordinates) {
+      return;
     }
 
-    createMap();
+    marker.setLatLng([latitude, longitude]);
 
-    return () => {
-      active = false;
+    marker.setTooltipContent(t.mapPinLabel);
 
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [hasCoordinates, latitude, longitude, t.mapPinLabel]);
+    map.setView([latitude, longitude], map.getZoom(), { animate: false });
+  }, [map, hasCoordinates, latitude, longitude, t.mapPinLabel]);
 
   const latitudeDms = hasCoordinates ? decimalToDms(latitude, true) : "";
 
@@ -1355,6 +1371,24 @@ function ExpandIcon({ className = "" }) {
       <path d="m3 21 6-6" />
       <path d="M16 21h5v-5" />
       <path d="m21 21-6-6" />
+    </svg>
+  );
+}
+
+function EditIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
+      <path d="m13.5 6.5 4 4" />
     </svg>
   );
 }

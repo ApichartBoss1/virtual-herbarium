@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
+import FilterDropdown from "@/components/FilterDropdown";
 import Navbar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
-import { supabase } from "@/lib/supabase";
+import {
+  EMPTY_FACETS,
+  fetchPlantFacets,
+  fetchPlantsPage,
+  plantFiltersToSearch,
+  readPlantFilters,
+} from "@/lib/plantQueries";
+import { supabasePublic } from "@/lib/supabasePublic";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 /* =========================================================
@@ -16,11 +24,20 @@ import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 const SORT_OPTIONS = ["newest", "oldest", "nameAZ", "nameZA"];
 
+/* portal ใช้ได้หลัง hydrate เท่านั้น (server = false, browser = true) */
+function subscribeNothing() {
+  return () => {};
+}
+
+/* รอให้หยุดพิมพ์ก่อนค่อยค้นหาที่ฐานข้อมูล */
+const SEARCH_DEBOUNCE_MS = 300;
+
 /* =========================================================
    PAGE
    useSearchParams needs a Suspense boundary (Next 16).
-   ?family=<name> (linked from the home page family index)
-   becomes the initial family filter.
+   Filters live in the URL:
+   ?q=&family=&group=&collector=&sort=&page=
+   (?family=<name> is linked from the home page family index)
 ========================================================= */
 
 export default function PlantsPage() {
@@ -29,7 +46,7 @@ export default function PlantsPage() {
       <Navbar />
 
       <Suspense fallback={<CatalogueFallback />}>
-        <PlantsCatalogue />
+        <PlantsBrowser />
       </Suspense>
 
       <SiteFooter />
@@ -37,46 +54,70 @@ export default function PlantsPage() {
   );
 }
 
-function PlantsCatalogue() {
-  const searchParams = useSearchParams();
-
-  const initialFamily = searchParams.get("family")?.trim() || "";
-
-  return <PlantsBrowser key={initialFamily} initialFamily={initialFamily} />;
-}
-
 /* =========================================================
    BROWSER
 ========================================================= */
 
-function PlantsBrowser({ initialFamily = "" }) {
+function PlantsBrowser() {
   const { language } = useSiteSettings();
 
   const isEnglish = language === "EN";
 
   /* =====================================================
+     URL STATE
+  ===================================================== */
+
+  const searchParams = useSearchParams();
+
+  /* q, family, group, collector อ่านด้วยฟังก์ชันเดียวกับ /map */
+  const {
+    search,
+    family: familyFilter,
+    group: artificialGroupFilter,
+    collector: collectorFilter,
+  } = readPlantFilters(searchParams);
+
+  const sortParam = searchParams.get("sort");
+
+  const sort = SORT_OPTIONS.includes(sortParam) ? sortParam : "newest";
+
+  const currentPage = Math.max(
+    1,
+    Number.parseInt(searchParams.get("page") || "", 10) || 1,
+  );
+
+  /* =====================================================
      STATE
   ===================================================== */
 
+  /* rows of the current page only */
   const [plants, setPlants] = useState([]);
+
+  const [totalResults, setTotalResults] = useState(0);
+
+  const [facets, setFacets] = useState(EMPTY_FACETS);
 
   const [loading, setLoading] = useState(true);
 
+  const [facetsLoading, setFacetsLoading] = useState(true);
+
   const [error, setError] = useState("");
 
-  const [search, setSearch] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const [familyFilter, setFamilyFilter] = useState(initialFamily);
-
-  const [artificialGroupFilter, setArtificialGroupFilter] = useState("");
-
-  const [collectorFilter, setCollectorFilter] = useState("");
-
-  const [sort, setSort] = useState("newest");
+  const [searchInput, setSearchInput] = useState(search);
 
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
-  const [portalReady, setPortalReady] = useState(false);
+  const portalReady = useSyncExternalStore(
+    subscribeNothing,
+    () => true,
+    () => false,
+  );
+
+  const requestIdRef = useRef(0);
+
+  const committedSearchRef = useRef(search);
 
   /* =====================================================
      PAGINATION STATE
@@ -84,9 +125,9 @@ function PlantsBrowser({ initialFamily = "" }) {
      DESKTOP / TABLET = 12
   ===================================================== */
 
-  const [currentPage, setCurrentPage] = useState(1);
-
   const [isDesktop, setIsDesktop] = useState(false);
+
+  const [viewportReady, setViewportReady] = useState(false);
 
   /* GRID / LIST VIEW (list view is desktop only) */
 
@@ -188,6 +229,8 @@ function PlantsBrowser({ initialFamily = "" }) {
       noSearchDescription: "ลองเปลี่ยนคำค้นหาหรือล้างตัวกรองบางรายการ",
 
       clearFilters: "ล้างตัวกรอง",
+
+      viewOnMap: "ดูบนแผนที่",
 
       applyFilters: "แสดงผล",
 
@@ -316,6 +359,8 @@ function PlantsBrowser({ initialFamily = "" }) {
 
       clearFilters: "Clear Filters",
 
+      viewOnMap: "View on map",
+
       applyFilters: "Show Results",
 
       closeFilters: "Close filters",
@@ -356,14 +401,6 @@ function PlantsBrowser({ initialFamily = "" }) {
   const t = isEnglish ? text.EN : text.TH;
 
   /* =====================================================
-     PORTAL
-  ===================================================== */
-
-  useEffect(() => {
-    setPortalReady(true);
-  }, []);
-
-  /* =====================================================
      PAGINATION RESPONSIVE SIZE
 
      MOBILE    = 10 records
@@ -379,6 +416,7 @@ function PlantsBrowser({ initialFamily = "" }) {
 
     function updateDeviceSize() {
       setIsDesktop(mediaQuery.matches);
+      setViewportReady(true);
     }
 
     updateDeviceSize();
@@ -439,186 +477,248 @@ function PlantsBrowser({ initialFamily = "" }) {
   }, [mobileFilterOpen]);
 
   /* =====================================================
-     FETCH
+     UPDATE URL
+     replaceState keeps the filters shareable and lets the
+     back button from a plant page restore them.
+     Any filter change goes back to page 1 unless keepPage.
   ===================================================== */
 
-  async function fetchPlants() {
-    setLoading(true);
-    setError("");
+  function updateParams(changes, { keepPage = false } = {}) {
+    const params = new URLSearchParams(window.location.search);
 
-    try {
-      const { data, error } = await supabase
-        .from("plants")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
+    Object.entries(changes).forEach(([key, value]) => {
+      const isDefault =
+        value === null ||
+        value === undefined ||
+        value === "" ||
+        (key === "sort" && value === "newest") ||
+        (key === "page" && Number(value) <= 1);
 
-      if (error) {
-        throw error;
+      if (isDefault) {
+        params.delete(key);
+      } else {
+        params.set(key, String(value));
       }
+    });
 
-      setPlants(data || []);
-    } catch (err) {
-      console.error("Fetch plants failed:", err);
+    if (!keepPage) {
+      params.delete("page");
+    }
 
-      setPlants([]);
+    const query = params.toString();
 
-      setError(err?.message || t.loadError);
-    } finally {
-      setLoading(false);
+    window.history.replaceState(
+      null,
+      "",
+      query ? `?${query}` : window.location.pathname,
+    );
+  }
+
+  function setSearch(value) {
+    const next = String(value || "").trim();
+
+    committedSearchRef.current = next;
+
+    setSearchInput(value);
+
+    updateParams({ q: next });
+  }
+
+  function setFamilyFilter(value) {
+    updateParams({ family: value });
+  }
+
+  function setArtificialGroupFilter(value) {
+    updateParams({ group: value });
+  }
+
+  function setCollectorFilter(value) {
+    updateParams({ collector: value });
+  }
+
+  function setSort(value) {
+    updateParams({ sort: value });
+  }
+
+  /* =====================================================
+     SEARCH INPUT (DEBOUNCED)
+  ===================================================== */
+
+  useEffect(() => {
+    const next = searchInput.trim();
+
+    if (next === search) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      committedSearchRef.current = next;
+
+      updateParams({ q: next });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [searchInput, search]);
+
+  /* URL changed from outside (e.g. navbar link) -> sync the input */
+
+  useEffect(() => {
+    if (search === committedSearchRef.current) {
+      return;
+    }
+
+    committedSearchRef.current = search;
+
+    setSearchInput(search);
+  }, [search]);
+
+  /* =====================================================
+     FETCH
+     facets = stats + filter options (once / on refresh)
+     page   = rows of the current page (on every change)
+  ===================================================== */
+
+  /* facets โหลดใหม่เฉพาะตอนกดโหลดใหม่ จึงตั้งสถานะกำลังโหลดที่นี่ */
+  function refreshData() {
+    setFacetsLoading(true);
+
+    setReloadKey((key) => key + 1);
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    fetchPlantFacets(supabasePublic)
+      .then((data) => {
+        if (active) {
+          setFacets(data);
+        }
+      })
+      .catch((err) => {
+        console.error("Fetch plant facets failed:", err);
+
+        if (active) {
+          setFacets(EMPTY_FACETS);
+
+          setError(err?.message || t.loadError);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setFacetsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [reloadKey]);
+
+  const pageSize = isDesktop ? 12 : 10;
+
+  /* คำขอใหม่ (ตัวกรอง หน้า หรือกดโหลดใหม่) → ตั้งสถานะกำลังโหลดระหว่าง render
+     แทนการ setState ใน effect ("" = ยังไม่ส่งคำขอ เพราะยังไม่รู้ขนาดจอ) */
+  const pageRequestKey = viewportReady
+    ? JSON.stringify([
+        search,
+        familyFilter,
+        artificialGroupFilter,
+        collectorFilter,
+        sort,
+        currentPage,
+        pageSize,
+        reloadKey,
+      ])
+    : "";
+
+  const [startedRequestKey, setStartedRequestKey] = useState("");
+
+  if (pageRequestKey !== startedRequestKey) {
+    setStartedRequestKey(pageRequestKey);
+
+    if (pageRequestKey) {
+      setLoading(true);
+      setError("");
     }
   }
 
   useEffect(() => {
-    fetchPlants();
-  }, []);
+    if (!viewportReady) {
+      return;
+    }
+
+    /* ignore responses that arrive after a newer request */
+    const requestId = ++requestIdRef.current;
+
+    fetchPlantsPage({
+      search,
+      family: familyFilter,
+      group: artificialGroupFilter,
+      collector: collectorFilter,
+      sort,
+      page: currentPage,
+      pageSize,
+      client: supabasePublic,
+    })
+      .then(({ rows, total }) => {
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+
+        /* page in the URL is past the last page */
+        if (total === null) {
+          updateParams({ page: 1 });
+
+          return;
+        }
+
+        setPlants(rows);
+        setTotalResults(total);
+      })
+      .catch((err) => {
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+
+        console.error("Fetch plants failed:", err);
+
+        setPlants([]);
+        setTotalResults(0);
+
+        setError(err?.message || t.loadError);
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
+      });
+  }, [
+    viewportReady,
+    search,
+    familyFilter,
+    artificialGroupFilter,
+    collectorFilter,
+    sort,
+    currentPage,
+    pageSize,
+    reloadKey,
+  ]);
 
   /* =====================================================
      FILTER OPTIONS
   ===================================================== */
 
-  const families = useMemo(() => {
-    return [
-      ...new Set(plants.map((plant) => plant.family).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, "th"));
-  }, [plants]);
+  const artificialGroups = facets.groups.map((group) => group.name);
 
-  const artificialGroups = useMemo(() => {
-    return [
-      ...new Set(plants.map((plant) => plant.artificial_group).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, "en"));
-  }, [plants]);
-
-  const collectors = useMemo(() => {
-    return [
-      ...new Set(plants.map((plant) => getCollector(plant)).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, "en"));
-  }, [plants, isEnglish]);
-
-  useEffect(() => {
-    setArtificialGroupFilter("");
-    setCollectorFilter("");
-  }, [language]);
-
-  /* =====================================================
-     FILTER + SORT
-  ===================================================== */
-
-  const filteredPlants = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
-    const result = plants.filter((plant) => {
-      const searchableText = [
-        plant.pnu_no,
-        plant.artificial_group,
-        plant.family,
-        plant.botanical_name,
-        getCollector(plant),
-        plant.collector_no,
-        plant.specimen_number,
-        plant.locality,
-        getPlantName(plant),
-        getLocation(plant),
-        getHabitat(plant),
-        getNotes(plant),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch = !keyword || searchableText.includes(keyword);
-
-      const matchesFamily = !familyFilter || plant.family === familyFilter;
-
-      const matchesArtificialGroup =
-        !artificialGroupFilter ||
-        plant.artificial_group === artificialGroupFilter;
-
-      const matchesCollector =
-        !collectorFilter || getCollector(plant) === collectorFilter;
-
-      return (
-        matchesSearch &&
-        matchesFamily &&
-        matchesArtificialGroup &&
-        matchesCollector
-      );
-    });
-
-    result.sort((a, b) => {
-      if (sort === "nameAZ") {
-        return getPlantName(a).localeCompare(
-          getPlantName(b),
-          isEnglish ? "en" : "th",
-        );
-      }
-
-      if (sort === "nameZA") {
-        return getPlantName(b).localeCompare(
-          getPlantName(a),
-          isEnglish ? "en" : "th",
-        );
-      }
-
-      if (sort === "oldest") {
-        return new Date(a.created_at || 0) - new Date(b.created_at || 0);
-      }
-
-      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-    });
-
-    return result;
-  }, [
-    plants,
-    search,
-    familyFilter,
-    artificialGroupFilter,
-    collectorFilter,
-    sort,
-    isEnglish,
-  ]);
+  const collectors = facets.collectors.map((collector) => collector.name);
 
   /* =====================================================
      PAGINATION
   ===================================================== */
 
-  const pageSize = isDesktop ? 12 : 10;
-
-  const totalPages = Math.max(1, Math.ceil(filteredPlants.length / pageSize));
-
-  const paginatedPlants = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-
-    const endIndex = startIndex + pageSize;
-
-    return filteredPlants.slice(startIndex, endIndex);
-  }, [filteredPlants, currentPage, pageSize]);
-
-  /* =====================================================
-     RESET PAGE WHEN FILTER / SEARCH / SORT CHANGES
-  ===================================================== */
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    search,
-    familyFilter,
-    artificialGroupFilter,
-    collectorFilter,
-    sort,
-    pageSize,
-  ]);
-
-  /* =====================================================
-     KEEP CURRENT PAGE VALID
-  ===================================================== */
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
 
   /* =====================================================
      CHANGE PAGE
@@ -631,7 +731,7 @@ function PlantsBrowser({ initialFamily = "" }) {
       return;
     }
 
-    setCurrentPage(nextPage);
+    updateParams({ page: nextPage }, { keepPage: true });
 
     window.requestAnimationFrame(() => {
       document.getElementById("plant-collection")?.scrollIntoView({
@@ -645,42 +745,19 @@ function PlantsBrowser({ initialFamily = "" }) {
      STATS
   ===================================================== */
 
-  const stats = useMemo(() => {
-    const groupCount = new Set(
-      plants.map((plant) => plant.artificial_group).filter(Boolean),
-    ).size;
+  const stats = {
+    specimens: facets.total,
 
-    const familyCount = new Set(
-      plants.map((plant) => plant.family).filter(Boolean),
-    ).size;
+    groups: facets.group_count,
 
-    return {
-      specimens: plants.length,
-
-      groups: groupCount,
-
-      families: familyCount,
-    };
-  }, [plants]);
+    families: facets.family_count,
+  };
 
   /* =====================================================
      FAMILY INDEX (name + record count)
   ===================================================== */
 
-  const familyIndex = useMemo(() => {
-    const counts = new Map();
-
-    plants.forEach((plant) => {
-      if (plant.family) {
-        counts.set(plant.family, (counts.get(plant.family) || 0) + 1);
-      }
-    });
-
-    return families.map((name) => ({
-      name,
-      count: counts.get(name) || 0,
-    }));
-  }, [plants, families]);
+  const familyIndex = facets.families;
 
   /* =====================================================
      HELPERS
@@ -771,12 +848,22 @@ function PlantsBrowser({ initialFamily = "" }) {
   }
 
   function clearFilters() {
-    setSearch("");
-    setFamilyFilter("");
-    setArtificialGroupFilter("");
-    setCollectorFilter("");
-    setSort("newest");
+    committedSearchRef.current = "";
+
+    setSearchInput("");
+
+    updateParams({
+      q: "",
+      family: "",
+      group: "",
+      collector: "",
+      sort: "newest",
+    });
   }
+
+  const hasFilterValues = Boolean(
+    search || familyFilter || artificialGroupFilter || collectorFilter,
+  );
 
   const hasActiveFilters = Boolean(
     search.trim() ||
@@ -802,32 +889,45 @@ function PlantsBrowser({ initialFamily = "" }) {
 
   const activeView = isDesktop ? view : "grid";
 
+  /* ตัวกรองปัจจุบันไปหน้า /map (ชื่อพารามิเตอร์เดียวกัน) */
+  const mapQuery = plantFiltersToSearch({
+    search,
+    family: familyFilter,
+    group: artificialGroupFilter,
+    collector: collectorFilter,
+  });
+
+  const mapHref = mapQuery ? `/map?${mapQuery}` : "/map";
+
   const activeChips = [
     familyFilter && {
       key: "family",
       label: t.familyFilter,
       value: familyFilter,
-      clear: () => setFamilyFilter(""),
     },
     artificialGroupFilter && {
       key: "group",
       label: t.artificialGroupFilter,
       value: artificialGroupFilter,
-      clear: () => setArtificialGroupFilter(""),
     },
     collectorFilter && {
       key: "collector",
       label: t.collectorFilter,
       value: collectorFilter,
-      clear: () => setCollectorFilter(""),
     },
     search.trim() && {
       key: "search",
       label: t.searchLabel,
       value: `“${search.trim()}”`,
-      clear: () => setSearch(""),
     },
   ].filter(Boolean);
+
+  function clearChip(key) {
+    if (key === "family") setFamilyFilter("");
+    if (key === "group") setArtificialGroupFilter("");
+    if (key === "collector") setCollectorFilter("");
+    if (key === "search") setSearch("");
+  }
 
   /* =====================================================
      PAGE
@@ -883,7 +983,7 @@ function PlantsBrowser({ initialFamily = "" }) {
                   </dt>
 
                   <dd className="mt-2 font-mono text-[1.5rem] leading-none text-ink tabular-nums md:text-[1.9rem]">
-                    {loading ? (
+                    {facetsLoading ? (
                       <span className="vh-skeleton inline-block h-7 w-12 rounded" />
                     ) : (
                       String(stat.value).padStart(2, "0")
@@ -915,8 +1015,8 @@ function PlantsBrowser({ initialFamily = "" }) {
             <input
               id="plant-search"
               type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder={isDesktop ? t.search : t.mobileSearch}
               className="vh-input !min-h-[48px] !rounded-full !pl-11 !pr-4 !text-[14px] md:!min-h-[52px] md:!text-[15px]"
             />
@@ -941,7 +1041,7 @@ function PlantsBrowser({ initialFamily = "" }) {
 
           <button
             type="button"
-            onClick={fetchPlants}
+            onClick={refreshData}
             disabled={loading}
             aria-label={t.refresh}
             className="vh-icon-btn !h-12 !w-11 md:!hidden"
@@ -955,7 +1055,7 @@ function PlantsBrowser({ initialFamily = "" }) {
 
           <button
             type="button"
-            onClick={fetchPlants}
+            onClick={refreshData}
             disabled={loading}
             className="vh-btn vh-btn-outline hidden !min-h-[52px] md:inline-flex"
           >
@@ -1005,11 +1105,11 @@ function PlantsBrowser({ initialFamily = "" }) {
 
                 <FamilyIndex
                   families={familyIndex}
-                  total={plants.length}
+                  total={facets.total}
                   value={familyFilter}
                   onChange={setFamilyFilter}
                   allLabel={t.allFamilies}
-                  loading={loading}
+                  loading={facetsLoading}
                 />
               </div>
 
@@ -1054,52 +1154,63 @@ function PlantsBrowser({ initialFamily = "" }) {
                 <p className="mt-1.5 text-[13px] text-muted">
                   {t.found}{" "}
                   <span className="font-mono text-ochre tabular-nums">
-                    {filteredPlants.length}
+                    {totalResults}
                   </span>
-                  {filteredPlants.length !== plants.length && (
+                  {totalResults !== facets.total && (
                     <span className="font-mono text-faint tabular-nums">
                       {" "}
-                      / {plants.length}
+                      / {facets.total}
                     </span>
                   )}{" "}
                   {t.result}
                 </p>
               </div>
 
-              <div className="hidden items-center gap-2 md:flex">
-                <div className="w-[190px]">
-                  <span className="sr-only">{t.sortFilter}</span>
-
-                  <FilterDropdown
-                    value={sort === "newest" ? "" : sort}
-                    onChange={(value) => setSort(value || "newest")}
-                    options={SORT_OPTIONS.slice(1)}
-                    labels={sortLabels}
-                    placeholder={t.newest}
-                    compact
-                  />
-                </div>
-
-                <div
-                  role="group"
-                  aria-label={t.viewMode}
-                  className="flex items-center rounded-full border border-rule p-0.5"
+              <div className="flex items-center gap-2">
+                <Link
+                  href={mapHref}
+                  data-view-on-map
+                  className="vh-btn vh-btn-outline vh-btn-sm !min-h-[40px] !rounded-full"
                 >
-                  <ViewToggleButton
-                    active={view === "grid"}
-                    label={t.gridView}
-                    onClick={() => setView("grid")}
-                  >
-                    <GridIcon className="h-4 w-4" />
-                  </ViewToggleButton>
+                  <PinIcon className="h-4 w-4 shrink-0" />
+                  {t.viewOnMap}
+                </Link>
 
-                  <ViewToggleButton
-                    active={view === "list"}
-                    label={t.listView}
-                    onClick={() => setView("list")}
+                <div className="hidden items-center gap-2 md:flex">
+                  <div className="w-[190px]">
+                    <span className="sr-only">{t.sortFilter}</span>
+
+                    <FilterDropdown
+                      value={sort === "newest" ? "" : sort}
+                      onChange={(value) => setSort(value || "newest")}
+                      options={SORT_OPTIONS.slice(1)}
+                      labels={sortLabels}
+                      placeholder={t.newest}
+                      compact
+                    />
+                  </div>
+
+                  <div
+                    role="group"
+                    aria-label={t.viewMode}
+                    className="flex items-center rounded-full border border-rule p-0.5"
                   >
-                    <ListIcon className="h-4 w-4" />
-                  </ViewToggleButton>
+                    <ViewToggleButton
+                      active={view === "grid"}
+                      label={t.gridView}
+                      onClick={() => setView("grid")}
+                    >
+                      <GridIcon className="h-4 w-4" />
+                    </ViewToggleButton>
+
+                    <ViewToggleButton
+                      active={view === "list"}
+                      label={t.listView}
+                      onClick={() => setView("list")}
+                    >
+                      <ListIcon className="h-4 w-4" />
+                    </ViewToggleButton>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1116,7 +1227,7 @@ function PlantsBrowser({ initialFamily = "" }) {
                   <button
                     key={chip.key}
                     type="button"
-                    onClick={chip.clear}
+                    onClick={() => clearChip(chip.key)}
                     title={chip.label}
                     className="vh-tag vh-tag-moss max-w-full transition hover:bg-moss-tint"
                   >
@@ -1157,7 +1268,7 @@ function PlantsBrowser({ initialFamily = "" }) {
 
                 <button
                   type="button"
-                  onClick={fetchPlants}
+                  onClick={refreshData}
                   className="vh-btn vh-btn-primary vh-btn-sm mt-5"
                 >
                   <RefreshIcon className="h-4 w-4" />
@@ -1168,7 +1279,7 @@ function PlantsBrowser({ initialFamily = "" }) {
 
             {/* LOADING */}
 
-            {loading && !error && (
+            {loading && !error && plants.length === 0 && (
               <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:gap-5 lg:grid-cols-3 min-[1680px]:grid-cols-4">
                 {Array.from({
                   length: 6,
@@ -1180,18 +1291,18 @@ function PlantsBrowser({ initialFamily = "" }) {
 
             {/* EMPTY */}
 
-            {!loading && !error && filteredPlants.length === 0 && (
+            {!loading && !error && totalResults === 0 && (
               <div className="vh-panel mt-6 px-6 py-12 text-center md:mt-8 md:py-16">
                 <LeafIcon className="mx-auto h-6 w-6 text-moss" />
 
                 <p className="mt-4 font-serif text-[1.25rem] italic text-ink-soft md:text-[1.4rem]">
-                  {plants.length === 0 ? t.noData : t.noSearch}
+                  {hasFilterValues ? t.noSearch : t.noData}
                 </p>
 
                 <p className="mx-auto mt-2 max-w-md text-[13px] leading-6 text-muted">
-                  {plants.length === 0
-                    ? t.noDataDescription
-                    : t.noSearchDescription}
+                  {hasFilterValues
+                    ? t.noSearchDescription
+                    : t.noDataDescription}
                 </p>
 
                 {hasActiveFilters && (
@@ -1208,11 +1319,14 @@ function PlantsBrowser({ initialFamily = "" }) {
 
             {/* RESULTS */}
 
-            {!loading && !error && filteredPlants.length > 0 && (
-              <>
+            {!error && plants.length > 0 && (
+              <div
+                aria-busy={loading}
+                className={`transition-opacity ${loading ? "opacity-60" : ""}`}
+              >
                 {activeView === "list" ? (
                   <SpecimenTable
-                    plants={paginatedPlants}
+                    plants={plants}
                     t={t}
                     isEnglish={isEnglish}
                     getPlantName={getPlantName}
@@ -1222,7 +1336,7 @@ function PlantsBrowser({ initialFamily = "" }) {
                   />
                 ) : (
                   <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:gap-5 lg:grid-cols-3 min-[1680px]:grid-cols-4">
-                    {paginatedPlants.map((plant) => (
+                    {plants.map((plant) => (
                       <PlantCard
                         key={plant.id}
                         plant={plant}
@@ -1244,7 +1358,7 @@ function PlantsBrowser({ initialFamily = "" }) {
                     t={t}
                   />
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -1357,11 +1471,11 @@ function PlantsBrowser({ initialFamily = "" }) {
 
                   <FamilyIndex
                     families={familyIndex}
-                    total={plants.length}
+                    total={facets.total}
                     value={familyFilter}
                     onChange={setFamilyFilter}
                     allLabel={t.allFamilies}
-                    loading={loading}
+                    loading={facetsLoading}
                     mobile
                   />
                 </div>
@@ -1387,7 +1501,7 @@ function PlantsBrowser({ initialFamily = "" }) {
                     <span className="truncate">{t.applyFilters}</span>
 
                     <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-on-moss/20 px-1.5 font-mono text-[10px]">
-                      {filteredPlants.length}
+                      {totalResults}
                     </span>
                   </button>
                 </div>
@@ -1630,233 +1744,6 @@ function getVisiblePages(currentPage, totalPages) {
   }
 
   return [1, "...", currentPage, "...", totalPages];
-}
-
-/* =========================================================
-   CUSTOM FILTER DROPDOWN
-========================================================= */
-
-function FilterDropdown({
-  value,
-  onChange,
-  options,
-  placeholder,
-  labels = {},
-  mobile = false,
-  compact = false,
-}) {
-  const [open, setOpen] = useState(false);
-
-  const [menuPosition, setMenuPosition] = useState(null);
-
-  const buttonRef = useRef(null);
-
-  const menuRef = useRef(null);
-
-  const selectedLabel = value ? labels[value] || value : placeholder;
-
-  function updateMenuPosition() {
-    const button = buttonRef.current;
-
-    if (!button || typeof window === "undefined") {
-      return;
-    }
-
-    const rect = button.getBoundingClientRect();
-
-    const margin = 8;
-
-    const desiredWidth = mobile
-      ? Math.max(rect.width, 220)
-      : Math.max(rect.width, 230);
-
-    const width = Math.min(desiredWidth, window.innerWidth - 16);
-
-    let left = rect.left;
-
-    if (left + width > window.innerWidth - 8) {
-      left = window.innerWidth - width - 8;
-    }
-
-    if (left < 8) {
-      left = 8;
-    }
-
-    const spaceBelow = window.innerHeight - rect.bottom - margin;
-
-    const spaceAbove = rect.top - margin;
-
-    const openUpward = spaceBelow < 190 && spaceAbove > spaceBelow;
-
-    const availableSpace = openUpward ? spaceAbove : spaceBelow;
-
-    const maxHeight = Math.max(140, Math.min(260, availableSpace - 6));
-
-    if (openUpward) {
-      setMenuPosition({
-        left,
-        width,
-        bottom: window.innerHeight - rect.top + margin,
-        top: "auto",
-        maxHeight,
-      });
-
-      return;
-    }
-
-    setMenuPosition({
-      left,
-      width,
-      top: rect.bottom + margin,
-      bottom: "auto",
-      maxHeight,
-    });
-  }
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    updateMenuPosition();
-
-    function handleResize() {
-      updateMenuPosition();
-    }
-
-    function handleScroll() {
-      updateMenuPosition();
-    }
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-
-    function handlePointerDown(event) {
-      const button = buttonRef.current;
-
-      const menu = menuRef.current;
-
-      if (button?.contains(event.target)) {
-        return;
-      }
-
-      if (menu?.contains(event.target)) {
-        return;
-      }
-
-      setOpen(false);
-    }
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("scroll", handleScroll, true);
-    window.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleScroll, true);
-      window.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [open]);
-
-  function handleSelect(option) {
-    onChange(option);
-
-    setOpen(false);
-  }
-
-  return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className={`vh-input flex items-center justify-between gap-2 text-left ${
-          compact
-            ? "!min-h-[40px] !rounded-full !py-2 !pl-4 !pr-2.5 !text-[13px]"
-            : mobile
-              ? "!min-h-[44px] !py-2 !pl-3 !pr-2 !text-[13px]"
-              : "!min-h-[44px] !py-2 !pl-3.5 !pr-2.5 !text-[14px]"
-        } ${open ? "!border-moss shadow-[0_0_0_3px_var(--moss-soft)]" : ""} ${
-          value ? "!text-ink" : "!text-ink-soft"
-        }`}
-      >
-        <span className="min-w-0 truncate">{selectedLabel}</span>
-
-        <ChevronDownIcon
-          className={`h-4 w-4 shrink-0 text-faint transition-transform duration-200 ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {open &&
-        menuPosition &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={menuRef}
-            role="listbox"
-            style={{
-              position: "fixed",
-              left: menuPosition.left,
-              width: menuPosition.width,
-              top: menuPosition.top,
-              bottom: menuPosition.bottom,
-              maxHeight: menuPosition.maxHeight,
-              zIndex: 260,
-            }}
-            className="overflow-y-auto rounded-[6px] border border-rule-strong bg-sheet-raised p-1 text-ink shadow-lift"
-          >
-            <DropdownOption
-              active={!value}
-              label={placeholder}
-              onClick={() => handleSelect("")}
-            />
-
-            {options.map((option) => (
-              <DropdownOption
-                key={option}
-                active={value === option}
-                label={labels[option] || option}
-                onClick={() => handleSelect(option)}
-              />
-            ))}
-          </div>,
-          document.body,
-        )}
-    </>
-  );
-}
-
-/* =========================================================
-   DROPDOWN OPTION
-========================================================= */
-
-function DropdownOption({ active, label, onClick }) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={active}
-      onClick={onClick}
-      className={`flex min-h-[40px] w-full items-center justify-between gap-3 rounded-[4px] px-3 text-left text-[13px] transition ${
-        active
-          ? "bg-moss-soft text-moss"
-          : "text-ink-soft hover:bg-moss-soft hover:text-ink"
-      }`}
-    >
-      <span className="min-w-0 break-words">{label}</span>
-
-      {active && <CheckIcon className="h-4 w-4 shrink-0 text-moss" />}
-    </button>
-  );
 }
 
 /* =========================================================
@@ -2274,23 +2161,6 @@ function ListIcon({ className = "" }) {
   );
 }
 
-function ChevronDownIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m7 10 5 5 5-5" />
-    </svg>
-  );
-}
-
 function DocumentIcon({ className = "" }) {
   return (
     <svg
@@ -2396,23 +2266,6 @@ function CloseIcon({ className = "" }) {
     >
       <path d="m6 6 12 12" />
       <path d="m18 6-12 12" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className = "" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m5 12 4 4L19 6" />
     </svg>
   );
 }

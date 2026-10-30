@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 
+import NameCheck from "@/components/NameCheck";
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
 import { supabase } from "@/lib/supabase";
+import { useLeafletMap } from "@/lib/useLeafletMap";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 import {
   IMAGE_INPUT_ACCEPT,
   getImageExtension,
+  getPlantImageStoragePath,
   preparePlantImage,
 } from "@/lib/plantImage";
 
@@ -163,6 +167,8 @@ const COPY = {
 
     notFound: "ไม่พบข้อมูลพรรณไม้ หรือคุณไม่มีสิทธิ์แก้ไขรายการนี้",
 
+    pnuDuplicate: "หมายเลข PNU นี้มีอยู่ในระบบแล้ว",
+
     cancel: "ยกเลิก",
 
     save: "บันทึกการแก้ไข",
@@ -274,6 +280,8 @@ const COPY = {
     notFound:
       "Plant record not found or you do not have permission to edit it.",
 
+    pnuDuplicate: "This PNU No. already exists in the system.",
+
     cancel: "Cancel",
 
     save: "Save Changes",
@@ -285,6 +293,25 @@ const COPY = {
 /* =========================================================
    PAGE
 ========================================================= */
+
+/* =========================================================
+   CAMERA SUPPORT
+   ค่าคงที่ของอุปกรณ์ อ่านผ่าน useSyncExternalStore (ไม่ต้อง subscribe)
+========================================================= */
+
+function subscribeNothing() {
+  return () => {};
+}
+
+function isCameraDevice() {
+  const userAgent = navigator.userAgent || navigator.vendor || "";
+
+  const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+
+  const iPadOS = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
+
+  return mobile || iPadOS;
+}
 
 export default function EditPlantPage() {
   const router = useRouter();
@@ -303,7 +330,7 @@ export default function EditPlantPage() {
      STATE
   ===================================================== */
 
-  const [user, setUser] = useState(null);
+  const { user } = useAdmin();
 
   const [form, setForm] = useState(INITIAL_FORM);
 
@@ -313,7 +340,12 @@ export default function EditPlantPage() {
 
   const [oldImageUrl, setOldImageUrl] = useState("");
 
-  const [canUseCamera, setCanUseCamera] = useState(false);
+  /* อุปกรณ์มือถือ/แท็บเล็ตเท่านั้น (server = false แล้วตรวจจริงหลัง hydrate) */
+  const canUseCamera = useSyncExternalStore(
+    subscribeNothing,
+    isCameraDevice,
+    () => false,
+  );
 
   const [processingImage, setProcessingImage] = useState(false);
 
@@ -343,54 +375,15 @@ export default function EditPlantPage() {
   const cameraInputRef = useRef(null);
 
   /* =====================================================
-     CAMERA SUPPORT
-  ===================================================== */
-
-  useEffect(() => {
-    if (typeof navigator === "undefined") {
-      return;
-    }
-
-    const userAgent = navigator.userAgent || navigator.vendor || "";
-
-    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
-
-    const iPadOS = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
-
-    setCanUseCamera(mobile || iPadOS);
-  }, []);
-
-  /* =====================================================
-     LOAD USER + PLANT
+     LOAD PLANT
+     สิทธิ์ admin ตรวจแล้วที่ app/account/layout.js
   ===================================================== */
 
   useEffect(() => {
     let mounted = true;
 
     async function loadPlant() {
-      setLoading(true);
-
-      setFatalError("");
-
       try {
-        const {
-          data: { user: currentUser },
-
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (!mounted) {
-          return;
-        }
-
-        if (userError || !currentUser) {
-          router.replace("/login");
-
-          return;
-        }
-
-        setUser(currentUser);
-
         if (!plantId || !UUID_PATTERN.test(plantId)) {
           throw new Error(t.notFound);
         }
@@ -419,7 +412,6 @@ export default function EditPlantPage() {
               `,
           )
           .eq("id", plantId)
-          .eq("user_id", currentUser.id)
           .maybeSingle();
 
         if (!mounted) {
@@ -492,7 +484,7 @@ export default function EditPlantPage() {
     return () => {
       mounted = false;
     };
-  }, [plantId, router, t.notFound]);
+  }, [plantId, t.notFound]);
 
   /* =====================================================
      CLEAN PREVIEW
@@ -798,13 +790,38 @@ export default function EditPlantPage() {
         .from("plants")
         .update(updateData)
         .eq("id", plantId)
-        .eq("user_id", user.id)
         .select()
         .maybeSingle();
+
+      if (updateError?.code === "23505") {
+        throw new Error(t.pnuDuplicate);
+      }
 
       if (updateError || !data) {
         throw new Error(updateError?.message || t.updateError);
       }
+
+      /*
+       * เปลี่ยนรูปสำเร็จแล้ว ลบไฟล์รูปเดิมใน bucket plant-images
+       * (ลบเฉพาะไฟล์ใน bucket นี้ ถ้าลบไม่สำเร็จให้ log ไว้เท่านั้น)
+       */
+      const oldImagePath = getPlantImageStoragePath(oldImageUrl);
+
+      if (uploadedImagePath && oldImagePath && oldImagePath !== uploadedImagePath) {
+        try {
+          const { error: removeOldError } = await supabase.storage
+            .from(IMAGE_BUCKET)
+            .remove([oldImagePath]);
+
+          if (removeOldError) {
+            console.error("Remove old image failed:", removeOldError);
+          }
+        } catch (removeOldError) {
+          console.error("Remove old image failed:", removeOldError);
+        }
+      }
+
+      setOldImageUrl(imageUrl || "");
 
       setSuccess(t.success);
 
@@ -899,7 +916,12 @@ export default function EditPlantPage() {
   ===================================================== */
 
   const pnuFieldError =
-    error && (error === t.pnuRequired || error === t.pnuError) ? error : "";
+    error &&
+    (error === t.pnuRequired ||
+      error === t.pnuError ||
+      error === t.pnuDuplicate)
+      ? error
+      : "";
 
   const botanicalFieldError = error === t.botanicalRequired ? error : "";
 
@@ -1146,19 +1168,29 @@ export default function EditPlantPage() {
                     disabled={saving}
                   />
 
-                  <Field
-                    className="sm:col-span-2"
-                    label={t.botanical}
-                    name="botanical_name"
-                    value={form.botanical_name}
-                    onChange={updateField}
-                    placeholder={t.botanicalPh}
-                    binomial
-                    required
-                    requiredText={t.requiredLabel}
-                    disabled={saving}
-                    error={botanicalFieldError}
-                  />
+                  <div className="sm:col-span-2">
+                    <Field
+                      label={t.botanical}
+                      name="botanical_name"
+                      value={form.botanical_name}
+                      onChange={updateField}
+                      placeholder={t.botanicalPh}
+                      binomial
+                      required
+                      requiredText={t.requiredLabel}
+                      disabled={saving}
+                      error={botanicalFieldError}
+                    />
+
+                    <NameCheck
+                      botanicalName={form.botanical_name}
+                      family={form.family}
+                      language={language}
+                      disabled={saving}
+                      onUseName={(name) => updateField("botanical_name", name)}
+                      onUseFamily={(value) => updateField("family", value)}
+                    />
+                  </div>
 
                   <Field
                     label={t.artificialGroup}
@@ -1214,7 +1246,7 @@ export default function EditPlantPage() {
 
                   longitude: form.longitude,
 
-                  elevation: toFiniteNumberOrNull(form.elevation),
+                  elevation: form.elevation,
                 }}
                 onLocationResolved={handleLocationResolved}
                 onLocationFieldChange={handleLocationFieldChange}
@@ -1290,11 +1322,7 @@ function AutoLocationMap({
 
   const mapContainerRef = useRef(null);
 
-  const mapRef = useRef(null);
-
   const markerRef = useRef(null);
-
-  const leafletRef = useRef(null);
 
   const forwardTimerRef = useRef(null);
 
@@ -1325,8 +1353,6 @@ function AutoLocationMap({
 
   const didHandleInitialSearchRef = useRef(false);
 
-  const [mapReady, setMapReady] = useState(false);
-
   const [locating, setLocating] = useState(false);
 
   const [searchingLocation, setSearchingLocation] = useState(false);
@@ -1338,6 +1364,73 @@ function AutoLocationMap({
   const [locationData, setLocationData] = useState(() =>
     normalizeLocationData(initialLocation),
   );
+
+  /* =====================================================
+     MAP (lib/useLeafletMap จัดการสร้าง/ลบแผนที่)
+  ===================================================== */
+
+  const {
+    map: leafletMap,
+    error: mapLoadError,
+    mapRef,
+    leafletRef,
+  } = useLeafletMap(mapContainerRef, {
+    options: {
+      zoomControl: true,
+
+      attributionControl: true,
+
+      preferCanvas: true,
+
+      center: [DEFAULT_MAP_CENTER.latitude, DEFAULT_MAP_CENTER.longitude],
+
+      zoom: DEFAULT_MAP_ZOOM,
+    },
+
+    setup: (L, map) => {
+      /* แผนที่ใหม่ ต้องสร้าง marker ใหม่ */
+      markerRef.current = null;
+
+      L.tileLayer(MAP_TILE_URL, {
+        maxZoom: 19,
+
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      map.on("click", (event) => {
+        selectLocation(
+          event.latlng.lat,
+
+          event.latlng.lng,
+
+          true,
+        );
+      });
+
+      const initial = normalizeLocationData(initialLocationRef.current);
+
+      setLocationData(initial);
+
+      if (hasValidCoordinates(initial.latitude, initial.longitude)) {
+        placeMarker(initial.latitude, initial.longitude);
+
+        map.setView([initial.latitude, initial.longitude], 16, {
+          animate: false,
+        });
+      }
+    },
+  });
+
+  const mapReady = Boolean(leafletMap);
+
+  const shownMapError =
+    mapError ||
+    (mapLoadError
+      ? isEnglish
+        ? "Unable to load the map."
+        : "ไม่สามารถโหลดแผนที่ได้"
+      : "");
 
   /* =====================================================
      MAP COPY
@@ -1438,150 +1531,20 @@ function AutoLocationMap({
   }, [initialLocation]);
 
   /* =====================================================
-     AUTO SEARCH LOCALITY
+     CLEANUP SEARCH ON UNMOUNT
   ===================================================== */
 
   useEffect(() => {
-    if (!mapReady) {
-      return;
-    }
+    const forwardTimer = forwardTimerRef;
 
-    const keyword = String(initialLocation?.locality || "").trim();
-
-    /*
-     * ถ้ามี Coordinates เดิมอยู่แล้ว
-     * รอบแรกไม่ต้อง Search ใหม่
-     */
-    if (!didHandleInitialSearchRef.current) {
-      didHandleInitialSearchRef.current = true;
-
-      if (firstCoordinatesRef.current && keyword === firstLocalityRef.current) {
-        return;
-      }
-    }
-
-    if (forwardTimerRef.current) {
-      window.clearTimeout(forwardTimerRef.current);
-    }
-
-    forwardAbortRef.current?.abort();
-
-    if (keyword.length < 3) {
-      setSearchingLocation(false);
-
-      setMapError("");
-
-      return;
-    }
-
-    forwardTimerRef.current = window.setTimeout(() => {
-      searchLocality(keyword);
-    }, 1000);
+    const forwardAbort = forwardAbortRef;
 
     return () => {
-      if (forwardTimerRef.current) {
-        window.clearTimeout(forwardTimerRef.current);
-      }
-    };
-  }, [initialLocation?.locality, mapReady]);
-
-  /* =====================================================
-     INITIALIZE MAP
-  ===================================================== */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function initMap() {
-      try {
-        const leafletModule = await import("leaflet");
-
-        if (!mounted || !mapContainerRef.current) {
-          return;
-        }
-
-        const L = leafletModule.default || leafletModule;
-
-        leafletRef.current = L;
-
-        const map = L.map(mapContainerRef.current, {
-          zoomControl: true,
-
-          attributionControl: true,
-
-          preferCanvas: true,
-        }).setView(
-          [DEFAULT_MAP_CENTER.latitude, DEFAULT_MAP_CENTER.longitude],
-          DEFAULT_MAP_ZOOM,
-        );
-
-        L.tileLayer(MAP_TILE_URL, {
-          maxZoom: 19,
-
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-        }).addTo(map);
-
-        map.on("click", (event) => {
-          selectLocation(
-            event.latlng.lat,
-
-            event.latlng.lng,
-
-            true,
-          );
-        });
-
-        mapRef.current = map;
-
-        const initial = normalizeLocationData(initialLocationRef.current);
-
-        setLocationData(initial);
-
-        if (hasValidCoordinates(initial.latitude, initial.longitude)) {
-          placeMarker(initial.latitude, initial.longitude);
-
-          map.setView([initial.latitude, initial.longitude], 16, {
-            animate: false,
-          });
-        }
-
-        setMapReady(true);
-
-        window.setTimeout(() => {
-          map.invalidateSize();
-        }, 150);
-      } catch (err) {
-        console.error("Initialize map error:", err);
-
-        if (mounted) {
-          setMapError(
-            isEnglish ? "Unable to load the map." : "ไม่สามารถโหลดแผนที่ได้",
-          );
-        }
-      }
-    }
-
-    initMap();
-
-    return () => {
-      mounted = false;
-
-      if (forwardTimerRef.current) {
-        window.clearTimeout(forwardTimerRef.current);
+      if (forwardTimer.current) {
+        window.clearTimeout(forwardTimer.current);
       }
 
-      forwardAbortRef.current?.abort();
-
-      if (mapRef.current) {
-        mapRef.current.remove();
-
-        mapRef.current = null;
-      }
-
-      markerRef.current = null;
-
-      leafletRef.current = null;
+      forwardAbort.current?.abort();
     };
   }, []);
 
@@ -1832,6 +1795,55 @@ function AutoLocationMap({
   }
 
   /* =====================================================
+     AUTO SEARCH LOCALITY
+     (อยู่หลัง searchLocality เพื่อให้ประกาศฟังก์ชันก่อนใช้)
+  ===================================================== */
+
+  useEffect(() => {
+    if (!mapReady) {
+      return;
+    }
+
+    const keyword = String(initialLocation?.locality || "").trim();
+
+    /*
+     * ถ้ามี Coordinates เดิมอยู่แล้ว
+     * รอบแรกไม่ต้อง Search ใหม่
+     */
+    if (!didHandleInitialSearchRef.current) {
+      didHandleInitialSearchRef.current = true;
+
+      if (firstCoordinatesRef.current && keyword === firstLocalityRef.current) {
+        return;
+      }
+    }
+
+    if (forwardTimerRef.current) {
+      window.clearTimeout(forwardTimerRef.current);
+    }
+
+    forwardAbortRef.current?.abort();
+
+    if (keyword.length < 3) {
+      setSearchingLocation(false);
+
+      setMapError("");
+
+      return;
+    }
+
+    forwardTimerRef.current = window.setTimeout(() => {
+      searchLocality(keyword);
+    }, 1000);
+
+    return () => {
+      if (forwardTimerRef.current) {
+        window.clearTimeout(forwardTimerRef.current);
+      }
+    };
+  }, [initialLocation?.locality, mapReady]);
+
+  /* =====================================================
      CURRENT LOCATION
   ===================================================== */
 
@@ -1967,7 +1979,7 @@ function AutoLocationMap({
             className="h-[240px] w-full sm:h-[290px] lg:h-[340px] dark:brightness-[0.78] dark:contrast-[1.05]"
           />
 
-          {!mapReady && !mapError && (
+          {!mapReady && !shownMapError && (
             <div className="vh-skeleton absolute inset-0 flex items-center justify-center">
               <LoadingIcon className="h-6 w-6 animate-spin text-moss" />
             </div>
@@ -2011,11 +2023,11 @@ function AutoLocationMap({
           )}
         </div>
 
-        {mapError && (
+        {shownMapError && (
           <div className="mt-3 flex items-start gap-2 rounded-[4px] border border-ochre/30 bg-ochre-soft px-3 py-2.5 text-[13px] leading-5 text-ink-soft">
             <InfoIcon className="mt-0.5 h-4 w-4 shrink-0 text-ochre" />
 
-            <span>{mapError}</span>
+            <span>{shownMapError}</span>
           </div>
         )}
 
@@ -2043,13 +2055,7 @@ function AutoLocationMap({
 
             <CoordinateCard
               label={m.elevation}
-              value={
-                locationData.elevation !== null &&
-                locationData.elevation !== undefined &&
-                Number.isFinite(Number(locationData.elevation))
-                  ? `${Math.round(Number(locationData.elevation))} ${m.meters}`
-                  : m.noValue
-              }
+              value={formatElevation(locationData.elevation, m)}
             />
           </dl>
         </div>
@@ -2070,8 +2076,36 @@ function normalizeLocationData(value) {
 
     longitude: toFiniteNumberOrNull(value?.longitude),
 
-    elevation: toFiniteNumberOrNull(value?.elevation),
+    elevation: normalizeElevationText(value?.elevation),
   };
+}
+
+/*
+ * elevation เป็น text ในฐานข้อมูล และอาจเป็นช่วง เช่น "800–900 m"
+ * ถ้าเป็นตัวเลขให้คงเป็นตัวเลข ถ้าไม่ใช่ให้คงข้อความเดิมไว้แสดงผล
+ */
+function normalizeElevationText(value) {
+  const number = toFiniteNumberOrNull(value);
+
+  if (number !== null) {
+    return number;
+  }
+
+  const text = String(value ?? "").trim();
+
+  return text || null;
+}
+
+function formatElevation(value, m) {
+  if (value === null || value === undefined || value === "") {
+    return m.noValue;
+  }
+
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? `${Math.round(number)} ${m.meters}`
+    : String(value);
 }
 
 /* =========================================================

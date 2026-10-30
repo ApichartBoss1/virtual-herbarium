@@ -1,14 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import Navbar from "@/components/Navbar";
+import { useAdmin } from "@/components/AdminContext";
+import { readLabelSelection, writeLabelSelection } from "@/lib/labelSelection";
 import { supabase } from "@/lib/supabase";
+import {
+  EMPTY_FACETS,
+  MAX_LABELS,
+  fetchPlantFacets,
+  fetchPlantsPage,
+} from "@/lib/plantQueries";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
+
+/* รอให้หยุดพิมพ์ก่อนค่อยค้นหาที่ฐานข้อมูล */
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function MyPlantsPage() {
   const { language } = useSiteSettings();
+
+  const router = useRouter();
 
   const isEnglish = language === "EN";
 
@@ -16,23 +30,37 @@ export default function MyPlantsPage() {
      STATE
   ===================================================== */
 
-  const [user, setUser] = useState(null);
+  const { user } = useAdmin();
+
+  /* rows of the current page only */
   const [plants, setPlants] = useState([]);
+  const [totalResults, setTotalResults] = useState(0);
+  const [facets, setFacets] = useState(EMPTY_FACETS);
 
-  const [loading, setLoading] = useState(true);
+  const [listLoading, setListLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const [search, setSearch] = useState("");
-  const [familyFilter, setFamilyFilter] = useState("");
-  const [localityFilter, setLocalityFilter] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearchValue] = useState("");
+  const [familyFilter, setFamilyFilterValue] = useState("");
+  const [localityFilter, setLocalityFilterValue] = useState("");
+  const [sort, setSortValue] = useState("newest");
 
   const [isMobile, setIsMobile] = useState(false);
+  const [viewportReady, setViewportReady] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const requestIdRef = useRef(0);
 
   const [deletingPlantId, setDeletingPlantId] = useState("");
   const [pendingDelete, setPendingDelete] = useState(null);
   const [actionError, setActionError] = useState("");
+
+  /* id ที่เลือกไว้พิมพ์ป้าย คงอยู่เมื่อเปลี่ยนหน้า/ตัวกรอง (เก็บใน sessionStorage) */
+  const [selectedIds, setSelectedIds] = useState(() =>
+    typeof window === "undefined" ? [] : readLabelSelection(),
+  );
 
   /* =====================================================
      TEXT
@@ -60,6 +88,15 @@ export default function MyPlantsPage() {
 
       addPlant: "เพิ่มข้อมูลพรรณไม้",
       addMobile: "เพิ่มพรรณไม้",
+      importData: "นำเข้าข้อมูล",
+      printLabels: "พิมพ์ป้าย",
+
+      selectRow: "เลือกรายการนี้",
+      selectPage: "เลือกทั้งหน้า",
+      selectedCount: (count) => `เลือกไว้ ${count} รายการ`,
+      clearSelection: "ล้างที่เลือก",
+      printSelected: (count) => `พิมพ์ป้ายที่เลือก (${count})`,
+      selectionLimit: `พิมพ์ได้ครั้งละไม่เกิน ${MAX_LABELS} ป้าย`,
 
       total: "ทั้งหมด",
       result: "รายการ",
@@ -115,11 +152,6 @@ export default function MyPlantsPage() {
 
       retry: "ลองอีกครั้ง",
 
-      loginRequired: "กรุณาเข้าสู่ระบบ",
-
-      loginDescription: "เข้าสู่ระบบเพื่อจัดการคลังพรรณไม้ส่วนตัวของคุณ",
-
-      login: "เข้าสู่ระบบ",
 
       unknownPlant: "ไม่ระบุชื่อพรรณไม้",
 
@@ -151,6 +183,15 @@ export default function MyPlantsPage() {
 
       addPlant: "Add Plant Record",
       addMobile: "Add Plant",
+      importData: "Import Data",
+      printLabels: "Print Labels",
+
+      selectRow: "Select this record",
+      selectPage: "Select this page",
+      selectedCount: (count) => `${count} selected`,
+      clearSelection: "Clear selection",
+      printSelected: (count) => `Print selected labels (${count})`,
+      selectionLimit: `Up to ${MAX_LABELS} labels per print`,
 
       total: "Total",
       result: "records",
@@ -207,11 +248,6 @@ export default function MyPlantsPage() {
 
       retry: "Try Again",
 
-      loginRequired: "Please sign in",
-
-      loginDescription: "Sign in to manage your personal plant collection.",
-
-      login: "Login",
 
       unknownPlant: "Unnamed Plant",
 
@@ -235,6 +271,8 @@ export default function MyPlantsPage() {
 
     const updateViewport = () => {
       setIsMobile(media.matches);
+      setViewportReady(true);
+      setCurrentPage(1);
     };
 
     updateViewport();
@@ -247,35 +285,161 @@ export default function MyPlantsPage() {
   }, []);
 
   /* =====================================================
-     FETCH PLANTS
+     FILTER SETTERS
+     Any filter change goes back to page 1
   ===================================================== */
 
-  async function fetchPlants(userId) {
+  function setSearch(value) {
+    setSearchInput(value);
+    setSearchValue(String(value || "").trim());
+    setCurrentPage(1);
+  }
+
+  function setFamilyFilter(value) {
+    setFamilyFilterValue(value);
+    setCurrentPage(1);
+  }
+
+  function setLocalityFilter(value) {
+    setLocalityFilterValue(value);
+    setCurrentPage(1);
+  }
+
+  function setSort(value) {
+    setSortValue(value);
+    setCurrentPage(1);
+  }
+
+  /* SEARCH INPUT (DEBOUNCED) */
+
+  useEffect(() => {
+    const next = searchInput.trim();
+
+    if (next === search) return;
+
+    const timer = window.setTimeout(() => {
+      setSearchValue(next);
+      setCurrentPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [searchInput, search]);
+
+  /* =====================================================
+     FETCH PLANTS
+     facets = totals + filter options
+     page   = rows of the current page
+  ===================================================== */
+
+  function refreshData() {
+    setReloadKey((key) => key + 1);
+  }
+
+  const userId = user?.id || "";
+
+  useEffect(() => {
     if (!userId) return;
 
-    setError("");
+    let active = true;
 
-    try {
-      const { data, error: fetchError } = await supabase
-        .from("plants")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
+    fetchPlantFacets()
+      .then((data) => {
+        if (active) setFacets(data);
+      })
+      .catch((err) => {
+        console.error("Fetch plant facets error:", err);
 
-      if (fetchError) {
-        throw fetchError;
-      }
+        if (active) {
+          setFacets(EMPTY_FACETS);
+          setError(err?.message || t.loadError);
+        }
+      });
 
-      setPlants(data || []);
-    } catch (err) {
-      console.error("Fetch my plants error:", err);
+    return () => {
+      active = false;
+    };
+  }, [userId, reloadKey]);
 
-      setPlants([]);
+  const itemsPerPage = isMobile ? 10 : 12;
 
-      setError(err?.message || t.loadError);
+  /* คำขอใหม่ → ตั้งสถานะกำลังโหลดระหว่าง render แทนการ setState ใน effect
+     ("" = ยังไม่ส่งคำขอ) */
+  const listRequestKey =
+    userId && viewportReady
+      ? JSON.stringify([
+          userId,
+          search,
+          familyFilter,
+          localityFilter,
+          sort,
+          currentPage,
+          itemsPerPage,
+          reloadKey,
+        ])
+      : "";
+
+  const [startedListKey, setStartedListKey] = useState("");
+
+  if (listRequestKey !== startedListKey) {
+    setStartedListKey(listRequestKey);
+
+    if (listRequestKey) {
+      setListLoading(true);
+      setError("");
     }
   }
+
+  useEffect(() => {
+    if (!userId || !viewportReady) return;
+
+    /* ignore responses that arrive after a newer request */
+    const requestId = ++requestIdRef.current;
+
+    fetchPlantsPage({
+      search,
+      family: familyFilter,
+      locality: localityFilter,
+      sort,
+      page: currentPage,
+      pageSize: itemsPerPage,
+    })
+      .then(({ rows, total }) => {
+        if (requestId !== requestIdRef.current) return;
+
+        /* page is past the last page (e.g. after deleting its last row) */
+        if (total === null) {
+          setCurrentPage((page) => Math.max(1, page - 1));
+          return;
+        }
+
+        setPlants(rows);
+        setTotalResults(total);
+      })
+      .catch((err) => {
+        if (requestId !== requestIdRef.current) return;
+
+        console.error("Fetch my plants error:", err);
+
+        setPlants([]);
+        setTotalResults(0);
+        setError(err?.message || t.loadError);
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) {
+          setListLoading(false);
+        }
+      });
+  }, [
+    userId,
+    viewportReady,
+    search,
+    familyFilter,
+    localityFilter,
+    sort,
+    currentPage,
+    itemsPerPage,
+    reloadKey,
+  ]);
 
   /* Opens the confirmation sheet (replaces window.confirm) */
   function requestDelete(plant) {
@@ -315,7 +479,9 @@ export default function MyPlantsPage() {
         throw new Error(t.deleteError);
       }
 
-      setPlants((prev) => prev.filter((item) => item.id !== plantId));
+      refreshData();
+
+      updateSelection((ids) => ids.filter((id) => id !== plantId));
 
       const imagePath = getPlantImageStoragePath(plant.image_url);
 
@@ -356,206 +522,86 @@ export default function MyPlantsPage() {
   }, [pendingDelete, deletingPlantId]);
 
   /* =====================================================
-     LOAD USER
+     LABEL SELECTION
   ===================================================== */
 
-  useEffect(() => {
-    let mounted = true;
+  function updateSelection(update) {
+    setSelectedIds((current) => {
+      const next = update(current);
 
-    async function init() {
-      setLoading(true);
-      setError("");
+      writeLabelSelection(next);
 
-      try {
-        const {
-          data: { user: currentUser },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (!mounted) return;
-
-        if (userError) {
-          throw userError;
-        }
-
-        if (!currentUser || currentUser.app_metadata?.role !== "admin") {
-          setUser(null);
-          setPlants([]);
-          return;
-        }
-
-        setUser(currentUser);
-
-        await fetchPlants(currentUser.id);
-      } catch (err) {
-        console.error("Load collection error:", err);
-
-        if (!mounted) return;
-
-        setError(err?.message || t.loadError);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    init();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return;
-
-      const sessionUser = session?.user || null;
-
-      const currentUser =
-        sessionUser?.app_metadata?.role === "admin" ? sessionUser : null;
-
-      setUser(currentUser);
-
-      if (currentUser) {
-        await fetchPlants(currentUser.id);
-      } else {
-        setPlants([]);
-      }
+      return next;
     });
+  }
 
-    return () => {
-      mounted = false;
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
-      subscription.unsubscribe();
-    };
-  }, [isEnglish]);
+  const pageIds = plants.map((plant) => plant.id).filter(Boolean);
+
+  const pageSelectedCount = pageIds.filter((id) => selectedSet.has(id)).length;
+
+  const allPageSelected =
+    pageIds.length > 0 && pageSelectedCount === pageIds.length;
+
+  function toggleSelected(id) {
+    if (!id) return;
+
+    updateSelection((ids) =>
+      ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id],
+    );
+  }
+
+  function togglePageSelected() {
+    updateSelection((ids) => {
+      if (allPageSelected) {
+        const onPage = new Set(pageIds);
+
+        return ids.filter((id) => !onPage.has(id));
+      }
+
+      const current = new Set(ids);
+
+      return [...ids, ...pageIds.filter((id) => !current.has(id))];
+    });
+  }
+
+  function printSelected() {
+    if (selectedIds.length === 0) return;
+
+    writeLabelSelection(selectedIds);
+
+    router.push("/account/plants/labels?source=selection");
+  }
 
   /* =====================================================
      FILTER OPTIONS
   ===================================================== */
 
-  const families = useMemo(() => {
-    return [
-      ...new Set(plants.map((plant) => plant.family).filter(Boolean)),
-    ].sort((a, b) => a.localeCompare(b, isEnglish ? "en" : "th"));
-  }, [plants, isEnglish]);
+  const families = useMemo(
+    () => facets.families.map((family) => family.name),
+    [facets],
+  );
 
-  const localityCounts = useMemo(() => {
-    const counts = new Map();
-
-    plants.forEach((plant) => {
-      const locality = plant.locality?.trim();
-
-      if (!locality) return;
-
-      counts.set(locality, (counts.get(locality) || 0) + 1);
-    });
-
-    return counts;
-  }, [plants]);
-
-  const localities = useMemo(() => {
-    return [...localityCounts.keys()].sort((a, b) =>
-      a.localeCompare(b, isEnglish ? "en" : "th"),
-    );
-  }, [localityCounts, isEnglish]);
+  const localities = useMemo(
+    () => facets.localities.map((locality) => locality.name),
+    [facets],
+  );
 
   const localityLabels = useMemo(() => {
     return Object.fromEntries(
-      [...localityCounts].map(([locality, count]) => [
-        locality,
-        `${locality} (${count})`,
+      facets.localities.map((locality) => [
+        locality.name,
+        `${locality.name} (${locality.count})`,
       ]),
     );
-  }, [localityCounts]);
-
-  /* =====================================================
-     FILTER + SORT
-  ===================================================== */
-
-  const filteredPlants = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
-    const result = plants.filter((plant) => {
-      const searchable = [
-        plant.common_name,
-        plant.common_name_th,
-        plant.common_name_en,
-        plant.botanical_name,
-        plant.family,
-        plant.artificial_group,
-        plant.province,
-        plant.district,
-        plant.location,
-        plant.locality,
-        plant.habitat,
-        plant.collected_by,
-        plant.collected_by_th,
-        plant.collected_by_en,
-        plant.pnu_no,
-        plant.collector_no,
-        plant.specimen_number,
-        plant.notes,
-      ]
-        .filter((value) => value != null && value !== "")
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch = !keyword || searchable.includes(keyword);
-
-      const matchesFamily = !familyFilter || plant.family === familyFilter;
-
-      const matchesLocality =
-        !localityFilter || plant.locality?.trim() === localityFilter;
-
-      return matchesSearch && matchesFamily && matchesLocality;
-    });
-
-    result.sort((a, b) => {
-      const aName = a.common_name || a.botanical_name || "";
-
-      const bName = b.common_name || b.botanical_name || "";
-
-      if (sort === "nameAZ") {
-        return aName.localeCompare(bName, isEnglish ? "en" : "th");
-      }
-
-      if (sort === "nameZA") {
-        return bName.localeCompare(aName, isEnglish ? "en" : "th");
-      }
-
-      if (sort === "oldest") {
-        return new Date(a.created_at || 0) - new Date(b.created_at || 0);
-      }
-
-      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-    });
-
-    return result;
-  }, [plants, search, familyFilter, localityFilter, sort, isEnglish]);
+  }, [facets]);
 
   /* =====================================================
      PAGINATION
   ===================================================== */
 
-  const itemsPerPage = isMobile ? 10 : 12;
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredPlants.length / itemsPerPage),
-  );
-
-  const paginatedPlants = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-
-    return filteredPlants.slice(start, start + itemsPerPage);
-  }, [filteredPlants, currentPage, itemsPerPage]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, familyFilter, localityFilter, sort, isMobile]);
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
+  const totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
 
   function goToPage(page) {
     if (page < 1 || page > totalPages || page === currentPage) {
@@ -576,9 +622,9 @@ export default function MyPlantsPage() {
      FILTER HELPERS
   ===================================================== */
 
-  const hasFilters = Boolean(
-    search.trim() || familyFilter || localityFilter || sort !== "newest",
-  );
+  const hasFilterValues = Boolean(search || familyFilter || localityFilter);
+
+  const hasFilters = Boolean(hasFilterValues || sort !== "newest");
 
   function clearFilters() {
     setSearch("");
@@ -588,8 +634,6 @@ export default function MyPlantsPage() {
     setLocalityFilter("");
 
     setSort("newest");
-
-    setCurrentPage(1);
   }
 
   const sortOptions = ["newest", "oldest", "nameAZ", "nameZA"];
@@ -602,79 +646,12 @@ export default function MyPlantsPage() {
   };
 
   /* =====================================================
-     LOADING
-  ===================================================== */
-
-  if (loading) {
-    return (
-      <main className="page min-h-screen overflow-x-hidden text-ink">
-        <Navbar />
-
-        <section className="flex min-h-[65dvh] items-center justify-center px-5">
-          <div className="text-center">
-            <LoadingIcon className="mx-auto h-6 w-6 animate-spin text-moss" />
-
-            <p className="mt-4 font-serif text-[15px] italic text-muted">
-              {t.loading}
-            </p>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  /* =====================================================
-     NOT LOGGED IN
-  ===================================================== */
-
-  if (!user) {
-    return (
-      <main className="page min-h-screen overflow-x-hidden text-ink">
-        <Navbar />
-
-        <section className="vh-grid-paper flex min-h-[calc(100dvh-58px)] items-center justify-center px-4 py-10 md:min-h-[calc(100dvh-78px)]">
-          <div className="vh-sheet page-enter w-full max-w-md p-6 sm:p-8">
-            <p className="vh-eyebrow flex items-center gap-3">
-              <span className="h-px w-6 bg-ochre" />
-              {t.eyebrow}
-            </p>
-
-            <div className="mt-5 flex items-start gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-rule bg-moss-soft text-moss">
-                <CollectionIcon className="h-5 w-5" />
-              </span>
-
-              <div className="min-w-0">
-                <h1 className="vh-display text-[1.8rem]">{t.loginRequired}</h1>
-
-                <p className="mt-2 text-[14px] leading-6 text-muted">
-                  {t.loginDescription}
-                </p>
-              </div>
-            </div>
-
-            <div className="vh-rule-double mt-6" />
-
-            <div className="mt-6">
-              <Link href="/login" className="vh-btn vh-btn-primary w-full">
-                {t.login}
-              </Link>
-            </div>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  /* =====================================================
      PAGE
   ===================================================== */
 
-  const pageStart = filteredPlants.length
-    ? (currentPage - 1) * itemsPerPage + 1
-    : 0;
+  const pageStart = totalResults ? (currentPage - 1) * itemsPerPage + 1 : 0;
 
-  const pageEnd = Math.min(currentPage * itemsPerPage, filteredPlants.length);
+  const pageEnd = Math.min(currentPage * itemsPerPage, totalResults);
 
   return (
     <main className="page min-h-screen overflow-x-hidden text-ink">
@@ -712,23 +689,43 @@ export default function MyPlantsPage() {
             <p className="mt-4 font-mono text-[12px] tabular-nums text-faint">
               <span className="text-ochre">{t.total}</span>{" "}
               <span className="text-ink">
-                {String(plants.length).padStart(3, "0")}
+                {String(facets.total).padStart(3, "0")}
               </span>{" "}
               {t.result}
             </p>
           </div>
 
-          <Link
-            href="/account/plants/new"
-            aria-label={t.addPlant}
-            className="vh-btn vh-btn-primary w-full shrink-0 sm:w-auto"
-          >
-            <PlusIcon className="h-4 w-4" />
+          <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+            <Link
+              href="/account/plants/labels"
+              className="vh-btn vh-btn-outline w-full sm:w-auto"
+            >
+              <PrintIcon className="h-4 w-4" />
 
-            <span className="sm:hidden">{t.addMobile}</span>
+              {t.printLabels}
+            </Link>
 
-            <span className="hidden sm:inline">{t.addPlant}</span>
-          </Link>
+            <Link
+              href="/account/plants/import"
+              className="vh-btn vh-btn-outline w-full sm:w-auto"
+            >
+              <ImportIcon className="h-4 w-4" />
+
+              {t.importData}
+            </Link>
+
+            <Link
+              href="/account/plants/new"
+              aria-label={t.addPlant}
+              className="vh-btn vh-btn-primary w-full sm:w-auto"
+            >
+              <PlusIcon className="h-4 w-4" />
+
+              <span className="sm:hidden">{t.addMobile}</span>
+
+              <span className="hidden sm:inline">{t.addPlant}</span>
+            </Link>
+          </div>
         </header>
 
         {/* =================================================
@@ -745,14 +742,14 @@ export default function MyPlantsPage() {
 
             <input
               type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder={t.searchPlaceholder}
               aria-label={t.searchTitle}
               className="vh-input h-12 truncate pl-11 pr-11 [&::-webkit-search-cancel-button]:appearance-none"
             />
 
-            {search && (
+            {searchInput && (
               <button
                 type="button"
                 onClick={() => setSearch("")}
@@ -838,10 +835,10 @@ export default function MyPlantsPage() {
           <p className="mt-4 border-t border-rule pt-3 text-[13px] text-muted">
             {t.found}{" "}
             <span className="font-mono tabular-nums text-ink">
-              {filteredPlants.length}
+              {totalResults}
             </span>{" "}
             {t.of}{" "}
-            <span className="font-mono tabular-nums">{plants.length}</span>{" "}
+            <span className="font-mono tabular-nums">{facets.total}</span>{" "}
             {t.result}
           </p>
         </section>
@@ -861,12 +858,12 @@ export default function MyPlantsPage() {
             </div>
 
             <p className="font-mono text-[12px] tabular-nums text-faint">
-              {filteredPlants.length > 0 && (
+              {totalResults > 0 && (
                 <>
                   {pageStart}–{pageEnd} / {" "}
                 </>
               )}
-              <span className="text-ink">{filteredPlants.length}</span>{" "}
+              <span className="text-ink">{totalResults}</span>{" "}
               {t.result}
             </p>
           </div>
@@ -887,7 +884,7 @@ export default function MyPlantsPage() {
 
                 <button
                   type="button"
-                  onClick={() => fetchPlants(user.id)}
+                  onClick={refreshData}
                   className="vh-btn vh-btn-danger vh-btn-sm mt-3"
                 >
                   {t.retry}
@@ -920,10 +917,79 @@ export default function MyPlantsPage() {
           )}
 
           {/* =================================================
+              LABEL SELECTION
+          ================================================= */}
+
+          {(plants.length > 0 || selectedIds.length > 0) && (
+            <div className="vh-panel mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 p-3 sm:px-4">
+              <label
+                className={`flex items-center gap-2.5 text-[13px] text-ink-soft ${
+                  pageIds.length > 0 ? "cursor-pointer" : "opacity-50"
+                }`}
+              >
+                <Checkbox
+                  checked={allPageSelected}
+                  indeterminate={pageSelectedCount > 0 && !allPageSelected}
+                  disabled={pageIds.length === 0}
+                  onChange={togglePageSelected}
+                />
+
+                {t.selectPage}
+              </label>
+
+              <p aria-live="polite" className="text-[13px] text-muted">
+                <span className="font-mono tabular-nums text-ink">
+                  {t.selectedCount(selectedIds.length)}
+                </span>
+
+                {selectedIds.length > MAX_LABELS && (
+                  <span className="ml-2 text-ochre">{t.selectionLimit}</span>
+                )}
+              </p>
+
+              <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => updateSelection(() => [])}
+                  disabled={selectedIds.length === 0}
+                  className="vh-btn vh-btn-ghost vh-btn-sm flex-1 sm:flex-none"
+                >
+                  <CloseIcon className="h-3.5 w-3.5" />
+                  {t.clearSelection}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={printSelected}
+                  disabled={selectedIds.length === 0}
+                  className="vh-btn vh-btn-primary vh-btn-sm flex-1 sm:flex-none"
+                >
+                  <PrintIcon className="h-4 w-4" />
+                  {t.printSelected(selectedIds.length)}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =================================================
+              FIRST LOAD
+          ================================================= */}
+
+          {!error && listLoading && plants.length === 0 && (
+            <div className="vh-panel mt-6 flex items-center justify-center gap-3 px-6 py-12">
+              <LoadingIcon className="h-5 w-5 animate-spin text-moss" />
+
+              <p className="font-serif text-[15px] italic text-muted">
+                {t.loading}
+              </p>
+            </div>
+          )}
+
+          {/* =================================================
               EMPTY
           ================================================= */}
 
-          {!error && plants.length === 0 && (
+          {!error && !listLoading && totalResults === 0 && !hasFilterValues && (
             <div className="vh-panel mt-6 px-6 py-12 text-center sm:py-16">
               <LeafIcon className="mx-auto h-7 w-7 text-faint" />
 
@@ -949,7 +1015,7 @@ export default function MyPlantsPage() {
               NO RESULTS
           ================================================= */}
 
-          {!error && plants.length > 0 && filteredPlants.length === 0 && (
+          {!error && !listLoading && totalResults === 0 && hasFilterValues && (
             <div className="vh-panel mt-6 px-6 py-12 text-center">
               <SearchIcon className="mx-auto h-6 w-6 text-faint" />
 
@@ -977,14 +1043,20 @@ export default function MyPlantsPage() {
               MOBILE / TABLET = STACKED ROWS
           ================================================= */}
 
-          {!error && paginatedPlants.length > 0 && (
-            <>
+          {!error && plants.length > 0 && (
+            <div
+              aria-busy={listLoading}
+              className={`transition-opacity ${listLoading ? "opacity-60" : ""}`}
+            >
               {/* DESKTOP TABLE */}
 
               <div className="vh-panel mt-5 hidden overflow-x-auto lg:block">
                 <table className="vh-table">
                   <thead>
                     <tr>
+                      <th className="w-[44px] pr-0">
+                        <span className="sr-only">{t.selectRow}</span>
+                      </th>
                       <th className="w-[76px]">
                         <span className="sr-only">{t.colImage}</span>
                       </th>
@@ -1000,7 +1072,7 @@ export default function MyPlantsPage() {
                   </thead>
 
                   <tbody>
-                    {paginatedPlants.map((plant) => (
+                    {plants.map((plant) => (
                       <PlantTableRow
                         key={plant.id || plant.plant_id}
                         plant={plant}
@@ -1010,6 +1082,8 @@ export default function MyPlantsPage() {
                         deleting={
                           deletingPlantId === (plant.id || plant.plant_id)
                         }
+                        selected={selectedSet.has(plant.id)}
+                        onToggleSelected={toggleSelected}
                       />
                     ))}
                   </tbody>
@@ -1019,7 +1093,7 @@ export default function MyPlantsPage() {
               {/* MOBILE / TABLET ROWS */}
 
               <ul className="vh-panel mt-5 divide-y divide-rule lg:hidden">
-                {paginatedPlants.map((plant) => (
+                {plants.map((plant) => (
                   <PlantMobileRow
                     key={plant.id || plant.plant_id}
                     plant={plant}
@@ -1027,6 +1101,8 @@ export default function MyPlantsPage() {
                     isEnglish={isEnglish}
                     onDelete={requestDelete}
                     deleting={deletingPlantId === (plant.id || plant.plant_id)}
+                    selected={selectedSet.has(plant.id)}
+                    onToggleSelected={toggleSelected}
                   />
                 ))}
               </ul>
@@ -1039,7 +1115,7 @@ export default function MyPlantsPage() {
                   t={t}
                 />
               )}
-            </>
+            </div>
           )}
         </section>
       </div>
@@ -1178,11 +1254,29 @@ function PlantName({ view, t, className = "" }) {
    TABLE ROW (DESKTOP)
 ========================================================= */
 
-function PlantTableRow({ plant, t, isEnglish, onDelete, deleting }) {
+function PlantTableRow({
+  plant,
+  t,
+  isEnglish,
+  onDelete,
+  deleting,
+  selected,
+  onToggleSelected,
+}) {
   const view = getPlantView(plant, t, isEnglish);
 
   return (
     <tr className="align-middle">
+      <td className="py-3 pr-0">
+        {view.plantId && (
+          <Checkbox
+            checked={selected}
+            onChange={() => onToggleSelected(view.plantId)}
+            label={`${t.selectRow}: ${view.accession || view.displayName}`}
+          />
+        )}
+      </td>
+
       <td className="py-3 pr-0">
         <Thumb image={view.image} alt={view.displayName} />
       </td>
@@ -1270,12 +1364,30 @@ function PlantTableRow({ plant, t, isEnglish, onDelete, deleting }) {
    STACKED ROW (MOBILE / TABLET)
 ========================================================= */
 
-function PlantMobileRow({ plant, t, isEnglish, onDelete, deleting }) {
+function PlantMobileRow({
+  plant,
+  t,
+  isEnglish,
+  onDelete,
+  deleting,
+  selected,
+  onToggleSelected,
+}) {
   const view = getPlantView(plant, t, isEnglish);
 
   return (
     <li className="p-4">
       <div className="flex min-w-0 gap-3.5">
+        {view.plantId && (
+          <div className="flex shrink-0 items-center">
+            <Checkbox
+              checked={selected}
+              onChange={() => onToggleSelected(view.plantId)}
+              label={`${t.selectRow}: ${view.accession || view.displayName}`}
+            />
+          </div>
+        )}
+
         <Thumb
           image={view.image}
           alt={view.displayName}
@@ -1606,6 +1718,33 @@ function SelectField({ label, value, onChange, options, placeholder, labels = {}
 }
 
 /* =========================================================
+   CHECKBOX
+   indeterminate ตั้งได้ผ่าน DOM เท่านั้น
+========================================================= */
+
+function Checkbox({ checked, indeterminate = false, disabled = false, onChange, label }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      onChange={onChange}
+      aria-label={label}
+      className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-moss disabled:cursor-not-allowed"
+    />
+  );
+}
+
+/* =========================================================
    FILTER CHIP
 ========================================================= */
 
@@ -1680,25 +1819,44 @@ function LeafIcon({ className = "" }) {
   );
 }
 
-function CollectionIcon({ className = "" }) {
+function ImportIcon({ className = "" }) {
   return (
     <svg
       className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M12 15V4" />
 
-      <path d="M8 7h8" />
+      <path d="m7 9 5-5 5 5" />
 
-      <path d="M8 11h8" />
+      <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
+    </svg>
+  );
+}
 
-      <path d="M8 15h5" />
+function PrintIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M7 9V4h10v5" />
+
+      <path d="M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
+
+      <path d="M7 14h10v6H7z" />
     </svg>
   );
 }
