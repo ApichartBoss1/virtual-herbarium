@@ -12,6 +12,7 @@ import {
   fetchPlantFacets,
   fetchPlantsPage,
 } from "@/lib/plantQueries";
+import { supabasePublic } from "@/lib/supabasePublic";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 
 /* =========================================================
@@ -580,7 +581,7 @@ function PlantsBrowser() {
 
     setFacetsLoading(true);
 
-    fetchPlantFacets()
+    fetchPlantFacets(supabasePublic)
       .then((data) => {
         if (active) {
           setFacets(data);
@@ -627,6 +628,7 @@ function PlantsBrowser() {
       sort,
       page: currentPage,
       pageSize,
+      client: supabasePublic,
     })
       .then(({ rows, total }) => {
         if (requestId !== requestIdRef.current) {

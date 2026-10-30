@@ -13,6 +13,7 @@ import {
   fetchPlantFacets,
   fetchPlantsPage,
 } from "@/lib/plantQueries";
+import { supabasePublic } from "@/lib/supabasePublic";
 
 /* =========================================================
    IMAGES
@@ -182,8 +183,9 @@ export default function HomePage() {
             sort: "newest",
             pageSize: RECENT_COUNT,
             columns: PLANT_CARD_COLUMNS,
+            client: supabasePublic,
           }),
-          fetchPlantFacets(),
+          fetchPlantFacets(supabasePublic),
         ]);
 
       if (!mounted) return;
