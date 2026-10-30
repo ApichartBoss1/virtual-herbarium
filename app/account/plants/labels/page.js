@@ -159,7 +159,8 @@ const text = {
     qrFailed: (count) =>
       `สร้าง QR ไม่สำเร็จ ${count} ป้าย โหลดหน้าใหม่แล้วลองอีกครั้ง`,
 
-    overflow: (list) => `ป้ายต่อไปนี้ข้อความล้น: ${list}`,
+    overflow: (list) =>
+      `ป้ายต่อไปนี้ข้อความอาจล้น (ตรวจใน PDF ก่อนพิมพ์): ${list}`,
     overflowHint:
       "ข้อความส่วนที่ล้นจะไม่ปรากฏบนป้าย (ขอบแดงแสดงเฉพาะบนหน้าจอ) ยังพิมพ์ได้ตามปกติ",
 
@@ -220,7 +221,8 @@ const text = {
     qrFailed: (count) =>
       `${count} QR ${count === 1 ? "code" : "codes"} failed. Reload the page and try again.`,
 
-    overflow: (list) => `These labels have overflowing text: ${list}`,
+    overflow: (list) =>
+      `These labels may overflow (check the PDF before printing): ${list}`,
     overflowHint:
       "Overflowing text will not appear on the label (the red outline shows on screen only). You can still print.",
 

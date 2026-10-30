@@ -25,6 +25,10 @@ export const QR_SIZE_MM = 20;
 /* locality ยาว ลดได้ถึง 6.5pt (ฟิลด์ปกติ 7.5pt) */
 export const LOCALITY_COMPACT_PT = 6.5;
 
+/* นับว่าล้นถ้าเหลือพื้นที่ใต้ข้อความน้อยกว่านี้ (มม.)
+   เผื่อข้อความใน PDF ที่อยู่ต่ำกว่าบนจอ 0.3–0.5 มม. */
+const FIT_MARGIN_MM = 1;
+
 const COPY = {
   TH: {
     /* หัวป้าย แก้ข้อความได้ที่นี่ */
@@ -115,9 +119,21 @@ function PrintLabel({
 
       if (!active || !text || !header) return;
 
-      const isOverflowing = () =>
-        text.scrollHeight > text.clientHeight + 1 ||
-        header.scrollWidth > header.clientWidth + 1;
+      /* px ต่อ มม. จากความกว้างจริงของป้าย (ถูกต้องแม้ซูมหน้าจอ) */
+      const pxPerMm = text.closest("article").offsetWidth / LABEL_WIDTH_MM;
+
+      const isOverflowing = () => {
+        const content = text.lastElementChild || text;
+
+        const spaceLeft =
+          text.getBoundingClientRect().bottom -
+          content.getBoundingClientRect().bottom;
+
+        return (
+          spaceLeft < FIT_MARGIN_MM * pxPerMm ||
+          header.scrollWidth > header.clientWidth + 1
+        );
+      };
 
       if (locality) {
         locality.style.fontSize = "";
