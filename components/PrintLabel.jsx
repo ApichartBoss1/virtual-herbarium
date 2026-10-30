@@ -12,6 +12,7 @@ import { getPlantUrl } from "@/lib/siteUrl";
    - ข้อความซ้าย, QR คอลัมน์ขวาชิดล่าง (สร้างแบบเดียวกับ PlantQR)
    - ฟิลด์ที่ว่างจะไม่แสดงทั้งบรรทัด, ไม่ตัดข้อความทิ้ง
    - ข้อความล้น: ลดตัวอักษร locality ก่อน ถ้ายังล้นแจ้งผ่าน onFitChange
+   ไฟล์ PDF (lib/labelPdf.js) ใช้ขนาด ข้อความ และฟิลด์ชุดเดียวกันจากไฟล์นี้
 ========================================================= */
 
 /* ขนาดป้าย แก้ที่นี่ที่เดียว (หน้า labels ใช้ค่านี้จัดหน้า A4) */
@@ -19,10 +20,14 @@ export const LABEL_WIDTH_MM = 90;
 export const LABEL_HEIGHT_MM = 60;
 
 /* QR ห้ามเล็กกว่า 18 มม. เพื่อให้สแกนได้ */
-const QR_SIZE_MM = 20;
+export const QR_SIZE_MM = 20;
 
 /* locality ยาว ลดได้ถึง 6.5pt (ฟิลด์ปกติ 7.5pt) */
-const LOCALITY_COMPACT_PT = 6.5;
+export const LOCALITY_COMPACT_PT = 6.5;
+
+/* นับว่าล้นถ้าเหลือพื้นที่ใต้ข้อความน้อยกว่านี้ (มม.)
+   เผื่อข้อความใน PDF ที่อยู่ต่ำกว่าบนจอ 0.3–0.5 มม. */
+const FIT_MARGIN_MM = 1;
 
 const COPY = {
   TH: {
@@ -114,9 +119,21 @@ function PrintLabel({
 
       if (!active || !text || !header) return;
 
-      const isOverflowing = () =>
-        text.scrollHeight > text.clientHeight + 1 ||
-        header.scrollWidth > header.clientWidth + 1;
+      /* px ต่อ มม. จากความกว้างจริงของป้าย (ถูกต้องแม้ซูมหน้าจอ) */
+      const pxPerMm = text.closest("article").offsetWidth / LABEL_WIDTH_MM;
+
+      const isOverflowing = () => {
+        const content = text.lastElementChild || text;
+
+        const spaceLeft =
+          text.getBoundingClientRect().bottom -
+          content.getBoundingClientRect().bottom;
+
+        return (
+          spaceLeft < FIT_MARGIN_MM * pxPerMm ||
+          header.scrollWidth > header.clientWidth + 1
+        );
+      };
 
       if (locality) {
         locality.style.fontSize = "";
@@ -126,7 +143,12 @@ function PrintLabel({
         }
       }
 
-      onFitChange?.(plantId, isOverflowing());
+      /* ส่งด้วยว่าลด locality หรือไม่ เพื่อให้ PDF ใช้ขนาดเดียวกัน */
+      onFitChange?.(
+        plantId,
+        isOverflowing(),
+        Boolean(locality?.style.fontSize),
+      );
     }
 
     measure();
@@ -138,18 +160,10 @@ function PrintLabel({
     };
   }, [plant, language, plantId, onFitChange]);
 
-  const pnuNo = textOf(plant.pnu_no);
-  const botanicalName = textOf(plant.botanical_name);
-  const family = textOf(plant.family);
-  const locality = textOf(plant.locality);
-  const coordinates = formatCoordinates(plant.latitude, plant.longitude);
-  const elevation = formatElevation(plant.elevation);
-
-  const collectorName = textOf(plant.collected_by);
-  const collectorNo = textOf(plant.collector_no);
-  const collector = [collectorName, collectorNo && `${t.number} ${collectorNo}`]
-    .filter(Boolean)
-    .join(" ");
+  const { institution, pnuNo, botanicalName, lines } = getLabelContent(
+    plant,
+    language,
+  );
 
   return (
     <article
@@ -166,7 +180,7 @@ function PrintLabel({
         ref={headerRef}
         className="shrink-0 overflow-hidden whitespace-nowrap border-b border-black pb-[1.2mm] text-center text-[7pt] font-semibold leading-tight"
       >
-        {t.institution}
+        {institution}
       </p>
 
       <div className="mt-[1.8mm] flex min-h-0 flex-1 gap-[3mm]">
@@ -184,23 +198,15 @@ function PrintLabel({
           )}
 
           <dl className="mt-[1.2mm] space-y-[0.4mm] text-[7.5pt] leading-[1.3]">
-            {family && <LabelLine label={t.family} value={family} />}
-
-            {locality && (
-              <LabelLine label={t.locality} value={locality} lineRef={localityRef} />
-            )}
-
-            {coordinates && (
+            {lines.map((line) => (
               <LabelLine
-                label={t.coordinates}
-                value={coordinates}
-                valueClassName="font-mono text-[7pt]"
+                key={line.key}
+                label={line.label}
+                value={line.value}
+                valueClassName={line.mono ? "font-mono text-[7pt]" : ""}
+                lineRef={line.key === "locality" ? localityRef : undefined}
               />
-            )}
-
-            {elevation && <LabelLine label={t.elevation} value={elevation} />}
-
-            {collector && <LabelLine label={t.collector} value={collector} />}
+            ))}
           </dl>
         </div>
 
@@ -254,6 +260,42 @@ function LabelLine({ label, value, valueClassName = "", lineRef }) {
 /* =========================================================
    HELPERS
 ========================================================= */
+
+/* ข้อความบนป้าย ใช้ทั้งป้ายบนหน้าจอและไฟล์ PDF
+   lines มีเฉพาะฟิลด์ที่มีค่า (ฟิลด์ว่างไม่แสดงทั้งบรรทัด) */
+export function getLabelContent(plant, language) {
+  const t = language === "EN" ? COPY.EN : COPY.TH;
+
+  const collectorName = textOf(plant.collected_by);
+  const collectorNo = textOf(plant.collector_no);
+  const collector = [collectorName, collectorNo && `${t.number} ${collectorNo}`]
+    .filter(Boolean)
+    .join(" ");
+
+  const lines = [
+    { key: "family", label: t.family, value: textOf(plant.family) },
+    { key: "locality", label: t.locality, value: textOf(plant.locality) },
+    {
+      key: "coordinates",
+      label: t.coordinates,
+      value: formatCoordinates(plant.latitude, plant.longitude),
+      mono: true,
+    },
+    {
+      key: "elevation",
+      label: t.elevation,
+      value: formatElevation(plant.elevation),
+    },
+    { key: "collector", label: t.collector, value: collector },
+  ].filter((line) => line.value);
+
+  return {
+    institution: t.institution,
+    pnuNo: textOf(plant.pnu_no),
+    botanicalName: textOf(plant.botanical_name),
+    lines,
+  };
+}
 
 /* ค่าว่าง / null / undefined → "" (กันคำว่า null ที่ติดมากับข้อมูลนำเข้า) */
 function textOf(value) {
