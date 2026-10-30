@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
 import { useWarnBeforeLeave } from "@/lib/useWarnBeforeLeave";
 import GeocodeFillPanel from "@/components/GeocodeFillPanel";
+import NameReportPanel from "@/components/NameReportPanel";
 import {
   AlertBox,
   AlertIcon,
@@ -577,6 +578,8 @@ export default function ImportPlantsPage() {
           className="mt-7 space-y-6"
         >
           <GeocodeFillPanel mode="all" />
+
+          <NameReportPanel />
         </div>
       </div>
     </main>
