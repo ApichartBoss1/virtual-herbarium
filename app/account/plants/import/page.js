@@ -14,6 +14,7 @@ import {
   preparePlantImage,
 } from "@/lib/plantImage";
 import {
+  downloadBlob,
   downloadImportTemplate,
   fetchAllPnuNumbers,
   fetchPlantsByPnu,
@@ -32,6 +33,12 @@ import {
   getMissingFields,
   readImportWorkbook,
 } from "@/lib/plantImportSheets";
+import {
+  XLSX_MIME_TYPE,
+  buildImportReportWorkbook,
+  getImportReportFileName,
+  writeWorkbookWithFrozenHeader,
+} from "@/lib/plantImportReport";
 
 const PREVIEW_PAGE_SIZE = 50;
 
@@ -133,6 +140,11 @@ const COPY = {
     previous: "ก่อนหน้า",
     next: "ถัดไป",
     importLater: "การนำเข้าข้อมูลจริงจะเปิดใช้ในขั้นถัดไป",
+    downloadReport: "ดาวน์โหลดรายงาน (Excel)",
+    creatingReport: "กำลังสร้างรายงาน...",
+    reportDownloaded: (fileName) =>
+      `ดาวน์โหลดแล้ว: ${fileName} (ดูในโฟลเดอร์ Downloads)`,
+    reportFailed: "สร้างรายงาน Excel ไม่สำเร็จ กรุณาลองอีกครั้ง",
     goToList: "ไปหน้ารายการพรรณไม้",
 
     errors: {
@@ -291,6 +303,11 @@ const COPY = {
     previous: "Previous",
     next: "Next",
     importLater: "Importing the data will be enabled in the next step.",
+    downloadReport: "Download Report (Excel)",
+    creatingReport: "Creating report...",
+    reportDownloaded: (fileName) =>
+      `Downloaded: ${fileName} (check your Downloads folder)`,
+    reportFailed: "Unable to create the Excel report. Please try again.",
     goToList: "Go to Plant List",
 
     errors: {
@@ -490,6 +507,9 @@ function DataImportSection({ t }) {
 
   const [inputKey, setInputKey] = useState(0);
 
+  /* { status: "creating" | "done" | "failed", fileName } */
+  const [reportResult, setReportResult] = useState(null);
+
   /* ข้อ e คำนวณใหม่ทุกครั้งที่เปลี่ยนช่องบังคับ โดยไม่ต้องอ่านไฟล์ใหม่ */
   const summary = useMemo(() => {
     if (!parsed) {
@@ -566,6 +586,7 @@ function DataImportSection({ t }) {
     setSkipFilter("all");
     setReadyPage(1);
     setSkippedPage(1);
+    setReportResult(null);
     setInputKey((key) => key + 1);
   }
 
@@ -625,6 +646,7 @@ function DataImportSection({ t }) {
       setParsed({
         sheets: workbook.sheets,
         rows: classifyImportRows(cleaned, existing),
+        checkedAt: new Date(),
       });
 
       setElapsedMs(performance.now() - startedAt);
@@ -648,7 +670,48 @@ function DataImportSection({ t }) {
 
     setReadyPage(1);
     setSkippedPage(1);
+
+    /* รายงานเดิมใช้ช่องบังคับชุดก่อน */
+    setReportResult(null);
   }
+
+  /* =====================================================
+     REPORT
+  ===================================================== */
+
+  async function handleDownloadReport() {
+    if (!summary || reportResult?.status === "creating") {
+      return;
+    }
+
+    const name = getImportReportFileName(fileName);
+
+    setReportResult({ status: "creating", fileName: name });
+
+    try {
+      const XLSX = await loadSheetJs();
+
+      const workbook = buildImportReportWorkbook(XLSX, {
+        fileName,
+        checkedAt: parsed.checkedAt,
+        requiredFields,
+        sheets: parsed.sheets,
+        rows: [...summary.ready, ...summary.skipped],
+      });
+
+      const bytes = writeWorkbookWithFrozenHeader(XLSX, workbook);
+
+      downloadBlob(new Blob([bytes], { type: XLSX_MIME_TYPE }), name);
+
+      setReportResult({ status: "done", fileName: name });
+    } catch (err) {
+      console.error("Create import report error:", err);
+
+      setReportResult({ status: "failed", fileName: name });
+    }
+  }
+
+  const creatingReport = reportResult?.status === "creating";
 
   /* =====================================================
      DERIVED
@@ -949,6 +1012,51 @@ function DataImportSection({ t }) {
                 </li>
               ))}
             </ul>
+          )}
+
+          <div className="mt-6">
+            <button
+              type="button"
+              data-download-report
+              onClick={handleDownloadReport}
+              disabled={creatingReport}
+              aria-busy={creatingReport}
+              className="vh-btn vh-btn-outline w-full sm:w-auto"
+            >
+              {creatingReport ? (
+                <LoadingIcon className="h-4 w-4 animate-spin" />
+              ) : (
+                <DownloadIcon className="h-4 w-4" />
+              )}
+
+              {creatingReport ? t.creatingReport : t.downloadReport}
+            </button>
+          </div>
+
+          {reportResult?.status === "done" && (
+            <p
+              role="status"
+              data-report-result="done"
+              className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-moss/30 bg-moss-soft px-3.5 py-3 text-[13px] leading-6 text-moss"
+            >
+              <CheckIcon className="mt-1 h-4 w-4 shrink-0" />
+
+              <span className="min-w-0 break-words">
+                {t.reportDownloaded(reportResult.fileName)}
+              </span>
+            </p>
+          )}
+
+          {reportResult?.status === "failed" && (
+            <p
+              role="alert"
+              data-report-result="failed"
+              className="mt-4 flex items-start gap-2.5 rounded-[6px] border border-clay/40 bg-clay-soft px-3.5 py-3 text-[13px] leading-6 text-clay"
+            >
+              <AlertIcon className="mt-1 h-4 w-4 shrink-0" />
+
+              <span className="min-w-0">{t.reportFailed}</span>
+            </p>
           )}
 
           <p className="mt-5 text-[13px] text-muted">{t.importLater}</p>
