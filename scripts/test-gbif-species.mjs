@@ -3,12 +3,29 @@
    ยิง /api/gbif/species และ /api/gbif/photo ของเซิร์ฟเวอร์ที่รันอยู่ (BASE_URL)
    แล้วพิมพ์ตารางสรุปและตรวจผลอัตโนมัติ (exit code 1 ถ้ามีข้อใด FAIL)
 
+   - ก่อนตรวจ เรียกทุกชื่อหนึ่งรอบเพื่ออุ่น cache (รอได้นานสุด 60 วินาทีต่อชื่อ)
+   - ข้อที่ไม่ผ่านเพราะ route รายงานว่า GBIF ไม่ตอบ (unavailable มี "name" หรือส่วนที่ข้อนั้นใช้)
+     เป็น SKIP ไม่ใช่ FAIL และไม่ทำให้ exit code เป็น 1
+
    BASE_URL=http://localhost:3000 npm run test:gbif-species
 ========================================================= */
 
 import { formatPhotoCredit, getLicenseLabel } from "../lib/photoCredit.js";
 
 const BASE_URL = (process.env.BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
+
+/* เวลารอสูงสุดต่อคำขอ (route ช้าสุดราว 40 วินาทีเมื่อ GBIF timeout ทุกส่วน) */
+const REQUEST_TIMEOUT_MS = 60000;
+
+const WARMUP_TIMEOUT_MS = 60000;
+
+const FULL_CACHE_CONTROL = "public, s-maxage=86400, stale-while-revalidate=604800";
+
+const FAILURE_CACHE_CONTROL = "public, s-maxage=900";
+
+const IMAGE_TIMEOUT_MS = 30000;
+
+const testStarted = performance.now();
 
 const NAMES = [
   "Samanea saman (Jacq.) Merr.",
@@ -19,12 +36,12 @@ const NAMES = [
   "",
 ];
 
-async function callApi(name, route = "species") {
+async function callApi(name, route = "species", signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS)) {
   const url = `${BASE_URL}/api/gbif/${route}?${new URLSearchParams({ name })}`;
 
   const started = performance.now();
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal });
 
   const body = await response.json().catch(() => null);
 
@@ -36,6 +53,59 @@ async function callApi(name, route = "species") {
     ms: Math.round(performance.now() - started),
   };
 }
+
+/* ส่วนที่ route รายงานว่าล้มเพราะ GBIF ("name" = ตรวจชื่อไม่ได้ ทุกส่วนจึงไม่มี) */
+const gbifDown = (result, ...parts) => {
+  const unavailable = result?.body?.unavailable || [];
+
+  const down = unavailable.filter((part) => part === "name" || parts.includes(part));
+
+  return down.length ? down : null;
+};
+
+/* =========================================================
+   อุ่น cache: species ก่อน แล้ว photo (ใช้ผลค้นรูปที่ cache แล้วจาก species)
+========================================================= */
+
+console.log("อุ่น cache (ไม่นับผล)");
+
+const warmupStarted = performance.now();
+
+const warmup = [];
+
+for (const name of NAMES.filter(Boolean)) {
+  const signal = AbortSignal.timeout(WARMUP_TIMEOUT_MS);
+
+  const started = performance.now();
+
+  const row = { ชื่อ: name, ms: 0, "species ไม่ตอบ": "—", "photo ไม่ตอบ": "—" };
+
+  try {
+    const species = await callApi(name, "species", signal);
+
+    row["species ไม่ตอบ"] = species.body?.unavailable?.join(", ") || "—";
+
+    const photo = await callApi(name, "photo", signal);
+
+    row["photo ไม่ตอบ"] = photo.body?.unavailable?.join(", ") || "—";
+  } catch (error) {
+    if (error?.name !== "TimeoutError") {
+      console.error(`ERROR "${name}": ${error.message} (เซิร์ฟเวอร์ที่ ${BASE_URL} รันอยู่หรือไม่?)`);
+
+      process.exit(1);
+    }
+
+    row["species ไม่ตอบ"] = `timeout ${WARMUP_TIMEOUT_MS / 1000} วินาที`;
+  }
+
+  row.ms = Math.round(performance.now() - started);
+
+  warmup.push(row);
+}
+
+console.table(warmup);
+
+const warmupMs = Math.round(performance.now() - warmupStarted);
 
 const results = new Map();
 
@@ -71,17 +141,40 @@ console.table(
         : "—",
       "occ. โลก/ไทย": d ? `${d.occurrenceCount ?? "—"}/${d.occurrenceCountTH ?? "—"}` : "—",
       รูป: d?.photos?.length ?? "—",
+      "GBIF ไม่ตอบ": r.body?.unavailable?.join(", ") || "—",
     };
   }),
 );
 
+let passed = 0;
 let failed = 0;
+let skipped = 0;
 
-const report = (ok, label, detail = "") => {
-  if (!ok) failed += 1;
+/* skip: ส่วนที่ GBIF ไม่ตอบ (จาก gbifDown) ข้อที่ไม่ผ่านและมี skip → SKIP */
+const report = (ok, label, detail = "", skip = null) => {
+  if (ok) {
+    passed += 1;
 
-  console.log(`${ok ? "PASS" : "FAIL"} ${label}${detail ? ` (${detail})` : ""}`);
+    console.log(`PASS ${label}${detail ? ` (${detail})` : ""}`);
+
+    return;
+  }
+
+  if (skip) {
+    skipped += 1;
+
+    console.log(`SKIP (GBIF ไม่ตอบ: ${skip.join(", ")}) ${label}`);
+
+    return;
+  }
+
+  failed += 1;
+
+  console.log(`FAIL ${label}${detail ? ` (${detail})` : ""}`);
 };
+
+const expectedCacheControl = (result) =>
+  result.body?.unavailable?.length ? FAILURE_CACHE_CONTROL : FULL_CACHE_CONTROL;
 
 const samanea = results.get("Samanea saman (Jacq.) Merr.");
 const samaneaData = samanea.body?.data;
@@ -91,12 +184,14 @@ report(
   samanea.status === 200 && Boolean(samaneaData),
   '"Samanea saman (Jacq.) Merr." → data ไม่เป็น null',
   `status=${samanea.status}`,
+  gbifDown(samanea),
 );
 
 report(
   Boolean(classification?.kingdom && classification?.family && classification?.species),
   '"Samanea saman" → มี classification',
   classification ? Object.values(classification).join(" > ") : "ไม่มี",
+  gbifDown(samanea, "classification"),
 );
 
 const photos = samaneaData?.photos || [];
@@ -105,6 +200,7 @@ report(
   Array.isArray(samaneaData?.photos) && photos.every((photo) => Boolean(photo.license)),
   '"Samanea saman" → รูปทุกรูปมี license',
   `${photos.length} รูป`,
+  gbifDown(samanea, "photos"),
 );
 
 report(
@@ -116,6 +212,8 @@ report(
         !("url" in photo),
     ),
   '"Samanea saman" → ทุกรูปมี thumbnailUrl ที่ไม่ใช่ไฟล์ original และไม่ส่ง URL ไฟล์เต็ม',
+  "",
+  gbifDown(samanea, "photos"),
 );
 
 report(
@@ -144,6 +242,7 @@ for (const photo of photos) {
   try {
     const response = await fetch(photo.thumbnailUrl, {
       headers: { "User-Agent": "virtual-herbarium (Naresuan University)" },
+      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
     });
 
     if (!response.ok || !String(response.headers.get("content-type")).startsWith("image/")) {
@@ -203,41 +302,50 @@ report(
 );
 
 report(
-  samanea.cacheControl === "public, s-maxage=86400, stale-while-revalidate=604800",
-  "Cache-Control ของ response ถูกต้อง",
+  samanea.cacheControl === expectedCacheControl(samanea),
+  "Cache-Control ของ response ถูกต้อง (ผลครบ 1 วัน / GBIF ไม่ตอบ 15 นาที)",
   samanea.cacheControl || "ไม่มี",
 );
 
-const michelia = results.get("Michelia alba DC.")?.body?.data;
+const micheliaResult = results.get("Michelia alba DC.");
+const michelia = micheliaResult?.body?.data;
 
 report(
   michelia?.status === "SYNONYM" && Boolean(michelia?.acceptedName),
   '"Michelia alba DC." → status เป็นชื่อพ้องและมี acceptedName',
   `status=${michelia?.status || "—"}, accepted=${michelia?.acceptedName || "—"}`,
+  gbifDown(micheliaResult),
 );
 
-const zingiber = results.get("Zingiber sp.")?.body?.data;
+const zingiberResult = results.get("Zingiber sp.");
+const zingiber = zingiberResult?.body?.data;
 
 report(
   zingiber?.level === "genus",
   '"Zingiber sp." → level "genus"',
   `level=${zingiber?.level || "—"}`,
+  gbifDown(zingiberResult),
 );
 
+/* data null เพราะตรวจชื่อไม่ได้ ไม่นับว่าผ่าน */
 const hydrophila = results.get("Hydrophila erecta");
 
 report(
-  hydrophila.status === 200 && hydrophila.body?.ok === true && hydrophila.body?.data === null,
+  hydrophila.status === 200 && hydrophila.body?.ok === true && hydrophila.body?.data === null &&
+    !gbifDown(hydrophila),
   '"Hydrophila erecta" → data เป็น null (สะกดผิด ไม่เดาชื่อ)',
   `status=${hydrophila.status}`,
+  gbifDown(hydrophila),
 );
 
 const nonsense = results.get("asdfgh");
 
 report(
-  nonsense.status === 200 && nonsense.body?.ok === true && nonsense.body?.data === null,
+  nonsense.status === 200 && nonsense.body?.ok === true && nonsense.body?.data === null &&
+    !gbifDown(nonsense),
   '"asdfgh" → data เป็น null และ status 200',
   `status=${nonsense.status}`,
+  gbifDown(nonsense),
 );
 
 const empty = results.get("");
@@ -255,6 +363,8 @@ console.log(
 report(
   JSON.stringify(repeat.body) === JSON.stringify(samanea.body),
   "เรียกซ้ำได้ข้อมูลเดิม",
+  "",
+  gbifDown(samanea) || gbifDown(repeat),
 );
 
 /* =========================================================
@@ -287,6 +397,7 @@ report(
   photoOk.status === 200 && Boolean(example),
   '/api/gbif/photo "Samanea saman" → ได้รูป',
   `status=${photoOk.status}, ${photoOk.ms} ms`,
+  gbifDown(photoOk, "photos"),
 );
 
 report(
@@ -294,28 +405,36 @@ report(
     Object.keys(example).sort().join() === [...PHOTO_FIELDS].sort().join(),
   "/api/gbif/photo คืนเฉพาะฟิลด์ของรูป",
   example ? Object.keys(example).join(", ") : "ไม่มี",
+  gbifDown(photoOk, "photos"),
 );
 
 report(
   Boolean(example?.licenseLabel || example?.licenseUrl),
   "/api/gbif/photo รูปมี license",
   example?.licenseLabel || example?.licenseUrl || "ไม่มี",
+  gbifDown(photoOk, "photos"),
 );
 
 report(
   Boolean(example?.thumbnailUrl && example?.largeUrl) &&
     ![example.thumbnailUrl, example.largeUrl].some((url) => /\/original\.\w+(\?|$)/i.test(url)),
   "/api/gbif/photo รูปย่อและรูปใหญ่ไม่ใช่ไฟล์ original",
+  "",
+  gbifDown(photoOk, "photos"),
 );
 
 report(
   /^https:\/\/www\.gbif\.org\/occurrence\/\d+$/.test(example?.occurrenceUrl || ""),
   "/api/gbif/photo ลิงก์ไปหน้า occurrence บน GBIF",
+  "",
+  gbifDown(photoOk, "photos"),
 );
 
 report(
   JSON.stringify(samaneaData?.examplePhoto) === JSON.stringify(example),
   "examplePhoto ใน /api/gbif/species เป็นรูปเดียวกับ /api/gbif/photo",
+  "",
+  gbifDown(samanea, "photos") || gbifDown(photoOk, "photos"),
 );
 
 for (const url of [example?.thumbnailUrl, example?.largeUrl].filter(Boolean)) {
@@ -324,7 +443,7 @@ for (const url of [example?.thumbnailUrl, example?.largeUrl].filter(Boolean)) {
   try {
     const response = await fetch(url, {
       headers: { "User-Agent": "virtual-herbarium (Naresuan University)" },
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
     });
 
     ok = response.ok && String(response.headers.get("content-type")).startsWith("image/");
@@ -338,33 +457,39 @@ for (const url of [example?.thumbnailUrl, example?.largeUrl].filter(Boolean)) {
 }
 
 report(
-  photoOk.cacheControl === "public, s-maxage=86400, stale-while-revalidate=604800",
-  "/api/gbif/photo Cache-Control ถูกต้อง",
+  photoOk.cacheControl === expectedCacheControl(photoOk),
+  "/api/gbif/photo Cache-Control ถูกต้อง (ผลครบ 1 วัน / GBIF ไม่ตอบ 15 นาที)",
   photoOk.cacheControl || "ไม่มี",
 );
 
+/* data null ได้เมื่อสกุลนี้ไม่มีรูปที่มี license แต่ไม่นับกรณีที่ GBIF ไม่ตอบ */
 const photoGenus = await callApi("Zingiber sp.", "photo");
 
 report(
-  photoGenus.body?.data === null || photoGenus.body?.data?.level === "genus",
+  photoGenus.body?.data?.level === "genus" ||
+    (photoGenus.body?.data === null && !gbifDown(photoGenus, "photos")),
   '/api/gbif/photo "Zingiber sp." → level "genus"',
   `level=${photoGenus.body?.data?.level || "—"}`,
+  gbifDown(photoGenus, "photos"),
 );
 
 const photoMisspelled = await callApi("Hydrophila erecta", "photo");
 
 report(
-  photoMisspelled.status === 200 && photoMisspelled.body?.ok === true && photoMisspelled.body?.data === null,
+  photoMisspelled.status === 200 && photoMisspelled.body?.ok === true &&
+    photoMisspelled.body?.data === null && !gbifDown(photoMisspelled),
   '/api/gbif/photo "Hydrophila erecta" → data เป็น null (สะกดผิด)',
   `status=${photoMisspelled.status}`,
+  gbifDown(photoMisspelled),
 );
 
 const photoNonsense = await callApi("asdfgh", "photo");
 
 report(
-  photoNonsense.status === 200 && photoNonsense.body?.data === null,
+  photoNonsense.status === 200 && photoNonsense.body?.data === null && !gbifDown(photoNonsense),
   '/api/gbif/photo "asdfgh" → data เป็น null',
   `status=${photoNonsense.status}`,
+  gbifDown(photoNonsense),
 );
 
 const photoEmpty = await callApi("", "photo");
@@ -384,6 +509,14 @@ console.log(
 report(
   JSON.stringify(photoRepeat.body) === JSON.stringify(photoOk.body),
   "/api/gbif/photo เรียกซ้ำได้ข้อมูลเดิม",
+  "",
+  gbifDown(photoOk) || gbifDown(photoRepeat),
+);
+
+console.log(
+  `\nสรุป: ผ่าน ${passed} / ไม่ผ่าน ${failed} / ข้ามเพราะ GBIF ไม่ตอบ ${skipped}` +
+    ` (อุ่น cache ${(warmupMs / 1000).toFixed(1)} วินาที,` +
+    ` รวม ${((performance.now() - testStarted) / 1000).toFixed(1)} วินาที)`,
 );
 
 process.exit(failed ? 1 : 0);
