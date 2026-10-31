@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import BulkDeleteDialog from "@/components/BulkDeleteDialog";
 import Navbar from "@/components/Navbar";
 import { useAdmin } from "@/components/AdminContext";
 import { readLabelSelection, writeLabelSelection } from "@/lib/labelSelection";
@@ -12,6 +13,7 @@ import {
   EMPTY_FACETS,
   MAX_LABELS,
   fetchPlantFacets,
+  fetchPlantIdsByFilters,
   fetchPlantsPage,
 } from "@/lib/plantQueries";
 import { useSiteSettings } from "@/components/SiteSettingsContext";
@@ -62,6 +64,11 @@ export default function MyPlantsPage() {
     typeof window === "undefined" ? [] : readLabelSelection(),
   );
 
+  /* ลบหลายรายการ: id ที่ส่งเข้ากล่องยืนยัน (null = ปิด) */
+  const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
+
+  const [selectingAll, setSelectingAll] = useState(false);
+
   /* =====================================================
      TEXT
   ===================================================== */
@@ -97,6 +104,11 @@ export default function MyPlantsPage() {
       clearSelection: "ล้างที่เลือก",
       printSelected: (count) => `พิมพ์ป้ายที่เลือก (${count})`,
       selectionLimit: `พิมพ์ได้ครั้งละไม่เกิน ${MAX_LABELS} ป้าย`,
+      deleteSelected: (count) => `ลบที่เลือก (${count})`,
+      selectAllMatching: (count) =>
+        `เลือกทั้งหมดที่ตรงตัวกรอง (${count.toLocaleString("th-TH")} รายการ)`,
+      selectingAll: "กำลังเลือก...",
+      selectAllError: "เลือกทั้งหมดไม่สำเร็จ กรุณาลองใหม่",
 
       total: "ทั้งหมด",
       result: "รายการ",
@@ -192,6 +204,11 @@ export default function MyPlantsPage() {
       clearSelection: "Clear selection",
       printSelected: (count) => `Print selected labels (${count})`,
       selectionLimit: `Up to ${MAX_LABELS} labels per print`,
+      deleteSelected: (count) => `Delete selected (${count})`,
+      selectAllMatching: (count) =>
+        `Select all matching filters (${count.toLocaleString("en-US")})`,
+      selectingAll: "Selecting...",
+      selectAllError: "Unable to select all records. Please try again.",
 
       total: "Total",
       result: "records",
@@ -564,6 +581,42 @@ export default function MyPlantsPage() {
 
       return [...ids, ...pageIds.filter((id) => !current.has(id))];
     });
+  }
+
+  /* id ทุกรายการที่ตรงตัวกรองปัจจุบัน รวมเข้ากับที่เลือกไว้ */
+  async function selectAllMatching() {
+    setSelectingAll(true);
+    setActionError("");
+
+    try {
+      const ids = await fetchPlantIdsByFilters({
+        search,
+        family: familyFilter,
+        locality: localityFilter,
+      });
+
+      updateSelection((current) => {
+        const existing = new Set(current);
+
+        return [...current, ...ids.filter((id) => !existing.has(id))];
+      });
+    } catch (err) {
+      console.error("Select all matching error:", err);
+
+      setActionError(t.selectAllError);
+    } finally {
+      setSelectingAll(false);
+    }
+  }
+
+  /* ลบเสร็จ: ล้าง id ที่ลบแล้ว (และที่ไม่พบในระบบ) ออกจากการเลือก แล้วโหลดใหม่
+     หน้าปัจจุบันว่าง → fetchPlantsPage คืน total = null แล้วถอยหน้าเอง */
+  function handleBulkDeleteFinished({ clearedIds }) {
+    const cleared = new Set(clearedIds);
+
+    updateSelection((ids) => ids.filter((id) => !cleared.has(id)));
+
+    refreshData();
   }
 
   function printSelected() {
@@ -947,12 +1000,29 @@ export default function MyPlantsPage() {
                 )}
               </p>
 
-              <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
+              {totalResults > 0 && (
+                <button
+                  type="button"
+                  data-select-all-matching
+                  onClick={selectAllMatching}
+                  disabled={selectingAll}
+                  className="vh-btn vh-btn-ghost vh-btn-sm -ml-2 w-full justify-start sm:w-auto"
+                >
+                  {selectingAll ? (
+                    <LoadingIcon className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckAllIcon className="h-3.5 w-3.5" />
+                  )}
+                  {selectingAll ? t.selectingAll : t.selectAllMatching(totalResults)}
+                </button>
+              )}
+
+              <div className="grid w-full grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto">
                 <button
                   type="button"
                   onClick={() => updateSelection(() => [])}
                   disabled={selectedIds.length === 0}
-                  className="vh-btn vh-btn-ghost vh-btn-sm flex-1 sm:flex-none"
+                  className="vh-btn vh-btn-ghost vh-btn-sm sm:flex-none"
                 >
                   <CloseIcon className="h-3.5 w-3.5" />
                   {t.clearSelection}
@@ -960,9 +1030,20 @@ export default function MyPlantsPage() {
 
                 <button
                   type="button"
+                  data-bulk-delete
+                  onClick={() => setBulkDeleteIds([...selectedIds])}
+                  disabled={selectedIds.length === 0}
+                  className="vh-btn vh-btn-danger vh-btn-sm sm:flex-none"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  {t.deleteSelected(selectedIds.length)}
+                </button>
+
+                <button
+                  type="button"
                   onClick={printSelected}
                   disabled={selectedIds.length === 0}
-                  className="vh-btn vh-btn-primary vh-btn-sm flex-1 sm:flex-none"
+                  className="vh-btn vh-btn-primary vh-btn-sm col-span-2 sm:flex-none"
                 >
                   <PrintIcon className="h-4 w-4" />
                   {t.printSelected(selectedIds.length)}
@@ -1123,6 +1204,14 @@ export default function MyPlantsPage() {
       {/* =================================================
           DELETE CONFIRMATION SHEET
       ================================================= */}
+
+      {bulkDeleteIds && (
+        <BulkDeleteDialog
+          ids={bulkDeleteIds}
+          onClose={() => setBulkDeleteIds(null)}
+          onFinished={handleBulkDeleteFinished}
+        />
+      )}
 
       {pendingDelete && (
         <DeleteSheet
@@ -1836,6 +1925,25 @@ function ImportIcon({ className = "" }) {
       <path d="m7 9 5-5 5 5" />
 
       <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
+    </svg>
+  );
+}
+
+function CheckAllIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 12l4 4 8-8" />
+
+      <path d="M11 16l1 1 9-9" />
     </svg>
   );
 }
