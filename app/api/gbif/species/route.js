@@ -1,15 +1,19 @@
-import { getSpeciesInfo } from "@/lib/gbifSpecies";
+import { FAILURE_CACHE_SECONDS, getSpeciesInfo } from "@/lib/gbifSpecies";
 
 /* =========================================================
    GET /api/gbif/species?name=...
    ข้อมูลชนิดพืชจาก GBIF (สาธารณะ ไม่ต้องล็อกอิน)
    - name ว่างหรือยาวเกิน 200 ตัวอักษร → 400
-   - คืน { ok: true, data } โดย data เป็น null เมื่อไม่ควรแสดงหรือ GBIF ล่ม
+   - คืน { ok: true, data, unavailable } โดย data เป็น null เมื่อไม่ควรแสดงหรือ GBIF ล่ม
+     unavailable: ส่วนที่ล้มเพราะ GBIF (เช่น ["photos"], ["name"]) สำหรับ test ไม่แสดงบนหน้าเว็บ
+     (มี unavailable → Cache-Control สั้นเท่า cache ผลที่ล้ม)
 ========================================================= */
 
 const MAX_NAME_LENGTH = 200;
 
 const CACHE_CONTROL = "public, s-maxage=86400, stale-while-revalidate=604800";
+
+const FAILURE_CACHE_CONTROL = `public, s-maxage=${FAILURE_CACHE_SECONDS}`;
 
 export async function GET(request) {
   const name = (request.nextUrl.searchParams.get("name") || "")
@@ -23,17 +27,31 @@ export async function GET(request) {
     );
   }
 
-  /* getSpeciesInfo ไม่ throw แต่กันไว้ไม่ให้กลายเป็น 500 */
-  let data = null;
+  /*
+   * getSpeciesInfo ไม่ throw แต่กันไว้ไม่ให้กลายเป็น 500
+   * error ของโค้ดเราไม่ใช่ GBIF ล่ม จึงไม่ใส่ใน unavailable แต่ยังใช้ cache สั้น
+   */
+  let result = { data: null, unavailable: [] };
+
+  let failed = false;
 
   try {
-    data = await getSpeciesInfo(name);
+    result = await getSpeciesInfo(name);
   } catch (error) {
     console.error("GBIF species route error:", error);
+
+    failed = true;
   }
 
+  const { data, unavailable } = result;
+
   return Response.json(
-    { ok: true, data },
-    { headers: { "Cache-Control": CACHE_CONTROL } },
+    { ok: true, data, unavailable },
+    {
+      headers: {
+        "Cache-Control":
+          failed || unavailable.length ? FAILURE_CACHE_CONTROL : CACHE_CONTROL,
+      },
+    },
   );
 }
