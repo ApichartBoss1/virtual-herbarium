@@ -248,8 +248,8 @@ for (const [base, minEm] of [
 
 /* =========================================================
    5. พิกัดโดยประมาณ (coordinate_source = geocoded)
-   ป้ายไม่พิมพ์พิกัดและความสูง เพราะเป็นค่าประมาณจากชื่อสถานที่
-   ป้ายพิกัดที่ admin ใส่เอง (manual) ยังพิมพ์ตามเดิม
+   ป้ายพิมพ์พิกัดและความสูงรูปแบบเดียวกับพิกัดที่ admin ใส่เอง (manual)
+   ไม่มี ca. รัศมีความคลาดเคลื่อน หรือคำว่าโดยประมาณ
 ========================================================= */
 
 const GEOCODED_LOCALITY = "อุทยานแห่งชาติแก่งเจ็ดแคว จังหวัดพิษณุโลก";
@@ -290,12 +290,24 @@ report(
   "ป้ายพิกัด manual ยังพิมพ์พิกัดและความสูง",
 );
 
+/* ข้อความที่ดึงจาก PDF ไม่มีช่องว่าง จึงเทียบแบบไม่สนช่องว่าง */
+const compact = (text) => text.replace(/\s+/g, "");
+
+/* รูปแบบเดียวกับ manual: ทศนิยม 5 ตำแหน่ง N/E และความสูงตามที่บันทึก */
+const GEOCODED_COORDINATES = compact("พิกัด: 16.98765° N, 100.45679° E");
+
+const GEOCODED_ELEVATION = compact("ความสูง: 345 m");
+
 report(
-  !geocodedText.includes("พิกัด:") &&
-    !geocodedText.includes("ความสูง:") &&
-    !geocodedText.includes("16.98") &&
-    !geocodedText.includes("345"),
-  "ป้ายพิกัด geocoded ไม่พิมพ์พิกัดและความสูงใน PDF",
+  compact(geocodedText).includes(GEOCODED_COORDINATES) &&
+    compact(geocodedText).includes(GEOCODED_ELEVATION),
+  "ป้ายพิกัด geocoded พิมพ์พิกัดและความสูงรูปแบบเดียวกับ manual ใน PDF",
+  compact(geocodedText).match(/พิกัด:[^ก-๙]*|ความสูง:\d+m/g)?.join(" | ") || "ไม่พบ",
+);
+
+report(
+  !/ca\.|±|ประมาณ|approx/i.test(geocodedText),
+  "ป้ายพิกัด geocoded ไม่มี ca. / ± / คำว่าโดยประมาณ",
 );
 
 report(
@@ -303,12 +315,30 @@ report(
   "ป้ายพิกัด geocoded ยังพิมพ์สถานที่เก็บ",
 );
 
-const screenKeys = getLabelContent(geocodedPlant, "TH").lines.map((line) => line.key);
+const screenLines = getLabelContent(geocodedPlant, "TH").lines;
+
+const manualLines = getLabelContent(
+  { ...geocodedPlant, coordinate_source: "manual", coordinate_uncertainty_m: null },
+  "TH",
+).lines;
 
 report(
-  !screenKeys.includes("coordinates") && !screenKeys.includes("elevation"),
-  "ป้ายบนหน้าจอของรายการ geocoded ไม่มีบรรทัดพิกัดและความสูง",
-  screenKeys.join(", "),
+  JSON.stringify(screenLines) === JSON.stringify(manualLines) &&
+    screenLines.some((line) => line.key === "coordinates") &&
+    screenLines.some((line) => line.key === "elevation"),
+  "ป้ายบนหน้าจอของรายการ geocoded เหมือน manual ทุกบรรทัด (มีพิกัดและความสูง)",
+  screenLines.map((line) => `${line.key}=${line.value}`).join(", "),
+);
+
+const emptyLines = getLabelContent(
+  { ...geocodedPlant, latitude: null, longitude: null, elevation: null },
+  "TH",
+).lines.map((line) => line.key);
+
+report(
+  !emptyLines.includes("coordinates") && !emptyLines.includes("elevation"),
+  "ฟิลด์พิกัดและความสูงที่ว่างยังซ่อนทั้งบรรทัด",
+  emptyLines.join(", "),
 );
 
 console.log(`\nPDF: ${pdfPath}`);
